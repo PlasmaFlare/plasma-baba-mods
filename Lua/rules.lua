@@ -622,6 +622,10 @@ function docode(firstwords)
 								8 = customobject
 							]]--
 							
+							-- @filler text
+							if (tiletype == 11) then
+								stop = false
+							else
 							if (tiletype ~= 5) then
 								if (stage == 0) then
 									if (tiletype == 0) then
@@ -738,6 +742,7 @@ function docode(firstwords)
 									end
 								end
 							end
+							end
 							
 							if stage3reached and not stop and tilename == "branching_and" then
 								local br_and_unit = mmf.newObject(tileid)
@@ -774,9 +779,12 @@ function docode(firstwords)
 							--MF_alert(tostring(k) .. "_" .. tostring(i) .. "_" .. tostring(wordid) .. ": " .. tilename .. ", " .. tostring(tiletype) .. ", " .. tostring(stop) .. ", " .. tostring(stage) .. ", " .. tostring(letterword_firstid).. ", " .. tostring(prevtiletype))
 							
 							if (stop == false) then
+								-- @filler text
+								if tiletype ~= 11 then
 								if (dontadd == false) then
 									table.insert(current, {tilename, tiletype, tileids, tilewidth})
 									tileids = {}
+								end
 								end
 							else
 								for a=1,#s[3] do
