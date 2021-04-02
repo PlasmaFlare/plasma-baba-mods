@@ -70,3 +70,4 @@ function mapcursor_move(ox,oy,mdir)
 		end
 	end
 end
+

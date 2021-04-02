@@ -1087,7 +1087,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	local vistest,vt2 = findallfeature(nil,"is","3d")
 	if (#vistest > 0) or (#vt2 > 0) then
 		local target = vistest[1] or vt[1]
-		visionmode(1,target,nil)
+		visionmode(1)
 	else
 		visionmode(0)
 	end
@@ -1627,3 +1627,4 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 	
 	return hm
 end
+

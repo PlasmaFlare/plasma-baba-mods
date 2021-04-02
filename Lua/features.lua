@@ -311,3 +311,4 @@ function getunitswitheffect(rule3,nolevels_,ignorethese_)
 	
 	return result
 end
+

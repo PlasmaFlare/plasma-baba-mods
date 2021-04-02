@@ -288,7 +288,6 @@ function moveblock()
 									end
 									
 									local undowordunits = currentundo.wordunits
-									local undogroupunits = currentundo.groupunits
 									local undowordrelatedunits = currentundo.wordrelatedunits
 									
 									if (#undowordunits > 0) then
@@ -300,15 +299,6 @@ function moveblock()
 									end
 									
 									local uname = getname(newunit)
-									
-									if (#undogroupunits > 0) then
-										for a,b in pairs(undogroupunits) do
-											--MF_alert("Check " .. tostring(b) .. ", " .. tostring(line[6]))
-											if (b == uname) then
-												updatecode = 1
-											end
-										end
-									end
 									
 									if (#undowordrelatedunits > 0) then
 										for a,b in ipairs(undowordrelatedunits) do
@@ -906,6 +896,12 @@ function block(small_)
 								create("text_" .. name,x,y,dir,x,y,nil,nil,leveldata)
 								updatecode = 1
 							end
+						elseif (string.sub(v, 1, 5) == "group") then
+							local mem = findgroup(v)
+							
+							for c,d in ipairs(mem) do
+								create(d,x,y,dir,x,y,nil,nil,leveldata)
+							end
 						end
 					end
 				end
@@ -1060,3 +1056,4 @@ function block(small_)
 		setsoundname("removal",removalsound,removalshort)
 	end
 end
+
