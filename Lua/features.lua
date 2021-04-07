@@ -218,7 +218,7 @@ function getunitswitheffect(rule3,nolevels_,ignorethese_)
 		for i,v in ipairs(group) do
 			if (v[1] ~= "empty") then
 				local name = v[1]
-				local groupmembers = unitlists[name]
+				local fgroupmembers = unitlists[name]
 				
 				local valid = true
 				
@@ -226,8 +226,8 @@ function getunitswitheffect(rule3,nolevels_,ignorethese_)
 					valid = false
 				end
 				
-				if (groupmembers ~= nil) and valid then
-					for a,b in ipairs(groupmembers) do
+				if (fgroupmembers ~= nil) and valid then
+					for a,b in ipairs(fgroupmembers) do
 						if testcond(v[2], b) then
 							local unit = mmf.newObject(b)
 							
