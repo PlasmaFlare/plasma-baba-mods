@@ -18,11 +18,10 @@ function get_this_parms_in_conds(conds, ids)
             local condtype = cond[1]
             local params = cond[2]
             
-            id_index = id_index + 1 -- consume the condition
-            
             if condtype == "this" or condtype == "not this" then
-                id_index = id_index + #params -- skip params if the condtype is "this", since the params are actually unitids
+                -- skip params if the condtype is "this", since the params are actually unitids
             else
+                id_index = id_index + 1 -- consume the condition
                 for i, param in ipairs(params) do
                     if string.sub(param, 1, 4) == "not " then
                         param = string.sub(param, 5)
@@ -48,6 +47,10 @@ function parse_this_param_and_get_raycast_units(this_param)
         return false, nil, 0
     else
         local end_index = string.find(this_param, " ", 5)
+        if not end_index then
+            end_index = #this_param
+        end
+        local this_param_name = string.sub(this_param, 1, end_index) 
         local param_id = string.sub(this_param, end_index + 1)
         local this_unitid = get_this_unit_from_param_id(param_id)
         if not this_unitid then
@@ -55,7 +58,6 @@ function parse_this_param_and_get_raycast_units(this_param)
         end
 
         local out = {}
-        print("parse param: this_unitid - "..tostring(this_unitid))
         local raycast_units = this_mod_globals.text_to_raycast_units[this_unitid]
         local count = 0
         if raycast_units then
@@ -64,7 +66,7 @@ function parse_this_param_and_get_raycast_units(this_param)
                 count = count +1
             end
         end
-        return true, out, count
+        return this_param_name, out, count
     end
 end
 

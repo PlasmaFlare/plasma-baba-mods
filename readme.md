@@ -27,6 +27,9 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 
 **If you are new to baba modding**, [check this more detailed guide I made for installing this mod.](docs/installation_guide.md)
 
+# Known Bugs
+- Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette
+
 # Changelog
 - **1.1.0** (4/9/21)
   - Updated for Beta 401

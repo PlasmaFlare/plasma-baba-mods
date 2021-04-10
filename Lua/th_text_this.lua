@@ -8,6 +8,8 @@ function reset_this_mod_globals()
         text_to_raycast_units = {}, -- mapping from this text unitid to all units that were hit by a raycast
         blocked_tiles = {}, -- all positions where "X is block" is active
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
+        on_level_start = false,
+        deferred_rules_with_this = {["this"] = {}, ["not this"] = {}}, --     
     
         -- These two globals assist in making regular infix conditions with "this" work.
         -- Infix conditions have a list of parameters that determine what objects to compare the testing object
@@ -32,6 +34,7 @@ table.insert(mod_hook_functions["level_start"],
                 this_mod_globals.text_to_cursor[unitid] = make_cursor(unit)
             end
         end
+        this_mod_globals.on_level_start = true
         update_raycast_units(true)
         update_all_cursors()
     end
@@ -63,14 +66,20 @@ table.insert(mod_hook_functions["rule_update"],
     function()
         this_mod_globals.this_param_to_unitid = {}
         this_mod_globals.registered_this_unitid_as_params = {}
+        this_mod_globals.deferred_rules_with_this = {["this"] = {}, ["not this"] = {}}
     end
 )
 table.insert(mod_hook_functions["rule_update_after"],
     function()
-        update_raycast_units(true)
+        -- update_raycast_units(true)
+        -- local update_cursors = false
+        -- if this_mod_globals.on_level_start then
+        --     this_mod_globals.on_level_start = false
+        --     update_cursors = true
+        -- end
         if this_mod_globals.undoed_after_called then
-            update_all_cursors()
             this_mod_globals.undoed_after_called = false
+            update_all_cursors()
         end
     end
 )
@@ -89,6 +98,30 @@ function is_name_text_this(name, check_not_)
         return string.sub(name, 1, 4) == "this"
     end
 end
+
+function is_unit_valid_this_property(unitid, verb)
+    local unit = mmf.newObject(unitid)
+    if unit.strings[UNITTYPE] == "object" then
+        return true
+    end
+
+    if unit.strings[UNITTYPE] == "text" then
+        if verb == "is" then
+            if unit.values[TYPE] == 2 then
+                return true
+            elseif unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
+                return true
+            end
+        else
+            if unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 
 function reset_this_mod()
     local count = 0
@@ -158,11 +191,7 @@ function update_this_cursor(wordunit, cursorunit)
             -- display different sprite if the tile is blocked
             cursorunit.direction = 29
             MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",29,true)
-            if wordunit.active then
-                c1,c2 = getuicolour("blocked")
-            else
-                c1,c2 = 2,1
-            end
+            c1,c2 = getuicolour("blocked")
             
         else
             cursorunit.direction = 28
@@ -259,6 +288,19 @@ function update_raycast_units(checkblocked_)
     this_mod_globals.text_to_raycast_units = new_raycast_units
 end
 
+function get_raycast_units(this_unitid)
+    local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
+    if raycast_units ~= nil and #raycast_units > 0 then
+        local unit = mmf.newObject(raycast_units[1])
+        local tileid = unit.values[XPOS] + unit.values[YPOS] * roomsizex
+        if this_mod_globals.blocked_tiles[tileid] then
+            return nil
+        end
+        return raycast_units
+    end
+    return nil
+end
+
 function this_raycast(x, y, dir)
     if dir >= 0 and dir <= 3 then 
         local dir_vec = dirs[dir+1]
@@ -283,13 +325,21 @@ function this_raycast(x, y, dir)
     return nil
 end
 
+function defer_addoption_with_this(rule, is_not_this)
+    local key = "this"
+    if is_not_this then
+        key = "not this"
+    end
+    table.insert(this_mod_globals.deferred_rules_with_this[key], rule)
+end
+
 function do_subrule_this()
     update_raycast_units()
     local this_is_blocks = {}
     local checkthese = {}
 
-    if (featureindex["this"] ~= nil) then
-        for i, rules in ipairs(featureindex["this"]) do
+    if (this_mod_globals.deferred_rules_with_this["this"] ~= nil) then
+        for i, rules in ipairs(this_mod_globals.deferred_rules_with_this["this"]) do
             local rule = rules[1]
             if is_name_text_this(rule[1]) and rule[2] == "is" and rule[3] == "block" then
                 table.insert(this_is_blocks, rules) -- prioritize "this is block" 
@@ -327,8 +377,8 @@ function do_subrule_this()
     update_raycast_units(true)
     local final_options = {}
     local this_is_not_this_options = {}
-    if featureindex["this"] ~= nil then
-        for i, rules in ipairs(featureindex["this"]) do
+    if this_mod_globals.deferred_rules_with_this["this"] ~= nil then
+        for i, rules in ipairs(this_mod_globals.deferred_rules_with_this["this"]) do
             local rule = rules[1]
             local conds = rules[2]
             local ids = rules[3]
@@ -349,27 +399,13 @@ function do_subrule_this()
                 if is_name_text_this(target_name) then
                     local this_text_unitid = ids[3][1]
                     local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
+                    local unit = mmf.newObject(this_text_unitid)
                     if raycast_units ~= nil then
                         for _, ray_unitid in ipairs(raycast_units) do
                             local ray_unit = mmf.newObject(ray_unitid)
-                            local add_rule = false
                             
-                            if ray_unit.strings[UNITTYPE] == "text" then
-                                if rule[2] == "is" and ray_unit.values[TYPE] == 2 then
-                                    add_rule = true
-                                elseif ray_unit.values[TYPE] == 0 and not is_name_text_this(ray_unit.strings[NAME]) then
-                                    add_rule = true
-                                end
-                            else
-                                add_rule = true
-                            end
-                            
-                            
-                            if add_rule then
+                            if is_unit_valid_this_property(ray_unitid, rule[2]) then
                                 local rulename = ray_unit.strings[NAME]
-                                if is_turning_text(rulename) then
-                                    rulename = get_turning_text_interpretation(ray_unitid)
-                                end
                                 local newrule = {rule[1],rule[2],rulename}
                                 local newconds = {}
                                 for a,b in ipairs(conds) do
@@ -379,8 +415,7 @@ function do_subrule_this()
                             end
                         end
                     end
-                end
-                if #property_options == 0 then
+                else
                     table.insert(property_options, {rule = rule, conds = conds})
                 end
 
@@ -428,10 +463,8 @@ function do_subrule_this()
         end
     end
 
-    local notthis = findfeature(nil, "is", "not this")
-
-    if featureindex["not this"] ~= nil then
-        for i, rules in ipairs(featureindex["not this"]) do
+    if this_mod_globals.deferred_rules_with_this["not this"] ~= nil then
+        for i, rules in ipairs(this_mod_globals.deferred_rules_with_this["not this"]) do
             local rule = rules[1]
             local conds = rules[2]
             local ids = rules[3]
@@ -471,6 +504,6 @@ function do_subrule_this()
     end
 
     for _,option in ipairs(final_options) do
-        addoption(option.rule,option.conds,option.ids,false,nil,option.tags)
+        addoption(option.rule,option.conds,option.ids,true,nil,option.tags)
     end
 end

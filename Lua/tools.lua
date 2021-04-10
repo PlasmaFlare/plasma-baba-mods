@@ -177,6 +177,20 @@ function writerules(parent,name,x_,y_)
 		
 		if (fullinvis == false) then
 			if (#conds > 0) then
+				local num_this_conds = 0
+				local this_cond = ""
+				for a,cond in ipairs(conds) do
+					if cond[1] == "this" or cond[1] == "not this" then
+						num_this_conds = num_this_conds + 1
+						this_cond = cond[1]
+					end
+				end
+				if num_this_conds > 0 then
+					text = this_cond.."("..rule[1]..")".." "
+				else 
+					text = text .. rule[1] .. " "
+				end
+
 				for a,cond in ipairs(conds) do
 					local middlecond = true
 					
@@ -185,25 +199,26 @@ function writerules(parent,name,x_,y_)
 					end
 
 					if cond[1] == "this" or cond[1] == "not this" then
-						middlecond = false
-					end
-					
-					if middlecond then
+					elseif middlecond then
 						text = text .. cond[1] .. " "
 						
 						if (cond[2] ~= nil) then
 							if (#cond[2] > 0) then
 								for c,d in ipairs(cond[2]) do
-									text = text .. d .. " "
-									
-									if (#cond[2] > 1) and (c ~= #cond[2]) then
-										text = text .. "& "
+									local this_param_name = parse_this_param_and_get_raycast_units(d)
+									if this_param_name then
+										text = text .. this_param_name
+									else
+										text = text .. d .. " "
+										if (#cond[2] > 1) and (c ~= #cond[2]) then
+											text = text .. "& "
+										end
 									end
 								end
 							end
 						end
 						
-						if (a < #conds) then
+						if (a < #conds - num_this_conds) then
 							text = text .. "& "
 						end
 					else

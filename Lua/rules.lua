@@ -549,6 +549,8 @@ function docode(firstwords)
 				if (sentences == nil) then
 					return
 				end
+
+				local filler_text_found_in_parsing = {}
 				
 				--MF_alert(tostring(k) .. ", " .. tostring(variations))
 				if (maxlen > 2) then
@@ -607,7 +609,15 @@ function docode(firstwords)
 							thissent = thissent .. tilename .. "," .. tostring(wordid) .. "  "
 							
 							for a,b in ipairs(s[3]) do
-								table.insert(tileids, b)
+								local unit = mmf.newObject(b)
+								if unit.values[TYPE] == 11 then
+									if not filler_text_found_in_parsing[i] then
+										filler_text_found_in_parsing[i] = {}
+									end
+									table.insert(filler_text_found_in_parsing[i], b)
+								else
+									table.insert(tileids, b)
+								end
 							end
 							
 							--[[
@@ -1004,8 +1014,18 @@ function docode(firstwords)
 									if (index < #sentence) then
 										allowedwords = {0}
 										allowedwords_extra = {}
-										
-										local realname = unitreference["text_" .. wname]
+										local realname = ""
+										local testunit = mmf.newObject(wid[1])
+										if name_is_branching_text(testunit.strings[NAME]) then
+											realname = unitreference["text_"..testunit.strings[NAME]]
+											if testunit.strings[NAME] == "branching_is" or testunit.strings[NAME] == "branching_play" then
+												realname = unitreference["text_"..wname]
+											else
+												realname = unitreference["text_"..testunit.strings[NAME]]
+											end
+										else
+											realname = unitreference["text_" .. wname]
+										end
 										local cargtype = false
 										local cargextra = false
 										
@@ -1143,7 +1163,13 @@ function docode(firstwords)
 										for g,h in ipairs(condids) do
 											ids = copytable(ids, h)
 										end
-									
+
+										if filler_text_found_in_parsing[i] then
+											for _, unitid in ipairs(filler_text_found_in_parsing[i]) do
+												table.insert(filler_mod_globals.active_filler_text, unitid)
+											end
+										end
+
 										addoption(rule,finalconds,ids)
 									end
 								end
@@ -1179,20 +1205,21 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 	
 	if (#option == 3) then
 		local rule = {option,conds,ids,tags}
+		-- Defer processing any sentences with "this" as target or effect. Special exception is "not this" as target
+		-- since it translates to "all" with a custom "not this" condtype
+		if is_name_text_this(option[1]) or is_name_text_this(option[3]) then
+			defer_addoption_with_this(rule, false)
+			return
+		elseif is_name_text_this(option[3], true) then
+			defer_addoption_with_this(rule, true)
+			return
+		end
+
 		table.insert(features, rule)
 		local target = option[1]
 		local verb = option[2]
 		local effect = option[3]
 
-		if is_name_text_this(target) then
-			target = "this"
-		end
-		if is_name_text_this(effect) then
-			effect = "this"
-		end
-		if is_name_text_this(effect, true) then
-			effect = "not this"
-		end
 	
 		if (featureindex[effect] == nil) then
 			featureindex[effect] = {}
@@ -1486,8 +1513,8 @@ function code(alreadyrun_)
 				end
 				
 				docode(firstwords,wordunits)
-				subrules()
 				do_subrule_this()
+				subrules()
 				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
@@ -1574,7 +1601,7 @@ function postrules(alreadyrun_)
 									if raycast_units then
 										for _, runit in ipairs(raycast_units) do
 											local ray_unit = mmf.newObject(runit)
-											if (ray_unit.strings[UNITTYPE] == "text") then
+											if is_unit_valid_this_property(runit, rule[2]) and ray_unit.strings[UNITTYPE] == "text" then
 												setcolour(runit,"active")
 												newruleids[runit] = 1
 												if (ruleids[runit] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
@@ -1671,6 +1698,22 @@ function postrules(alreadyrun_)
 			end
 		end
 	end
+
+	for _, unitid in ipairs(filler_mod_globals.active_filler_text) do
+        local unit = mmf.newObject(unitid)
+        setcolour(unitid,"active")
+        newruleids[unitid] = 1
+        if (ruleids[unitid] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+            if (ruleeffectlimiter[unitid] == nil) then
+                local x,y = unit.values[XPOS],unit.values[YPOS]
+                local c1,c2 = getcolour(unitid,"active")
+                MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,unitid)
+                ruleeffectlimiter[unitid] = 1
+            end
+            
+            playrulesound = true
+        end
+    end
 	
 	if (#protects > 0) then
 		for i,v in ipairs(protects) do
