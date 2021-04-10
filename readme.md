@@ -10,6 +10,7 @@ Total list of mods (Click on one to get a *stylized* description of each mod)
 - [Arrow Properties Plus/Turning Text](docs/arrow_properties_plus.md)
 - [Omni Connectors](docs/omni_connectors.md)
 - [Filler Text](docs/filler_text.md)
+- [THIS](docs/this.md)
 
 Mods with seperate repositories
 - [Arrow Properties Plus/Turning Text](https://github.com/PlasmaFlare/Baba-Is-You-Arrow-Properties-Plus)
@@ -27,5 +28,9 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 **If you are new to baba modding**, [check this more detailed guide I made for installing this mod.](docs/installation_guide.md)
 
 # Changelog
+- **1.1.0** (4/9/21)
+  - Updated for Beta 401
+  - New mod: THIS
+  - Added a detailed guide for mod installation
 - **1.0.0** (4/2/21)
   - Initial Release

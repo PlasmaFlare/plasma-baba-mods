@@ -24,6 +24,10 @@ turning_word_names = {
     select=true,
 }
 
+for name,_ in pairs(turning_word_names) do
+    register_directional_text("turning_"..name)
+end
+
 function is_turning_text(name)
     return string.len(name) > 8 and string.sub(name, 1,8) == "turning_" and turning_word_names[string.sub(name, 9)]
 end
@@ -50,24 +54,24 @@ function reset_tt()
     output_turning_dir_ids = false
 end
 
-function set_tt_display_direction(unit, dir)
-    dir = dir or nil
-    if (is_turning_text(unit.strings[NAME])) then
-        if dir == nil then
-            unit.direction = (unit.values[DIR] * 8) % 32
-        else
-            unit.direction = (dir * 8) % 32
-        end
-    end
-end
+-- function set_tt_display_direction(unit, dir)
+--     dir = dir or nil
+--     if (is_turning_text(unit.strings[NAME])) then
+--         if dir == nil then
+--             unit.direction = (unit.values[DIR] * 8) % 32
+--         else
+--             unit.direction = (dir * 8) % 32
+--         end
+--     end
+-- end
 
 table.insert( mod_hook_functions["level_start"],
     function()
         reset_tt()
-        for i,unitid in ipairs(codeunits) do
-            local unit = mmf.newObject(unitid)
-            set_tt_display_direction(unit)
-        end
+        -- for i,unitid in ipairs(codeunits) do
+        --     local unit = mmf.newObject(unitid)
+        --     set_tt_display_direction(unit)
+        -- end
     end
 )
 table.insert( mod_hook_functions["level_restart"],
@@ -95,10 +99,10 @@ table.insert(mod_hook_functions["levelpack_done"],
 table.insert(mod_hook_functions["undoed_after"], 
     function()
         --@TT todo- replace this with mod hook for after undo once it has been implemented
-        for i,unitid in ipairs(codeunits) do
-            local unit = mmf.newObject(unitid)
-            set_tt_display_direction(unit)
-        end
+        -- for i,unitid in ipairs(codeunits) do
+        --     local unit = mmf.newObject(unitid)
+        --     set_tt_display_direction(unit)
+        -- end
     end
 )
 
@@ -108,7 +112,7 @@ table.insert( mod_hook_functions["turn_end"],
         for i,unitid in ipairs(codeunits) do
             local unit = mmf.newObject(unitid)
             if (is_turning_text(unit.strings[NAME])) then
-                set_tt_display_direction(unit)
+                -- set_tt_display_direction(unit)
                 for i,b in ipairs(turning_units) do
                     local id,init_dir,prev_has_rule,prev_active = b[1],b[2],b[3],b[4]
                     if (unitid == id and unit.values[DIR] ~= init_dir) then

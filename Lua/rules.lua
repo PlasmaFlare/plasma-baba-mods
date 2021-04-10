@@ -1156,3 +1156,601 @@ function docode(firstwords)
 	end
 end
 
+-- @mods this text
+function addoption(option,conds_,ids,visible,notrule,tags_)
+	---@This mod - Override reason: handle "not this is X. Also treat "this<string>" as part of featureindex["this"]
+	--MF_alert(option[1] .. ", " .. option[2] .. ", " .. option[3])
+
+	local visual = true
+	
+	if (visible ~= nil) then
+		visual = visible
+	end
+	
+	local conds = {}
+	
+	if (conds_ ~= nil) then
+		conds = conds_
+	else
+		MF_alert("nil conditions in rule: " .. option[1] .. ", " .. option[2] .. ", " .. option[3])
+	end
+	
+	local tags = tags_ or {}
+	
+	if (#option == 3) then
+		local rule = {option,conds,ids,tags}
+		table.insert(features, rule)
+		local target = option[1]
+		local verb = option[2]
+		local effect = option[3]
+
+		if is_name_text_this(target) then
+			target = "this"
+		end
+		if is_name_text_this(effect) then
+			effect = "this"
+		end
+		if is_name_text_this(effect, true) then
+			effect = "not this"
+		end
+	
+		if (featureindex[effect] == nil) then
+			featureindex[effect] = {}
+		end
+		
+		if (featureindex[target] == nil) then
+			featureindex[target] = {}
+		end
+		
+		if (featureindex[verb] == nil) then
+			featureindex[verb] = {}
+		end
+		
+		table.insert(featureindex[effect], rule)
+		table.insert(featureindex[verb], rule)
+		
+		if (target ~= effect) then
+			table.insert(featureindex[target], rule)
+		end
+		
+		if visual then
+			local visualrule = copyrule(rule)
+			table.insert(visualfeatures, visualrule)
+		end
+		
+		local groupcond = false
+		
+		if (string.sub(target, 1, 5) == "group") or (string.sub(effect, 1, 5) == "group") or (string.sub(target, 1, 9) == "not group") or (string.sub(effect, 1, 9) == "not group") then
+			groupcond = true
+		end
+		
+		if (notrule ~= nil) then
+			local notrule_effect = notrule[1]
+			local notrule_id = notrule[2]
+			
+			if (notfeatures[notrule_effect] == nil) then
+				notfeatures[notrule_effect] = {}
+			end
+			
+			local nr_e = notfeatures[notrule_effect]
+			
+			if (nr_e[notrule_id] == nil) then
+				nr_e[notrule_id] = {}
+			end
+			
+			local nr_i = nr_e[notrule_id]
+			
+			table.insert(nr_i, rule)
+		end
+		
+		if (#conds > 0) then
+			local addedto = {}
+
+			local this_params_in_conds = get_this_parms_in_conds(conds, ids)
+			
+			for i,cond in ipairs(conds) do
+				local condname = cond[1]
+				if (string.sub(condname, 1, 4) == "not ") then
+					condname = string.sub(condname, 5)
+				end
+				
+				if (condfeatureindex[condname] == nil) then
+					condfeatureindex[condname] = {}
+				end
+				
+				if (addedto[condname] == nil) then
+					table.insert(condfeatureindex[condname], rule)
+					addedto[condname] = 1
+				end
+				
+				if (cond[2] ~= nil) then
+					if (#cond[2] > 0) then
+						local alreadyused = {}
+						local newconds = {}
+						local allfound = false
+						
+						--alreadyused[target] = 1
+						
+						for a,b in ipairs(cond[2]) do
+							if is_name_text_this(b) or is_name_text_this(b, true) then
+								local this_unitid = this_params_in_conds[cond][a]
+								if not is_this_param_id_registered(this_unitid) then
+									local param_id = register_this_param_id(this_unitid)
+									table.insert(newconds, b.." "..param_id)
+								else
+									table.insert(newconds, b)
+								end
+
+							elseif (b ~= "all") and (b ~= "not all") then
+								alreadyused[b] = 1
+								table.insert(newconds, b)
+							elseif (b == "all") then
+								allfound = true
+							elseif (b == "not all") then
+								newconds = {"empty","text"}
+							end
+							
+							if (string.sub(b, 1, 5) == "group") or (string.sub(b, 1, 9) == "not group") then
+								groupcond = true
+							end
+						end
+						
+						if allfound then
+							for a,mat in pairs(objectlist) do
+								if (alreadyused[a] == nil) and (findnoun(a,nlist.short) == false) then
+									table.insert(newconds, a)
+									alreadyused[a] = 1
+								end
+							end
+						end
+						
+						cond[2] = newconds
+					end
+				end
+			end
+		end
+		
+		if groupcond then
+			table.insert(groupfeatures, rule)
+		end
+
+		local targetnot = string.sub(target, 1, 4)
+		local targetnot_ = string.sub(target, 5)
+		
+		-- @This mod - dealing with "not this is X"
+		if targetnot == "not " and is_name_text_this(targetnot_) then
+			local rule = {"all",verb,effect}
+			local newconds = {}
+			table.insert(newconds, {"not this", {ids[1][1]}})
+			for a,b in ipairs(conds) do
+				table.insert(newconds, b)
+			end
+			addoption(rule,newconds,ids,false,{effect,#featureindex[effect]},tags)
+		elseif (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") then
+			if (targetnot_ ~= "all") then
+				for i,mat in pairs(objectlist) do
+					if (i ~= targetnot_) and (findnoun(i) == false) then
+						local rule = {i,verb,effect}
+						local newconds = {}
+						for a,b in ipairs(conds) do
+							table.insert(newconds, b)
+						end
+						addoption(rule,newconds,ids,false,{effect,#featureindex[effect]},tags)
+					end
+				end
+			else
+				local mats = {"empty","text"}
+				
+				for m,i in pairs(mats) do
+					local rule = {i,verb,effect}
+					local newconds = {}
+					for a,b in ipairs(conds) do
+						table.insert(newconds, b)
+					end
+					addoption(rule,newconds,ids,false,{effect,#featureindex[effect]},tags)
+				end
+			end
+		end
+	end
+end
+
+-- @mods this text
+function code(alreadyrun_)
+	--@This mod - Override reason: need to call update_raycast_units() before rule parsing regardless of if updatecode == 1
+	-- 			  Override reason: provide hook for do_subrule_this()
+	local playrulesound = false
+	local alreadyrun = alreadyrun_ or false
+
+	update_raycast_units()
+	
+	if (updatecode == 1) then
+		HACK_INFINITY = HACK_INFINITY + 1
+		--MF_alert("code being updated!")
+		
+		MF_removeblockeffect(0)
+		wordrelatedunits = {}
+		
+		do_mod_hook("rule_update",{alreadyrun})
+		
+		if (HACK_INFINITY < 200) then
+			local checkthese = {}
+			local wordidentifier = ""
+			wordunits,wordidentifier,wordrelatedunits = findwordunits()
+			
+			if (#wordunits > 0) then
+				for i,v in ipairs(wordunits) do
+					if testcond(v[2],v[1]) then
+						table.insert(checkthese, v[1])
+					end
+				end
+			end
+			
+			features = {}
+			featureindex = {}
+			condfeatureindex = {}
+			visualfeatures = {}
+			notfeatures = {}
+			groupfeatures = {}
+			local firstwords = {}
+			local alreadyused = {}
+			
+			for i,v in ipairs(baserulelist) do
+				addbaserule(v[1],v[2],v[3],v[4])
+			end
+			
+			do_mod_hook("rule_baserules")
+			
+			formlettermap()
+			
+			if (#codeunits > 0) then
+				for i,v in ipairs(codeunits) do
+					table.insert(checkthese, v)
+				end
+			end
+		
+			if (#checkthese > 0) or (#letterunits > 0) then
+				for iid,unitid in ipairs(checkthese) do
+					local unit = mmf.newObject(unitid)
+					local x,y = unit.values[XPOS],unit.values[YPOS]
+					local ox,oy,nox,noy = 0,0
+					local tileid = x + y * roomsizex
+
+					setcolour(unit.fixed)
+					
+					if (alreadyused[tileid] == nil) and (unit.values[TYPE] ~= 5) then
+						for i=1,2 do
+							local drs = dirs[i+2]
+							local ndrs = dirs[i]
+							ox = drs[1]
+							oy = drs[2]
+							nox = ndrs[1]
+							noy = ndrs[2]
+							
+							--MF_alert("Doing firstwords check for " .. unit.strings[UNITNAME] .. ", dir " .. tostring(i))
+							
+							local hm = codecheck(unitid,ox,oy,i)
+							local hm2 = codecheck(unitid,nox,noy,i)
+							
+							if (#hm == 0) and (#hm2 > 0) then
+								--MF_alert("Added " .. unit.strings[UNITNAME] .. " to firstwords, dir " .. tostring(i))
+								
+								table.insert(firstwords, {{unitid}, i, 1, unit.strings[UNITNAME], unit.values[TYPE]})
+								
+								if (alreadyused[tileid] == nil) then
+									alreadyused[tileid] = {}
+								end
+								
+								alreadyused[tileid][i] = 1
+							end
+						end
+					end
+				end
+				
+				--table.insert(checkthese, {unit.strings[UNITNAME], unit.values[TYPE], unit.values[XPOS], unit.values[YPOS], 0, 1, {unitid})
+				
+				for a,b in pairs(letterunits_map) do
+					for iid,data in ipairs(b) do
+						local x,y,i = data[3],data[4],data[5]
+						local unitids = data[7]
+						local width = data[6]
+						local word,wtype = data[1],data[2]
+						
+						local unitid = unitids[1]
+						
+						local tileid = x + y * roomsizex
+						
+						if (alreadyused[tileid] == nil) or ((alreadyused[tileid] ~= nil) and (alreadyused[tileid][i] == nil)) then
+							local drs = dirs[i+2]
+							local ndrs = dirs[i]
+							ox = drs[1]
+							oy = drs[2]
+							nox = ndrs[1] * width
+							noy = ndrs[2] * width
+							
+							local hm = codecheck(unitid,ox,oy,i)
+							local hm2 = codecheck(unitid,nox,noy,i)
+							
+							--MF_alert(word .. ", " .. tostring(hm) .. ", " .. tostring(hm2) .. ", " .. tostring(width))
+							
+							if (#hm == 0) and (#hm2 > 0) then
+								table.insert(firstwords, {unitids, i, width, word, wtype})
+								
+								if (alreadyused[tileid] == nil) then
+									alreadyused[tileid] = {}
+								end
+								
+								alreadyused[tileid][i] = 1
+							end
+						end
+					end
+				end
+				
+				docode(firstwords,wordunits)
+				subrules()
+				do_subrule_this()
+				grouprules()
+				playrulesound = postrules(alreadyrun)
+				updatecode = 0
+				
+				local newwordunits,newwordidentifier,wordrelatedunits = findwordunits()
+				
+				--MF_alert("ID comparison: " .. newwordidentifier .. " - " .. wordidentifier)
+				
+				if (newwordidentifier ~= wordidentifier) then
+					updatecode = 1
+					code(true)
+				else
+					--domaprotation()
+				end
+			end
+		else
+			MF_alert("Level destroyed - code() run too many times")
+			destroylevel("infinity")
+			return
+		end
+		
+		if (alreadyrun == false) then
+			effects_decors()
+		end
+	end
+	
+	if (alreadyrun == false) then
+		local rulesoundshort = ""
+		alreadyrun = true
+		if playrulesound and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+			local pmult,sound = checkeffecthistory("rule")
+			rulesoundshort = sound
+			local rulename = "rule" .. tostring(math.random(1,5)) .. rulesoundshort
+			MF_playsound(rulename)
+		end
+	end
+	
+	do_mod_hook("rule_update_after",{alreadyrun})
+end
+
+-- @mods this text
+function postrules(alreadyrun_)
+	--@This mod - Override reason: add rule puff effects for "X is this"
+	local protects = {}
+	local newruleids = {}
+	local ruleeffectlimiter = {}
+	local playrulesound = false
+	local alreadyrun = alreadyrun_ or false
+	
+	for i,unit in ipairs(units) do
+		unit.active = false
+	end
+	
+	local limit = #features
+	
+	for i,rules in ipairs(features) do
+		if (i <= limit) then
+			local rule = rules[1]
+			local conds = rules[2]
+			local ids = rules[3]
+			
+			if (rule[1] == rule[3]) and (rule[2] == "is") then
+				table.insert(protects, i)
+			end
+			
+			if (ids ~= nil) then
+				local works = true
+				local idlist = {}
+				local effectsok = false
+				
+				if (#ids > 0) then
+					for a,b in ipairs(ids) do
+						table.insert(idlist, b)
+					end
+				end
+				
+				if (#idlist > 0) and works then
+					for a,d in ipairs(idlist) do
+						for c,b in ipairs(d) do
+							if (b ~= 0) then
+								local bunit = mmf.newObject(b)
+								if is_name_text_this(bunit.strings[NAME]) and a == 3 then
+									local raycast_units = this_mod_globals.text_to_raycast_units[b]
+									if raycast_units then
+										for _, runit in ipairs(raycast_units) do
+											local ray_unit = mmf.newObject(runit)
+											if (ray_unit.strings[UNITTYPE] == "text") then
+												setcolour(runit,"active")
+												newruleids[runit] = 1
+												if (ruleids[runit] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+													if (ruleeffectlimiter[runit] == nil) then
+														local x,y = ray_unit.values[XPOS],ray_unit.values[YPOS]
+														local c1,c2 = getcolour(runit,"active")
+														MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,runit)
+														ruleeffectlimiter[runit] = 1
+													end
+													
+													playrulesound = true
+												end
+											end
+										end
+									end
+								end
+								
+								if (bunit.strings[UNITTYPE] == "text") then
+									bunit.active = true
+									setcolour(b,"active")
+								end
+								newruleids[b] = 1
+								
+								if (ruleids[b] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+									if (ruleeffectlimiter[b] == nil) then
+										local x,y = bunit.values[XPOS],bunit.values[YPOS]
+										local c1,c2 = getcolour(b,"active")
+										--MF_alert(b)
+										MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,b)
+										ruleeffectlimiter[b] = 1
+									end
+									
+									if (rule[2] ~= "play") then
+										playrulesound = true
+									end
+								end
+							end
+						end
+					end
+				elseif (#idlist > 0) and (works == false) then
+					for a,visualrules in pairs(visualfeatures) do
+						local vrule = visualrules[1]
+						local same = comparerules(rule,vrule)
+						
+						if same then
+							table.remove(visualfeatures, a)
+						end
+					end
+				end
+			end
+
+			local rulenot = 0
+			local neweffect = ""
+			
+			local nothere = string.sub(rule[3], 1, 4)
+			
+			if (nothere == "not ") then
+				rulenot = 1
+				neweffect = string.sub(rule[3], 5)
+			end
+			
+			if (rulenot == 1) then
+				local newconds,crashy = invertconds(conds,nil,rule[3])
+				
+				local newbaserule = {rule[1],rule[2],neweffect}
+				
+				local target = rule[1]
+				local verb = rule[2]
+				
+				for a,b in ipairs(featureindex[target]) do
+					local same = comparerules(newbaserule,b[1])
+					
+					if same then
+						--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
+						local theseconds = b[2]
+						
+						if (#newconds > 0) then
+							if (newconds[1] ~= "never") then
+								for c,d in ipairs(newconds) do
+									table.insert(theseconds, d)
+								end
+							else
+								theseconds = {"never",{}}
+							end
+						end
+						
+						if crashy then
+							addoption({rule[1],"is","crash"},theseconds,ids,false,nil,rules[4])
+						end
+						
+						b[2] = theseconds
+					end
+				end
+			end
+		end
+	end
+	
+	if (#protects > 0) then
+		for i,v in ipairs(protects) do
+			local rule = features[v]
+			
+			local baserule = rule[1]
+			local conds = rule[2]
+			
+			local target = baserule[1]
+			
+			local newconds = {{"never",{}}}
+			
+			if (conds[1] ~= "never") then
+				if (#conds > 0) then
+					newconds = {}
+					
+					for a,b in ipairs(conds) do
+						local condword = b[1]
+						local condgroup = {}
+						
+						if (string.sub(condword, 1, 1) == "(") then
+							condword = string.sub(condword, 2)
+						end
+						
+						if (string.sub(condword, -1) == ")") then
+							condword = string.sub(condword, 1, #condword - 1)
+						end
+						
+						local newcondword = "not " .. condword
+						
+						if (string.sub(condword, 1, 3) == "not") then
+							newcondword = string.sub(condword, 5)
+						end
+						
+						if (a == 1) then
+							newcondword = "(" .. newcondword
+						end
+						
+						if (a == #conds) then
+							newcondword = newcondword .. ")"
+						end
+						
+						if (b[2] ~= nil) then
+							for c,d in ipairs(b[2]) do
+								table.insert(condgroup, d)
+							end
+						end
+						
+						table.insert(newconds, {newcondword, condgroup})
+					end
+				end		
+			
+				if (featureindex[target] ~= nil) then
+					for a,rules in ipairs(featureindex[target]) do
+						local targetrule = rules[1]
+						local targetconds = rules[2]
+						local object = targetrule[3]
+						
+						if (targetrule[1] == target) and (targetrule[2] == "is") and (target ~= object) and ((getmat(object) ~= nil) or (object == "revert")) and (string.sub(object, 1, 5) ~= "group") then
+							if (#newconds > 0) then
+								if (newconds[1] == "never") then
+									targetconds = {}
+								end
+								
+								for c,d in ipairs(newconds) do
+									table.insert(targetconds, d)
+								end
+							end
+							
+							rules[2] = targetconds
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	ruleids = newruleids
+	
+	ruleblockeffect()
+	
+	return playrulesound
+end
