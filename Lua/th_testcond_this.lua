@@ -58,13 +58,10 @@ function parse_this_param_and_get_raycast_units(this_param)
         end
 
         local out = {}
-        local raycast_units = this_mod_globals.text_to_raycast_units[this_unitid]
         local count = 0
-        if raycast_units then
-            for _, ray_unitid in ipairs(raycast_units) do
-                out[ray_unitid] = true
-                count = count +1
-            end
+        for _, ray_unitid in ipairs(get_raycast_units(this_unitid, true)) do
+            out[ray_unitid] = true
+            count = count +1
         end
         return this_param_name, out, count
     end

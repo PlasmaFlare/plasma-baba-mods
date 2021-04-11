@@ -2657,13 +2657,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
                         local this_text_unitid = params[1]
                         
 						local pass = false
-                        local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
-						if raycast_units then
-							for _, ray_unit in ipairs(raycast_units) do
-								if ray_unit == unitid then
-									pass = true
-									break
-								end
+						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
+							if ray_unit == unitid then
+								pass = true
+								break
 							end
 						end
                         if not pass then
@@ -2681,13 +2678,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
                         local this_text_unitid = params[1]
                         
 						local pass = true
-                        local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
-						if raycast_units then
-							for _, ray_unit in ipairs(raycast_units) do
-								if ray_unit == unitid then
-									pass = false
-									break
-								end
+						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
+							if ray_unit == unitid then
+								pass = false
+								break
 							end
 						end
                         if not pass then

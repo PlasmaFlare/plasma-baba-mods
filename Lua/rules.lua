@@ -1597,23 +1597,20 @@ function postrules(alreadyrun_)
 							if (b ~= 0) then
 								local bunit = mmf.newObject(b)
 								if is_name_text_this(bunit.strings[NAME]) and a == 3 then
-									local raycast_units = this_mod_globals.text_to_raycast_units[b]
-									if raycast_units then
-										for _, runit in ipairs(raycast_units) do
-											local ray_unit = mmf.newObject(runit)
-											if is_unit_valid_this_property(runit, rule[2]) and ray_unit.strings[UNITTYPE] == "text" then
-												setcolour(runit,"active")
-												newruleids[runit] = 1
-												if (ruleids[runit] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
-													if (ruleeffectlimiter[runit] == nil) then
-														local x,y = ray_unit.values[XPOS],ray_unit.values[YPOS]
-														local c1,c2 = getcolour(runit,"active")
-														MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,runit)
-														ruleeffectlimiter[runit] = 1
-													end
-													
-													playrulesound = true
+									for _, runit in ipairs(get_raycast_units(b, true)) do
+										local ray_unit = mmf.newObject(runit)
+										if is_unit_valid_this_property(runit, rule[2]) and ray_unit.strings[UNITTYPE] == "text" then
+											setcolour(runit,"active")
+											newruleids[runit] = 1
+											if (ruleids[runit] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+												if (ruleeffectlimiter[runit] == nil) then
+													local x,y = ray_unit.values[XPOS],ray_unit.values[YPOS]
+													local c1,c2 = getcolour(runit,"active")
+													MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,runit)
+													ruleeffectlimiter[runit] = 1
 												end
+												
+												playrulesound = true
 											end
 										end
 									end
