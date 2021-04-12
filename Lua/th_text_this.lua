@@ -79,8 +79,7 @@ table.insert(mod_hook_functions["rule_update"],
 )
 table.insert(mod_hook_functions["rule_update_after"],
     function()
-        update_raycast_units(true)
-        if this_mod_globals.on_level_start then
+        if this_mod_globals.on_level_-start then
             this_mod_globals.on_level_start = false
         end
         if this_mod_globals.undoed_after_called then
@@ -177,7 +176,7 @@ function update_this_cursor(wordunit, cursorunit)
     local dir = wordunit.values[DIR]
     undo = undo or false
 
-    local ray_pos = this_raycast(x, y, dir)
+    local ray_pos = this_raycast(x, y, dir, true)
     if ray_pos then
         cursorunit.values[XPOS] = ray_pos[1] * f_tilesize+ Xoffset + (f_tilesize / 2)
         cursorunit.values[YPOS] = ray_pos[2] * f_tilesize + Yoffset + (f_tilesize / 2)
@@ -219,9 +218,11 @@ end
 function update_raycast_units(checkblocked_)
     local checkblocked = checkblocked_ or false
     local new_raycast_units = {}
+    local all_block = false
     
     if checkblocked then
         this_mod_globals.blocked_tiles = {}
+        -- all_block = findfeature("all", "is", "block") ~= nil
     end
     for i,unitid in ipairs(codeunits) do
         local unit = mmf.newObject(unitid)
@@ -232,7 +233,7 @@ function update_raycast_units(checkblocked_)
             local ray_unitids = {}
 
             local blocked = false
-            local ray_pos,is_emptyblock = this_raycast(x, y, dir)
+            local ray_pos,is_emptyblock = this_raycast(x, y, dir, checkblocked)
             local tileid = nil
             if ray_pos then
                 tileid = ray_pos[1] + ray_pos[2] * roomsizex
@@ -248,15 +249,12 @@ function update_raycast_units(checkblocked_)
                             ray_unit_name = "text"
                         end
 
-                        -- if checkblocked then
-                        --     if hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
-                        --         print("not block in featureindex")
-                        --     else
-                        --         print("not block not in featureindex")
-                        --     end
-                        -- end
-                        if checkblocked and hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
-                            blocked = true
+                        if checkblocked then
+                            if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                blocked = true
+                            elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
+                                blocked = true
+                            end
                         end
                         table.insert(ray_unitids, ray_unitid)
                     end
@@ -323,7 +321,8 @@ function get_raycast_units(this_text_unitid, checkblocked)
     return {}
 end
 
-function this_raycast(x, y, dir)
+function this_raycast(x, y, dir, checkemptyblock_)
+    local checkemptyblock = checkemptyblock_ or false
     if dir >= 0 and dir <= 3 then 
         local dir_vec = dirs[dir+1]
         local dx = dir_vec[1]
@@ -333,7 +332,7 @@ function this_raycast(x, y, dir)
         while inbounds(ox,oy) do
             local tileid = ox + oy * roomsizex
 
-            if unitmap[tileid] == nil and hasfeature("empty", "is", "block", 2, ox, oy) then
+            if checkemptyblock and unitmap[tileid] == nil and hasfeature("empty", "is", "block", 2, ox, oy) then
                 return {ox, oy},true
             elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
                 return {ox, oy},false
@@ -347,7 +346,7 @@ function this_raycast(x, y, dir)
     return nil
 end
 
-function defer_addoption_with_this(rule, is_not_this)
+function defer_addoption_with_this(rule)
     table.insert(this_mod_globals.deferred_rules_with_this, rule)
 end
 
@@ -357,19 +356,6 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
     for i, rules in ipairs(this_rules) do
         local rule, conds, ids, tags = rules[1], rules[2], rules[3], rules[4]
         local target, verb, property = rule[1], rule[2], rule[3]
-
-        if not checkblocked then
-            print("-----")
-            print(target.." "..verb.." "..property)
-            -- for _, rule in ipairs(ids) do
-            --     local u = mmf.newObject(id[1])
-            --     print(u.strings[NAME])
-            -- end
-            -- for _, id in ipairs(ids) do
-            --     local u = mmf.newObject(id[1])
-            --     print(u.strings[NAME])
-            -- end
-        end
 
         local target_isnot = string.sub(target, 1, 4) == "not "
         if target_isnot then
@@ -387,13 +373,17 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
         else
             local this_text_unitid = ids[1][1]
             if target_isnot then
-                local newrule = {"all",rule[2],rule[3]}
-                local newconds = {}
-                table.insert(newconds, {"not this", {this_text_unitid}})
-                for a,b in ipairs(conds) do
-                    table.insert(newconds, b)
+                for i,mat in pairs(objectlist) do
+                    if (findnoun(i) == false) then
+                        local newrule = {i,rule[2],rule[3]}
+                        local newconds = {}
+                        table.insert(newconds, {"not this", {this_text_unitid}})
+                        for a,b in ipairs(conds) do
+                            table.insert(newconds, b)
+                        end
+                        table.insert(target_options, {rule = newrule, conds = newconds, notrule = true, showrule = false})
+                    end
                 end
-                table.insert(target_options, {rule = newrule, conds = newconds})
             else
                 for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
                     local ray_unit = mmf.newObject(ray_unitid)
@@ -402,19 +392,14 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
                         ray_name = "text"
                     end
 
-                    local this_condtype = "this"
-                    if target_isnot then
-                        this_condtype = "not this"
-                    end
-                    
                     local newrule = {ray_name,rule[2],rule[3]}
                     local newconds = {}
-                    table.insert(newconds, {this_condtype, {this_text_unitid}})
+                    table.insert(newconds, {"this", {this_text_unitid}})
                     for a,b in ipairs(conds) do
                         table.insert(newconds, b)
                     end
 
-                    table.insert(target_options, {rule = newrule, conds = newconds})
+                    table.insert(target_options, {rule = newrule, conds = newconds, notrule = false, showrule = true})
                 end
             end
         end
@@ -446,7 +431,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
                             for a,b in ipairs(option.conds) do
                                 table.insert(newconds, b)
                             end
-                            table.insert(property_options, {rule = newrule, conds = newconds})
+                            table.insert(property_options, {rule = newrule, conds = newconds, newrule = option.notrule, showrule = option.showrule})
                         end
                     end
                 end
@@ -454,7 +439,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
         end
 
         for _, option in ipairs(property_options) do
-            table.insert(final_options, {rule = option.rule, conds=option.conds, ids=ids, tags=tags})
+            table.insert(final_options, {rule = option.rule, conds=option.conds, ids=ids, tags=tags, notrule = option.notrule, showrule = option.showrule})
         end
         if #property_options == 0 then
             -- @ Note: this is meant to trick postrules to display the active particles even
@@ -464,15 +449,18 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
     end
 
     for _, option in ipairs(final_options) do
-        addoption(option.rule,option.conds,option.ids,true,nil,option.tags)
+        local notrule = nil
+        if option.notrule then
+            print(option.rule[3])
+            -- notrule = {option.rule[3], #featureindex[option.rule[3]]}
+        end
+        addoption(option.rule,option.conds,option.ids,option.showrule,notrule,option.tags)
     end
 end
 
 function do_subrule_this()
-    print("do subrule this")
     function block_filter(unitid)
         local unit = mmf.newObject(unitid)
-        -- print(unit.strings[NAME])
         return unit.strings[NAME] == "block"
     end
     function other_filter(unitid)

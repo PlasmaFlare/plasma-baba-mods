@@ -1207,11 +1207,11 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		local rule = {option,conds,ids,tags}
 		-- Defer processing any sentences with "this" as target or effect. Special exception is "not this" as target
 		-- since it translates to "all" with a custom "not this" condtype
-		if is_name_text_this(option[1]) or is_name_text_this(option[3]) then
-			defer_addoption_with_this(rule, false)
+		if is_name_text_this(option[1]) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
+			defer_addoption_with_this(rule)
 			return
-		elseif is_name_text_this(option[1], true) or is_name_text_this(option[3], true) then
-			defer_addoption_with_this(rule, true)
+		elseif is_name_text_this(option[1], true) then
+			defer_addoption_with_this(rule)
 			return
 		end
 
@@ -1345,16 +1345,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		local targetnot = string.sub(target, 1, 4)
 		local targetnot_ = string.sub(target, 5)
 		
-		-- @This mod - dealing with "not this is X"
-		if targetnot == "not " and is_name_text_this(targetnot_) then
-			local rule = {"all",verb,effect}
-			local newconds = {}
-			table.insert(newconds, {"not this", {ids[1][1]}})
-			for a,b in ipairs(conds) do
-				table.insert(newconds, b)
-			end
-			addoption(rule,newconds,ids,false,{effect,#featureindex[effect]},tags)
-		elseif (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") then
+		if (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") then
 			if (targetnot_ ~= "all") then
 				for i,mat in pairs(objectlist) do
 					if (i ~= targetnot_) and (findnoun(i) == false) then
@@ -1382,13 +1373,12 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 	end
 end
 
--- @mods this text
 function code(alreadyrun_)
-	--@This mod - Override reason: need to call update_raycast_units() before rule parsing regardless of if updatecode == 1. Helps indicators 
-	-- 			  Override reason: provide hook for do_subrule_this()
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
+	update_raycast_units(true)
+	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")
@@ -1513,7 +1503,6 @@ function code(alreadyrun_)
 				
 				docode(firstwords,wordunits)
 				subrules()
-				-- do_subrule_this()
 				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
