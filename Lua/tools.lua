@@ -186,10 +186,8 @@ function writerules(parent,name,x_,y_)
 					end
 				end
 				if num_this_conds > 0 then
-					text = this_cond.."("..rule[1]..")".." "
-				else 
-					text = text .. rule[1] .. " "
-				end
+					text = this_cond.." ("..rule[1]..")".." "
+				end 
 
 				for a,cond in ipairs(conds) do
 					local middlecond = true

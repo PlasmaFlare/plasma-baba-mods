@@ -1210,7 +1210,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		if is_name_text_this(option[1]) or is_name_text_this(option[3]) then
 			defer_addoption_with_this(rule, false)
 			return
-		elseif is_name_text_this(option[3], true) then
+		elseif is_name_text_this(option[1], true) or is_name_text_this(option[3], true) then
 			defer_addoption_with_this(rule, true)
 			return
 		end
@@ -1301,13 +1301,14 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 						for a,b in ipairs(cond[2]) do
 							if is_name_text_this(b) or is_name_text_this(b, true) then
 								local this_unitid = this_params_in_conds[cond][a]
-								if not is_this_param_id_registered(this_unitid) then
+
+								local is_param_this_formatted = parse_this_param_and_get_raycast_units(b)
+								if not is_param_this_formatted then
 									local param_id = register_this_param_id(this_unitid)
 									table.insert(newconds, b.." "..param_id)
 								else
 									table.insert(newconds, b)
 								end
-
 							elseif (b ~= "all") and (b ~= "not all") then
 								alreadyused[b] = 1
 								table.insert(newconds, b)
@@ -1383,13 +1384,11 @@ end
 
 -- @mods this text
 function code(alreadyrun_)
-	--@This mod - Override reason: need to call update_raycast_units() before rule parsing regardless of if updatecode == 1
+	--@This mod - Override reason: need to call update_raycast_units() before rule parsing regardless of if updatecode == 1. Helps indicators 
 	-- 			  Override reason: provide hook for do_subrule_this()
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	update_raycast_units()
-	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")
@@ -1513,8 +1512,8 @@ function code(alreadyrun_)
 				end
 				
 				docode(firstwords,wordunits)
-				do_subrule_this()
 				subrules()
+				-- do_subrule_this()
 				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
@@ -1553,6 +1552,230 @@ function code(alreadyrun_)
 	end
 	
 	do_mod_hook("rule_update_after",{alreadyrun})
+end
+
+function subrules()
+	local mimicprotects = {}
+	
+	if (featureindex["all"] ~= nil) then
+		for k,rules in ipairs(featureindex["all"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local ids = rules[3]
+			local tags = rules[4]
+			
+			if (rule[3] == "all") then
+				if (rule[2] ~= "is") then
+					local nconds = {}
+					
+					if (featureindex["not all"] ~= nil) then
+						for a,prules in ipairs(featureindex["not all"]) do
+							local prule = prules[1]
+							local pconds = prules[2]
+							
+							if (prule[1] == rule[1]) and (prule[2] == rule[2]) and (prule[3] == "not all") then
+								local ipconds = invertconds(pconds)
+								
+								for c,d in ipairs(ipconds) do
+									table.insert(nconds, d)
+								end
+							end
+						end
+					end
+					
+					for i,mat in pairs(objectlist) do
+						if (findnoun(i) == false) then
+							local newrule = {rule[1],rule[2],i}
+							local newconds = {}
+							for a,b in ipairs(conds) do
+								table.insert(newconds, b)
+							end
+							for a,b in ipairs(nconds) do
+								table.insert(newconds, b)
+							end
+							addoption(newrule,newconds,ids,false,nil,tags)
+						end
+					end
+				end
+			end
+
+			if (rule[1] == "all") and (string.sub(rule[3], 1, 4) ~= "not ") then
+				local nconds = {}
+				
+				if (featureindex["not all"] ~= nil) then
+					for a,prules in ipairs(featureindex["not all"]) do
+						local prule = prules[1]
+						local pconds = prules[2]
+						
+						if (prule[1] == rule[1]) and (prule[2] == rule[2]) and (prule[3] == "not " .. rule[3]) then
+							local ipconds = invertconds(pconds)
+							
+							if crashy_ then
+								crashy = true
+							end
+							
+							for c,d in ipairs(ipconds) do
+								table.insert(nconds, d)
+							end
+						end
+					end
+				end
+				
+				for i,mat in pairs(objectlist) do
+					if (findnoun(i) == false) then
+						local newrule = {i,rule[2],rule[3]}
+						local newconds = {}
+						for a,b in ipairs(conds) do
+							table.insert(newconds, b)
+						end
+						for a,b in ipairs(nconds) do
+							table.insert(newconds, b)
+						end
+						addoption(newrule,newconds,ids,false,nil,tags)
+					end
+				end
+			end
+			
+			if (rule[1] == "all") and (string.sub(rule[3], 1, 4) == "not ") then
+				for i,mat in pairs(objectlist) do
+					if (findnoun(i) == false) then
+						local newrule = {i,rule[2],rule[3]}
+						local newconds = {}
+						for a,b in ipairs(conds) do
+							table.insert(newconds, b)
+						end
+						addoption(newrule,newconds,ids,false,nil,tags)
+					end
+				end
+			end
+		end
+	end
+
+	do_subrule_this()
+	
+	if (featureindex["mimic"] ~= nil) then
+		for i,rules in ipairs(featureindex["mimic"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local tags = rules[4]
+			
+			if (rule[2] == "mimic") then
+				local object = rule[1]
+				local target = rule[3]
+				
+				local isnot = false
+				
+				if (string.sub(target, 1, 4) == "not ") then
+					target = string.sub(target, 5)
+					isnot = true
+				end
+				
+				if isnot then
+					if (mimicprotects[object] == nil) then
+						mimicprotects[object] = {}
+					end
+					
+					table.insert(mimicprotects[object], {target, conds, rule[3]})
+				end
+			end
+		end
+	end
+	
+	if (featureindex["mimic"] ~= nil) then
+		for i,rules in ipairs(featureindex["mimic"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local tags = rules[4]
+			
+			if (rule[2] == "mimic") then
+				local object = rule[1]
+				local target = rule[3]
+				local mprotects = mimicprotects[object] or {}
+				local extraconds = {}
+				
+				local valid = true
+				
+				if (string.sub(target, 1, 4) == "not ") then
+					valid = false
+				end
+				
+				for a,b in ipairs(mprotects) do
+					if (b[1] == target) then
+						local pconds = b[2]
+						
+						if (#pconds == 0) then
+							valid = false
+						else
+							local newconds = invertconds(pconds)
+							
+							for c,d in ipairs(newconds) do
+								table.insert(extraconds, d)
+							end
+						end
+					end
+				end
+				
+				local copythese = {}
+				
+				if valid then
+					if (getmat(object) ~= nil) and (getmat(target) ~= nil) then
+						if (featureindex[target] ~= nil) then
+							copythese = featureindex[target]
+						end
+					end
+				
+					for a,b in ipairs(copythese) do
+						local trule = b[1]
+						local tconds = b[2]
+						local ids = b[3]
+						local ttags = b[4]
+						
+						local valid = true
+						for c,d in ipairs(ttags) do
+							if (d == "mimic") then
+								valid = false
+							end
+						end
+						
+						if (trule[1] == target) and (trule[2] ~= "mimic") and valid then
+							local newconds = {}
+							local newtags = {}
+							
+							for c,d in ipairs(tconds) do
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(conds) do
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(extraconds) do
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(ttags) do
+								table.insert(newtags, d)
+							end
+							
+							for c,d in ipairs(tags) do
+								table.insert(newtags, d)
+							end
+							
+							table.insert(newtags, "mimic")
+							
+							local newword1 = object
+							local newword2 = trule[2]
+							local newword3 = trule[3]
+							
+							local newrule = {newword1, newword2, newword3}
+							
+							addoption(newrule,newconds,ids,true,nil,newtags)
+						end
+					end
+				end
+			end
+		end
+	end
 end
 
 -- @mods this text
