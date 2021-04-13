@@ -11,6 +11,7 @@ function reset_this_mod_globals()
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
         on_level_start = false,
         deferred_rules_with_this = {["this"] = {}, ["not this"] = {}}, --     
+        on_already_run = false,
     
         -- These two globals assist in making regular infix conditions with "this" work.
         -- Infix conditions have a list of parameters that determine what objects to compare the testing object
@@ -71,15 +72,18 @@ table.insert(mod_hook_functions["command_given"],
 )
 
 table.insert(mod_hook_functions["rule_update"],
-    function()
-        this_mod_globals.this_param_to_unitid = {}
-        this_mod_globals.registered_this_unitid_as_params = {}
+    function(is_this_a_repeated_update)
+        this_mod_globals.on_already_run = is_this_a_repeated_update
+        if not is_this_a_repeated_update then
+            this_mod_globals.this_param_to_unitid = {}
+            this_mod_globals.registered_this_unitid_as_params = {}
+        end
         this_mod_globals.deferred_rules_with_this = {}
     end
 )
 table.insert(mod_hook_functions["rule_update_after"],
     function()
-        if this_mod_globals.on_level_-start then
+        if this_mod_globals.on_level_start then
             this_mod_globals.on_level_start = false
         end
         if this_mod_globals.undoed_after_called then
@@ -365,7 +369,6 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
         if prop_isnot then
             property = string.sub(property, 5)
         end
-
         -- Process target first
         local target_options = {}
         if not is_name_text_this(target) then
@@ -383,6 +386,11 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
                         end
                         table.insert(target_options, {rule = newrule, conds = newconds, notrule = true, showrule = false})
                     end
+                end
+                
+                -- Rule display in pause menu
+                if #target_options > 0 and filter_property_func(ids[3][1]) then
+                    table.insert(visualfeatures, {rule, conds, ids, tags})
                 end
             else
                 for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
@@ -451,7 +459,10 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
     for _, option in ipairs(final_options) do
         local notrule = nil
         if option.notrule then
-            print(option.rule[3])
+            -- table.insert(features, {{"sdfsfdthis", option.rule[2], option.rule[3]},option.conds,option.ids,option.tags})
+            -- table.insert(visualfeatures, {{"",option.rule[2],option.rule[3]}, option.conds, option.ids, option.tags})
+            -- addoption({"abs", option.rule[2], option.rule[3]},option.conds,option.ids,true,notrule,option.tags)
+            -- print(option.rule[3])
             -- notrule = {option.rule[3], #featureindex[option.rule[3]]}
         end
         addoption(option.rule,option.conds,option.ids,option.showrule,notrule,option.tags)
