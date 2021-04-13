@@ -247,10 +247,10 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 					local domove = false
 					local turndir = 0
 					local ox,oy = 0,0
-
-					local v = MF_getfixed(spritedata.values[CAMTARGET])
 					
-					if (v ~= 2) then
+					local v = MF_getfixed(spritedata.values[CAMTARGET]) or 0
+					
+					if (v ~= 2) and (v ~= 0) then
 						local unit = mmf.newObject(v)
 						
 						local udir = unit.values[DIR]
@@ -1088,8 +1088,11 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	if (#vistest > 0) or (#vt2 > 0) then
 		local target = vistest[1] or vt[1]
 		visionmode(1)
-	else
-		visionmode(0)
+	elseif (spritedata.values[VISION] == 1) then
+		local vistest2 = findfeature(nil,"is","3d")
+		if (vistest2 == nil) then
+			visionmode(0)
+		end
 	end
 
 end

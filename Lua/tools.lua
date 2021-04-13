@@ -112,8 +112,22 @@ function delunit(unitid)
 					table.remove(wordrelatedunits, i)
 				end
 			end
-        end
-        
+		end
+		
+		if (#visiontargets > 0) then
+			for i,v in pairs(visiontargets) do
+				if (v == unitid) then
+					local currentundo = undobuffer[1]
+					table.insert(currentundo.visiontargets, unit.values[ID])
+					v = {}
+					table.remove(visiontargets, i)
+				end
+			end
+			
+			if (spritedata.values[CAMTARGET] == unitid) then
+				changevisiontarget()
+			end
+		end
 	else
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))
 	end
@@ -288,3 +302,4 @@ function writerules(parent,name,x_,y_)
 		writetext("(+ " .. tostring(i_ - maxlimit) .. ")",0,x,y,name,true,2,true)
 	end
 end
+

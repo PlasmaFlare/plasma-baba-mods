@@ -2454,15 +2454,25 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (checkedconds[tostring(dconds)] == nil) then
 								if (string.sub(drule[1], 1, 4) ~= "not ") and (drule[2] == "is") and (drule[3] == "power") then
-									if (unitlists[drule[1]] ~= nil) then
-										checkedconds[tostring(dconds)] = 1
-										
-										for e,f in ipairs(unitlists[drule[1]]) do
-											if testcond(dconds,f,x,y,nil,limit,checkedconds) then
-												found = true
-												break
+									if (drule[1] ~= "empty") and (drule[1] ~= "level") then
+										if (unitlists[drule[1]] ~= nil) then
+											checkedconds[tostring(dconds)] = 1
+											
+											for e,f in ipairs(unitlists[drule[1]]) do
+												if testcond(dconds,f,x,y,nil,limit,checkedconds) then
+													found = true
+													break
+												end
 											end
 										end
+									elseif (drule[1] == "empty") then
+										local empties = findempty(dconds,true)
+										
+										if (#empties > 0) then
+											found = true
+										end
+									elseif (drule[1] == "level") and testcond(dconds,2,x,y,nil,limit,checkedconds) then
+										found = true
 									end
 								end
 							end
@@ -2494,15 +2504,25 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (checkedconds[tostring(dconds)] == nil) then
 								if (string.sub(drule[1], 1, 4) ~= "not ") and (drule[2] == "is") and (drule[3] == "power") then
-									if (unitlists[drule[1]] ~= nil) then
-										checkedconds[tostring(dconds)] = 1
-										
-										for e,f in ipairs(unitlists[drule[1]]) do
-											if testcond(dconds,f,x,y,nil,limit,checkedconds) then
-												found = true
-												break
+									if (drule[1] ~= "empty") and (drule[1] ~= "level") then
+										if (unitlists[drule[1]] ~= nil) then
+											checkedconds[tostring(dconds)] = 1
+											
+											for e,f in ipairs(unitlists[drule[1]]) do
+												if testcond(dconds,f,x,y,nil,limit,checkedconds) then
+													found = true
+													break
+												end
 											end
 										end
+									elseif (drule[1] == "empty") then
+										local empties = findempty(dconds,true)
+										
+										if (#empties > 0) then
+											found = true
+										end
+									elseif (drule[1] == "level") and testcond(dconds,2,x,y,nil,limit,checkedconds) then
+										found = true
 									end
 								end
 							end
