@@ -27,8 +27,13 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 
 **If you are new to baba modding**, [check this more detailed guide I made for installing this mod.](docs/installation_guide.md)
 
-# Known Bugs
-- Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette
+----
+## Known Bugs that might be too complex to fix
+- Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
+- "This is group is block" does not work.
+## Potential bugs that might also be too complex to fix
+- Messing around with THIS + special nouns (All, Empty, Group) will most likely encounter some weird behaviors
+- Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
 - **1.1.0** (4/9/21)

@@ -226,7 +226,7 @@ function update_raycast_units(checkblocked_)
     
     if checkblocked then
         this_mod_globals.blocked_tiles = {}
-        -- all_block = findfeature("all", "is", "block") ~= nil
+        all_block = findfeature("all", "is", "block") ~= nil
     end
     for i,unitid in ipairs(codeunits) do
         local unit = mmf.newObject(unitid)
@@ -457,15 +457,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked)
     end
 
     for _, option in ipairs(final_options) do
-        local notrule = nil
-        if option.notrule then
-            -- table.insert(features, {{"sdfsfdthis", option.rule[2], option.rule[3]},option.conds,option.ids,option.tags})
-            -- table.insert(visualfeatures, {{"",option.rule[2],option.rule[3]}, option.conds, option.ids, option.tags})
-            -- addoption({"abs", option.rule[2], option.rule[3]},option.conds,option.ids,true,notrule,option.tags)
-            -- print(option.rule[3])
-            -- notrule = {option.rule[3], #featureindex[option.rule[3]]}
-        end
-        addoption(option.rule,option.conds,option.ids,option.showrule,notrule,option.tags)
+        addoption(option.rule,option.conds,option.ids,option.showrule,nil,option.tags)
     end
 end
 

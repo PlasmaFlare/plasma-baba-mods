@@ -1880,7 +1880,6 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pnot = true
 								pname = string.sub(b, 5)
 							end
-							print("in above: "..tostring(pname))
 
 							local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
 
@@ -2070,7 +2069,6 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							print("in not above: "..tostring(pname))
 							local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
 							
 							local bcode = b .. "_" .. tostring(a)
