@@ -1,5 +1,5 @@
 function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
-    --@Turning text - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it doesn't have an actual object associated
+    --@This - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it doesn't have an actual object associated
     -- with it. Therefore, exclude "this" from "all" 
 	local all = {}
 	local empty = false

@@ -3,27 +3,39 @@ THIS mod adds THIS, a new special noun whose meaning is whichever objects THIS p
 
 Here it is in action:
 
-<img src="gifs/this_mod_demo.gif" alt="drawing" width="600"/>
+<img src="gifs/this_mod_demo.gif" alt="drawing" width="400"/>
+
+Seems pretty op right? Well to control this, this mod also adds a few properties that limit what THIS points to.
 
 ---
-Seems pretty op right? Well to control this, this mod also adds a new property: **BLOCK**
+##  **BLOCK**
 
-Objects that are block prevent itself and any objects on it from being referred by any this. So you can still hide text behind walls without worrying about cheese with THIS.
+Objects that are block prevent itself and any objects on it from being referred by any this. It also stops THIS from raycasting any further when it reaches the blocked object.
 
-<img src="gifs/this_mod_block.gif" alt="drawing" width="600"/>
+<img src="gifs/this_mod_block.gif" alt="drawing" width="400"/>
+---
+##  **PASS**
+Pass objects will be ignored by any other raycasts coming from THIS texts. This allows for background objects to be ignored as if they were empty. 
+
+<img src="gifs/this_mod_pass.gif" alt="drawing" width="400"/>
+
+### Note about Block and Pass edge cases
+- Blocks should have priority over passes
+- "This is pass" or "This is block" works, but trying to mix these together will reveal weird edge cases with some experimentation
+- Since block and pass were designed to be used in constant rules (e.g: wall is stop and block), I'm not too inclined to fix edge cases where block and/or pass are being used dynamically.
 
 ## **Multiple thises with different colors**
 The THIS indicators change color depending on the color of THIS. This can help differentiate between the different THIS's and which objects each of the are pointing to.
 
-Unfortunately baba doesn't allow two objects to share the exact name. So I programmed this mod to treat all objects with the name "this\<string_with_no_spaces>" to treat as "this". (So this2, this34, thiswhyisthissolong, are all valid).
+Unfortunately baba doesn't allow two objects to share the exact name. So I programmed this mod to treat all objects with the name "text_this\<string_with_no_spaces>" to treat as "this". (So text_this2, text_this34, text_thiswhyisthissolong, are all valid).
 
-Here are the steps to add a this with different color:
-1. In the object palette, click the baba icon with "abc" to make it checked. Then select an object in the palette to change into a "this" object.
-2. Click "Change Sprite" and select the "this" sprite
+Here are the steps to add a THIS with different color:
+1. In the object palette, click the baba icon with "abc" to make it checked. Then select an object in the palette that you want to change into a THIS object.
+2. Click "Change Sprite" and select the THIS sprite
 3. Click "Change Name" and rename to "text_this\<string_with_no_spaces>"
 4. Click "Change Type" and input "Text"
 5. Configure "Base Color" and "Active Color" to whatever color you want.
 6. Set "Animation Type" to "none"
 7. Set "Text Type" to "baba"
 
-The "this" text should now be ready to use.
+The THIS text should now be ready to use.

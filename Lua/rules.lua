@@ -1379,7 +1379,7 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	update_raycast_units(true)
+	update_raycast_units(true, false)
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
@@ -1744,26 +1744,6 @@ function postrules(alreadyrun_)
 						for c,b in ipairs(d) do
 							if (b ~= 0) then
 								local bunit = mmf.newObject(b)
-								if is_name_text_this(bunit.strings[NAME]) and a == 3 then
-									for _, runit in ipairs(get_raycast_units(b, true)) do
-										local ray_unit = mmf.newObject(runit)
-										if is_unit_valid_this_property(runit, rule[2]) and ray_unit.strings[UNITTYPE] == "text" then
-											setcolour(runit,"active")
-											newruleids[runit] = 1
-											if (ruleids[runit] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
-												if (ruleeffectlimiter[runit] == nil) then
-													local x,y = ray_unit.values[XPOS],ray_unit.values[YPOS]
-													local c1,c2 = getcolour(runit,"active")
-													MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,runit)
-													ruleeffectlimiter[runit] = 1
-												end
-												
-												playrulesound = true
-											end
-										end
-									end
-								end
-								
 								if (bunit.strings[UNITTYPE] == "text") then
 									bunit.active = true
 									setcolour(b,"active")
@@ -1844,6 +1824,21 @@ function postrules(alreadyrun_)
 		end
 	end
 
+	for unitid, _ in pairs(this_mod_globals.active_this_property_text) do
+		local unit = mmf.newObject(unitid)
+        setcolour(unitid,"active")
+        newruleids[unitid] = 1
+        if (ruleids[unitid] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
+            if (ruleeffectlimiter[unitid] == nil) then
+                local x,y = unit.values[XPOS],unit.values[YPOS]
+                local c1,c2 = getcolour(unitid,"active")
+                MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,unitid)
+                ruleeffectlimiter[unitid] = 1
+            end
+            
+            playrulesound = true
+		end
+	end
 	for _, unitid in ipairs(filler_mod_globals.active_filler_text) do
         local unit = mmf.newObject(unitid)
         setcolour(unitid,"active")
