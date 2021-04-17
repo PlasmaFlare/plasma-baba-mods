@@ -190,11 +190,7 @@ function update_this_cursor(wordunit, cursorunit)
             cursorunit.values[ZLAYER] = 39
             cursorunit.direction = 28
             MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
-            if wordunit.active then
-                c1,c2 = getcolour(wordunit.fixed, "active")
-            else
-                c1,c2 = getcolour(wordunit.fixed)
-            end
+            c1,c2 = wordunit.colour[1],wordunit.colour[2]
         end
     
         MF_setcolour(cursorunit.fixed,c1,c2)

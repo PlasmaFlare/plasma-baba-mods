@@ -26,7 +26,8 @@ Pass objects will be ignored by any other raycasts coming from THIS texts. This 
 ### Note about Block and Pass edge cases
 - Blocks should have priority over passes
 - Block and pass don't work with group. Since group is being reworked by Hempuli, I won't bother fixing this until the group code is stable.
-- "This is pass" or "This is block" works, but trying to mix these together will reveal weird edge cases with some experimentation
+- "This is pass" or "This is block" only applies to other THISes that are *not* part of the original sentence. So if "This(rock) is pass", other THISes cannot refer to the rock pointed by the original THIS.
+- Mixing together block and pass will most likely reveal weird edge cases with some experimentation.
 - Since block and pass were designed to be used in constant rules (e.g: wall is stop and block), I'm not too inclined to fix edge cases where block and/or pass are being used dynamically.
 
 ## **Multiple thises with different colors**
