@@ -1,7 +1,13 @@
-function moveblock()
-	local isshift = findallfeature(nil,"is","shift",true)
-	local istele = findallfeature(nil,"is","tele",true)
+function moveblock(onlystartblock_)
+	local onlystartblock = onlystartblock_ or false
+	
+	local isshift,istele = {},{}
 	local isfollow = findfeature(nil,"follow",nil,true)
+	
+	if (onlystartblock == false) then
+		isshift = findallfeature(nil,"is","shift",true)
+		istele = findallfeature(nil,"is","tele",true)
+	end
 	
 	local doned = {}
 	
@@ -143,26 +149,32 @@ function moveblock()
 							
 							if (followedfound == false) then
 								if (highpriorityfollow > -1) then
-									addundo({"followed",unit.values[ID],unit.followed,highpriorityfollow},unit.fixed)
+									if (onlystartblock == false) then
+										addundo({"followed",unit.values[ID],unit.followed,highpriorityfollow},unit.fixed)
+									end
 									unit.followed = highpriorityfollow
 									targetdir = highpriorityfollowdir
 									stophere = true
 									followedfound = true
 								elseif (priorityfollow > -1) then
-									addundo({"followed",unit.values[ID],unit.followed,priorityfollow},unit.fixed)
+									if (onlystartblock == false) then
+										addundo({"followed",unit.values[ID],unit.followed,priorityfollow},unit.fixed)
+									end
 									unit.followed = priorityfollow
 									targetdir = priorityfollowdir
 									stophere = true
 									followedfound = true
 								elseif (unit.followed > -1) then
-									addundo({"followed",unit.values[ID],unit.followed,0},unit.fixed)
+									if (onlystartblock == false) then
+										addundo({"followed",unit.values[ID],unit.followed,0},unit.fixed)
+									end
 									unit.followed = -1
 								end
 							end
 			
 							if (targetdir >= 0) then
 								--MF_alert(unit.strings[UNITNAME] .. " faces to " .. tostring(targetdir))
-                                updatedir(unit.fixed,targetdir)
+								updatedir(unit.fixed,targetdir,onlystartblock)
 							end
 						end
 					end
@@ -171,235 +183,237 @@ function moveblock()
 		end
 	end
 	
-	local isback = findallfeature(nil,"is","back",true)
-	
-	for i,unitid in ipairs(isback) do
-		local unit = mmf.newObject(unitid)
+	if (onlystartblock == false) then
+		local isback = findallfeature(nil,"is","back",true)
 		
-		local undooffset = #undobuffer - unit.back_init
-		
-		local undotargetid = undooffset * 2 + 1
-		
-		if (undotargetid <= #undobuffer) and (unit.back_init > 0) and (unit.flags[DEAD] == false) then
-			local currentundo = undobuffer[undotargetid]
-			
-			particles("wonder",unit.values[XPOS],unit.values[YPOS],1,{3,0})
-			
-			updateundo = true
-			
-			if (currentundo ~= nil) then
-				for a,line in ipairs(currentundo) do
-					local style = line[1]
-					
-					if (style == "update") and (line[9] == unit.values[ID]) then
-						local uid = line[9]
-						
-						if (paradox[uid] == nil) then
-							local ux,uy = unit.values[XPOS],unit.values[YPOS]
-							local oldx,oldy = line[6],line[7]
-							local x,y,dir = line[3],line[4],line[5]
-							
-							local ox = x - oldx
-							local oy = y - oldy
-							
-							--[[
-							Enable this to make the Back effect relative to current position
-							x = ux + ox
-							y = uy + oy
-							]]--
-							
-							--MF_alert(unit.strings[UNITNAME] .. " is being updated from " .. tostring(ux) .. ", " .. tostring(uy) .. ", offset " .. tostring(ox) .. ", " .. tostring(oy))
-							
-							if (ox ~= 0) or (oy ~= 0) then
-								addaction(unitid,{"update",x,y,dir})
-							else
-								addaction(unitid,{"updatedir",dir})
-							end
-							updateundo = true
-							
-							if (objectdata[unitid] == nil) then
-								objectdata[unitid] = {}
-							end
-							
-							local odata = objectdata[unitid]
-							
-							odata.tele = 1
-						else
-							particles("hot",line[3],line[4],1,{1, 1})
-							updateundo = true
-						end
-					elseif (style == "create") and (line[3] == unit.values[ID]) then
-						local uid = line[4]
-						
-						--MF_alert(unit.strings[UNITNAME] .. " back: " .. tostring(uid) .. ", " .. tostring(line[3]))
-						
-						if (paradox[uid] == nil) then
-							local name = unit.strings[UNITNAME]
-							
-							local delname = {}
-							
-							for b,bline in ipairs(currentundo) do
-								--MF_alert(" -- " .. bline[1] .. ", " .. tostring(bline[6]))
-								
-								if (bline[1] == "remove") and (bline[6] == uid) then
-									local x,y,dir,levelfile,levelname,vislevel,complete,visstyle,maplevel,colour,clearcolour,followed,back_init = bline[3],bline[4],bline[5],bline[8],bline[9],bline[10],bline[11],bline[12],bline[13],bline[14],bline[15],bline[16],bline[17]
-									
-									local newname = bline[2]
-									
-									local newunitname = ""
-									local newunitid = 0
-									
-									local ux,uy = unit.values[XPOS],unit.values[YPOS]
-									
-									newunitname = unitreference[newname]
-									newunitid = MF_emptycreate(newunitname,ux,uy)
-									
-									local newunit = mmf.newObject(newunitid)
-									newunit.values[ONLINE] = 1
-									newunit.values[XPOS] = ux
-									newunit.values[YPOS] = uy
-									newunit.values[DIR] = dir
-									newunit.values[ID] = bline[6]
-									newunit.flags[9] = true
-									
-									newunit.strings[U_LEVELFILE] = levelfile
-									newunit.strings[U_LEVELNAME] = levelname
-									newunit.flags[MAPLEVEL] = maplevel
-									newunit.values[VISUALLEVEL] = vislevel
-									newunit.values[VISUALSTYLE] = visstyle
-									newunit.values[COMPLETED] = complete
-									
-									newunit.strings[COLOUR] = colour
-									newunit.strings[CLEARCOLOUR] = clearcolour
-									
-									if (newunit.className == "level") then
-										MF_setcolourfromstring(newunitid,colour)
-									end
-									
-									addunit(newunitid,true)
-									addunitmap(newunitid,x,y,newunit.strings[UNITNAME])
-									dynamic(unitid)
-									
-									newunit.followed = followed
-									newunit.back_init = back_init
-									
-									if (newunit.strings[UNITTYPE] == "text") then
-										updatecode = 1
-									end
-									
-									local undowordunits = currentundo.wordunits
-									local undowordrelatedunits = currentundo.wordrelatedunits
-									
-									if (#undowordunits > 0) then
-										for a,b in ipairs(undowordunits) do
-											if (b == bline[6]) then
-												updatecode = 1
-											end
-										end
-									end
-									
-									local uname = getname(newunit)
-									
-									if (#undowordrelatedunits > 0) then
-										for a,b in ipairs(undowordrelatedunits) do
-											if (b == bline[6]) then
-												updatecode = 1
-											end
-										end
-									end
-									
-									table.insert(delname, {newunit.strings[UNITNAME], bline[6]})
-								end
-							end
-							
-							addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init})
-							
-							for a,b in ipairs(delname) do
-								MF_alert("added undo for " .. b[1] .. " with ID " .. tostring(b[2]))
-								addundo({"create",b[1],b[2],b[2],"back"})
-							end
-							
-							delunit(unitid)
-							dynamic(unitid)
-							MF_specialremove(unitid,2)
-						end
-					end
-				end
-			end
-		end
-	end
-	
-	doupdate()
-	
-	for i,unitid in ipairs(istele) do
-		if (isgone(unitid) == false) then
+		for i,unitid in ipairs(isback) do
 			local unit = mmf.newObject(unitid)
-			local name = getname(unit)
-			local x,y = unit.values[XPOS],unit.values[YPOS]
-		
-			local targets = findallhere(x,y)
-			local telethis = false
-			local telethisx,telethisy = 0,0
 			
-			if (#targets > 0) then
-				for i,v in ipairs(targets) do
-					local vunit = mmf.newObject(v)
-					local thistype = vunit.strings[UNITTYPE]
-					local vname = getname(vunit)
-					
-					local targetvalid = isgone(v)
-					local targetstill = hasfeature(vname,"is","still",v,x,y)
-					-- Luultavasti ei väliä onko kohde tuhoutumassa?
-					
-					if (targetstill == nil) and floating(v,unitid,x,y) then
-						local targetname = getname(vunit)
-						if (objectdata[v] == nil) then
-							objectdata[v] = {}
-						end
+			local undooffset = #undobuffer - unit.back_init
+			
+			local undotargetid = undooffset * 2 + 1
+			
+			if (undotargetid <= #undobuffer) and (unit.back_init > 0) and (unit.flags[DEAD] == false) then
+				local currentundo = undobuffer[undotargetid]
+				
+				particles("wonder",unit.values[XPOS],unit.values[YPOS],1,{3,0})
+				
+				updateundo = true
+				
+				if (currentundo ~= nil) then
+					for a,line in ipairs(currentundo) do
+						local style = line[1]
 						
-						local odata = objectdata[v]
-						
-						if (odata.tele == nil) then
-							if (targetname ~= name) and (v ~= unitid) then
-								local teles = istele
+						if (style == "update") and (line[9] == unit.values[ID]) then
+							local uid = line[9]
+							
+							if (paradox[uid] == nil) then
+								local ux,uy = unit.values[XPOS],unit.values[YPOS]
+								local oldx,oldy = line[6],line[7]
+								local x,y,dir = line[3],line[4],line[5]
 								
-								if (#teles > 1) then
-									local teletargets = {}
-									local targettele = 0
+								local ox = x - oldx
+								local oy = y - oldy
+								
+								--[[
+								Enable this to make the Back effect relative to current position
+								x = ux + ox
+								y = uy + oy
+								]]--
+								
+								--MF_alert(unit.strings[UNITNAME] .. " is being updated from " .. tostring(ux) .. ", " .. tostring(uy) .. ", offset " .. tostring(ox) .. ", " .. tostring(oy))
+								
+								if (ox ~= 0) or (oy ~= 0) then
+									addaction(unitid,{"update",x,y,dir})
+								else
+									addaction(unitid,{"updatedir",dir})
+								end
+								updateundo = true
+								
+								if (objectdata[unitid] == nil) then
+									objectdata[unitid] = {}
+								end
+								
+								local odata = objectdata[unitid]
+								
+								odata.tele = 1
+							else
+								particles("hot",line[3],line[4],1,{1, 1})
+								updateundo = true
+							end
+						elseif (style == "create") and (line[3] == unit.values[ID]) then
+							local uid = line[4]
+							
+							--MF_alert(unit.strings[UNITNAME] .. " back: " .. tostring(uid) .. ", " .. tostring(line[3]))
+							
+							if (paradox[uid] == nil) then
+								local name = unit.strings[UNITNAME]
+								
+								local delname = {}
+								
+								for b,bline in ipairs(currentundo) do
+									--MF_alert(" -- " .. bline[1] .. ", " .. tostring(bline[6]))
 									
-									for a,b in ipairs(teles) do
-										local tele = mmf.newObject(b)
-										local telename = getname(tele)
+									if (bline[1] == "remove") and (bline[6] == uid) then
+										local x,y,dir,levelfile,levelname,vislevel,complete,visstyle,maplevel,colour,clearcolour,followed,back_init = bline[3],bline[4],bline[5],bline[8],bline[9],bline[10],bline[11],bline[12],bline[13],bline[14],bline[15],bline[16],bline[17]
 										
-										if (b ~= unitid) and (telename == name) and (tele.flags[DEAD] == false) then
-											table.insert(teletargets, b)
+										local newname = bline[2]
+										
+										local newunitname = ""
+										local newunitid = 0
+										
+										local ux,uy = unit.values[XPOS],unit.values[YPOS]
+										
+										newunitname = unitreference[newname]
+										newunitid = MF_emptycreate(newunitname,ux,uy)
+										
+										local newunit = mmf.newObject(newunitid)
+										newunit.values[ONLINE] = 1
+										newunit.values[XPOS] = ux
+										newunit.values[YPOS] = uy
+										newunit.values[DIR] = dir
+										newunit.values[ID] = bline[6]
+										newunit.flags[9] = true
+										
+										newunit.strings[U_LEVELFILE] = levelfile
+										newunit.strings[U_LEVELNAME] = levelname
+										newunit.flags[MAPLEVEL] = maplevel
+										newunit.values[VISUALLEVEL] = vislevel
+										newunit.values[VISUALSTYLE] = visstyle
+										newunit.values[COMPLETED] = complete
+										
+										newunit.strings[COLOUR] = colour
+										newunit.strings[CLEARCOLOUR] = clearcolour
+										
+										if (newunit.className == "level") then
+											MF_setcolourfromstring(newunitid,colour)
 										end
+										
+										addunit(newunitid,true)
+										addunitmap(newunitid,x,y,newunit.strings[UNITNAME])
+										dynamic(unitid)
+										
+										newunit.followed = followed
+										newunit.back_init = back_init
+										
+										if (newunit.strings[UNITTYPE] == "text") then
+											updatecode = 1
+										end
+										
+										local undowordunits = currentundo.wordunits
+										local undowordrelatedunits = currentundo.wordrelatedunits
+										
+										if (#undowordunits > 0) then
+											for a,b in ipairs(undowordunits) do
+												if (b == bline[6]) then
+													updatecode = 1
+												end
+											end
+										end
+										
+										local uname = getname(newunit)
+										
+										if (#undowordrelatedunits > 0) then
+											for a,b in ipairs(undowordrelatedunits) do
+												if (b == bline[6]) then
+													updatecode = 1
+												end
+											end
+										end
+										
+										table.insert(delname, {newunit.strings[UNITNAME], bline[6]})
 									end
+								end
+								
+								addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init})
+								
+								for a,b in ipairs(delname) do
+									MF_alert("added undo for " .. b[1] .. " with ID " .. tostring(b[2]))
+									addundo({"create",b[1],b[2],b[2],"back"})
+								end
+								
+								delunit(unitid)
+								dynamic(unitid)
+								MF_specialremove(unitid,2)
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		doupdate()
+		
+		for i,unitid in ipairs(istele) do
+			if (isgone(unitid) == false) then
+				local unit = mmf.newObject(unitid)
+				local name = getname(unit)
+				local x,y = unit.values[XPOS],unit.values[YPOS]
+			
+				local targets = findallhere(x,y)
+				local telethis = false
+				local telethisx,telethisy = 0,0
+				
+				if (#targets > 0) then
+					for i,v in ipairs(targets) do
+						local vunit = mmf.newObject(v)
+						local thistype = vunit.strings[UNITTYPE]
+						local vname = getname(vunit)
+						
+						local targetvalid = isgone(v)
+						local targetstill = hasfeature(vname,"is","still",v,x,y)
+						-- Luultavasti ei väliä onko kohde tuhoutumassa?
+						
+						if (targetstill == nil) and floating(v,unitid,x,y) then
+							local targetname = getname(vunit)
+							if (objectdata[v] == nil) then
+								objectdata[v] = {}
+							end
+							
+							local odata = objectdata[v]
+							
+							if (odata.tele == nil) then
+								if (targetname ~= name) and (v ~= unitid) then
+									local teles = istele
 									
-									if (#teletargets > 0) then
-										local randomtarget = fixedrandom(1, #teletargets)
-										targettele = teletargets[randomtarget]
-										local limit = 0
+									if (#teles > 1) then
+										local teletargets = {}
+										local targettele = 0
 										
-										while (targettele == unitid) and (limit < 10) do
-											randomtarget = fixedrandom(1, #teletargets)
-											targettele = teletargets[randomtarget]
-											limit = limit + 1
+										for a,b in ipairs(teles) do
+											local tele = mmf.newObject(b)
+											local telename = getname(tele)
+											
+											if (b ~= unitid) and (telename == name) and (tele.flags[DEAD] == false) then
+												table.insert(teletargets, b)
+											end
 										end
 										
-										odata.tele = 1
+										if (#teletargets > 0) then
+											local randomtarget = fixedrandom(1, #teletargets)
+											targettele = teletargets[randomtarget]
+											local limit = 0
+											
+											while (targettele == unitid) and (limit < 10) do
+												randomtarget = fixedrandom(1, #teletargets)
+												targettele = teletargets[randomtarget]
+												limit = limit + 1
+											end
+											
+											odata.tele = 1
+											
+											local tele = mmf.newObject(targettele)
+											local tx,ty = tele.values[XPOS],tele.values[YPOS]
+											local vx,vy = vunit.values[XPOS],vunit.values[YPOS]
 										
-										local tele = mmf.newObject(targettele)
-										local tx,ty = tele.values[XPOS],tele.values[YPOS]
-										local vx,vy = vunit.values[XPOS],vunit.values[YPOS]
-									
-										update(v,tx,ty)
-										
-										local pmult,sound = checkeffecthistory("tele")
-										
-										MF_particles("glow",vx,vy,5 * pmult,1,4,1,1)
-										MF_particles("glow",tx,ty,5 * pmult,1,4,1,1)
-										setsoundname("turn",6,sound)
+											update(v,tx,ty)
+											
+											local pmult,sound = checkeffecthistory("tele")
+											
+											MF_particles("glow",vx,vy,5 * pmult,1,4,1,1)
+											MF_particles("glow",tx,ty,5 * pmult,1,4,1,1)
+											setsoundname("turn",6,sound)
+										end
 									end
 								end
 							end
@@ -442,9 +456,9 @@ function moveblock()
 				end
 			end
 		end
+		
+		doupdate()
 	end
-	
-	doupdate()
 end
 
 function block(small_)

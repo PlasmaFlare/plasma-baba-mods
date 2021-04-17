@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: Beta 401 on PC**
+**Current compatable Baba Is You version: Beta 405 on PC**
 
 This is a merged collection of all of my Baba mods I made so far. Download this if you want to use all of my mods at once rather than individually.
 
@@ -36,9 +36,11 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
-- **1.1.0** (4/9/21)
-  - Updated for Beta 401
+- **1.1.0** (4/17/21)
+  - Updated for Beta 405
   - New mod: THIS
+  - Added BLOCK and PASS
   - Added a detailed guide for mod installation
+  - (Mostly) Fixed omni text not working when normal variation isn't in palette
 - **1.0.0** (4/2/21)
   - Initial Release
