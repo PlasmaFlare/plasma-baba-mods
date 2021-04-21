@@ -28,6 +28,12 @@ function reset_this_mod_globals()
 end   
 reset_this_mod_globals()
 
+table.insert(mod_hook_functions["rule_baserules"],
+    function()
+        addbaserule("empty", "is", "pass")
+    end
+)
+
 table.insert(mod_hook_functions["level_start"], 
     function()
         -- reset_this_mod()
@@ -97,6 +103,8 @@ function is_name_text_this(name, check_not_)
 end
 
 function is_unit_valid_this_property(unitid, verb)
+    if unitid == 2 then return true end
+        
     local unit = mmf.newObject(unitid)
     if unit.strings[UNITTYPE] == "object" then
         return true
@@ -225,16 +233,20 @@ function update_raycast_units(checkblocked_, checkpass_, processed_this_units_)
 
             local tileid = nil
             local blocked = false
+            local select_empty_tile = false
             local tile_pass = true
 
             while tile_pass do
                 tile_pass = false
-                local ray_pos,is_emptyblock = this_raycast(x, y, dir, checkblocked)
+                local ray_pos,is_emptyblock, select_empty = this_raycast(x, y, dir, checkblocked)
                 if ray_pos then
                     tileid = ray_pos[1] + ray_pos[2] * roomsizex
 
                     if is_emptyblock then
                         blocked = true
+                    elseif select_empty then
+                        select_empty_tile = true
+                        table.insert(ray_unitids, 2)
                     else
                         local total_pass = 0
                         for _, ray_unitid in ipairs(unitmap[tileid]) do
@@ -292,6 +304,8 @@ function update_raycast_units(checkblocked_, checkpass_, processed_this_units_)
                 updatecode = 1
             elseif tileid and tileid ~= this_mod_globals.text_to_raycast_pos[unitid] then
                 updatecode = 1
+            elseif select_empty_tile then
+                updatecode = 1
             else
                 if updatecode == 0 then
                     -- set updatecode to 1 if any of the raycast units changed
@@ -339,8 +353,7 @@ function get_raycast_units(this_text_unitid, checkblocked)
     local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked then
-            local unit = mmf.newObject(raycast_units[1])
-            local tileid = unit.values[XPOS] + unit.values[YPOS] * roomsizex
+            local tileid = this_mod_globals.text_to_raycast_pos[this_text_unitid]
             if this_mod_globals.blocked_tiles[tileid] then
                 return {}
             end
@@ -354,8 +367,7 @@ function get_raycast_tileid(this_text_unitid)
     return this_mod_globals.text_to_raycast_pos[this_text_unitid]
 end
 
-function this_raycast(x, y, dir, checkemptyblock_)
-    local checkemptyblock = checkemptyblock_ or false
+function this_raycast(x, y, dir, checkemptyblock)
     if dir >= 0 and dir <= 3 then 
         local dir_vec = dirs[dir+1]
         local dx = dir_vec[1]
@@ -365,10 +377,14 @@ function this_raycast(x, y, dir, checkemptyblock_)
         while inbounds(ox,oy) do
             local tileid = ox + oy * roomsizex
 
-            if checkemptyblock and unitmap[tileid] == nil and hasfeature("empty", "is", "block", 2, ox, oy) then
-                return {ox, oy},true
+            if unitmap[tileid] == nil then
+                if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) then
+                    return {ox, oy},true, true
+                elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
+                    return {ox, oy}, false, true
+                end
             elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
-                return {ox, oy},false
+                return {ox, oy},false, false
             end
 
             ox = ox + dx
@@ -409,18 +425,23 @@ function process_this_rules(this_rules, filter_property_func, processed_this_uni
             local this_text_unitid = ids[3][1]
             for _, unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
                 if filter_property_func(unitid) and is_unit_valid_this_property(unitid, verb) then
-                    local ray_unit = mmf.newObject(unitid)
-                    local rulename = ray_unit.strings[NAME]
-                    if is_turning_text(rulename) then
-                        rulename = get_turning_text_interpretation(this_text_unitid)
+                    local rulename = ""
+
+                    if unitid == 2 then
+                        rulename = "empty"
+                    else
+                        local ray_unit = mmf.newObject(unitid)
+                        rulename = ray_unit.strings[NAME]
+                        if is_turning_text(rulename) then
+                            rulename = get_turning_text_interpretation(this_text_unitid)
+                        end
+                        if ray_unit.strings[UNITTYPE] == "text" then
+                            this_mod_globals.active_this_property_text[unitid] = true
+                        end
                     end
 
                     if prop_isnot then
                         rulename = "not "..rulename
-                    end
-
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        this_mod_globals.active_this_property_text[unitid] = true
                     end
                     
                     local newrule = {rule[1],rule[2],rulename}
@@ -460,10 +481,15 @@ function process_this_rules(this_rules, filter_property_func, processed_this_uni
                 end
             else
                 for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    local ray_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_name = "text"
+                    local ray_name = ""
+                    if ray_unitid == 2 then
+                        ray_name = "empty"
+                    else
+                        local ray_unit = mmf.newObject(ray_unitid)
+                        ray_name = ray_unit.strings[NAME]
+                        if ray_unit.strings[UNITTYPE] == "text" then
+                            ray_name = "text"
+                        end
                     end
 
                     for _, option in ipairs(property_options) do
@@ -510,14 +536,17 @@ end
 
 function do_subrule_this()
     function block_filter(unitid)
+        if unitid == 2 then return true end
         local unit = mmf.newObject(unitid)
         return unit.strings[NAME] == "block"
     end
     function pass_filter(unitid)
+        if unitid == 2 then return true end
         local unit = mmf.newObject(unitid)
         return unit.strings[NAME] == "pass"
     end
     function other_filter(unitid)
+        if unitid == 2 then return true end
         local unit = mmf.newObject(unitid)
         return unit.strings[NAME] ~= "block" and unit.strings[NAME] ~= "pass"
     end

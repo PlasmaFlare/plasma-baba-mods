@@ -44,7 +44,7 @@ end
 
 function parse_this_param_and_get_raycast_units(this_param)
     if not is_name_text_this(string.sub(this_param, 1, 4)) then 
-        return false, nil, 0
+        return false, nil, nil, 0
     else
         local end_index = string.find(this_param, " ", 5)
         if not end_index then
@@ -54,7 +54,7 @@ function parse_this_param_and_get_raycast_units(this_param)
         local param_id = string.sub(this_param, end_index + 1)
         local this_unitid = get_this_unit_from_param_id(param_id)
         if not this_unitid then
-            return false, nil, 0
+            return false, nil, nil, 0
         end
 
         local out = {}
@@ -63,7 +63,7 @@ function parse_this_param_and_get_raycast_units(this_param)
             out[ray_unitid] = true
             count = count +1
         end
-        return this_param_name, out, count
+        return this_param_name, out, this_mod_globals.text_to_raycast_pos[this_unitid], count
     end
 end
 
