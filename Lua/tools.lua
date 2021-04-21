@@ -160,7 +160,7 @@ function writerules(parent,name,x_,y_)
 	local x,y = basex,basey
 	
 	if (#visualfeatures > 0) then
-		writetext(langtext("rules") .. ":",0,x,y,name,true,2,true)
+		writetext(langtext("rules_colon"),0,x,y,name,true,2,true)
 	end
 	
 	local i_ = 1
