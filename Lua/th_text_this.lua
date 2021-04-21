@@ -363,6 +363,67 @@ function get_raycast_units(this_text_unitid, checkblocked)
     return {}
 end
 
+-- Like get_raycast_units, but factors in this redirection
+function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
+    if not this_mod_globals.text_to_raycast_pos[this_text_unitid] then
+        return {}
+    end
+    local this_text_unit = mmf.newObject(this_text_unitid)
+    local init_tileid = this_text_unit.values[XPOS] + this_text_unit.values[YPOS] * roomsizex
+
+    local visited_tileids = {}
+    visited_tileids[init_tileid] = true
+    local out_raycast_units = {}
+    local raycast_this_texts = { this_text_unitid } -- This will be treated as a stack, meaning we are doing DFS instead of BFS
+    local lit_up_this_texts = {}
+
+    while #raycast_this_texts > 0 do
+        local curr_this_unitid = table.remove(raycast_this_texts) -- Pop the stack 
+        local curr_raycast_tileid = this_mod_globals.text_to_raycast_pos[curr_this_unitid]
+        
+        if checkblocked and this_mod_globals.blocked_tiles[curr_raycast_tileid] then
+            -- do nothing if blocked
+        elseif visited_tileids[curr_raycast_tileid] then
+
+        elseif curr_raycast_tileid then
+            visited_tileids[curr_raycast_tileid] = true
+
+            if curr_phase == "other" then
+                lit_up_this_texts[curr_this_unitid] = true
+            end
+
+            local raycast_units = this_mod_globals.text_to_raycast_units[curr_this_unitid]
+            if raycast_units then
+                for i, ray_unitid in ipairs(raycast_units) do
+                    local ray_unit = mmf.newObject(ray_unitid)
+
+                    if is_name_text_this(ray_unit.strings[NAME]) then
+                        table.insert(raycast_this_texts, ray_unitid)
+                    elseif is_unit_valid_this_property(ray_unitid, verb) then
+                        table.insert(out_raycast_units, ray_unitid)
+                    else
+                        local ray_unit = mmf.newObject(ray_unitid)
+
+                        if is_name_text_this(ray_unit.strings[NAME]) then
+                            table.insert(raycast_this_texts, ray_unitid)
+                        elseif is_unit_valid_this_property(ray_unitid, verb) then
+                            table.insert(out_raycast_units, ray_unitid)
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if #out_raycast_units > 0 then
+        for unitid, _ in pairs(lit_up_this_texts) do
+            this_mod_globals.active_this_property_text[unitid] = true
+        end
+    end
+
+    return out_raycast_units
+end
+
 function get_raycast_tileid(this_text_unitid)
     return this_mod_globals.text_to_raycast_pos[this_text_unitid]
 end
@@ -399,7 +460,7 @@ function defer_addoption_with_this(rule)
     table.insert(this_mod_globals.deferred_rules_with_this, rule)
 end
 
-function process_this_rules(this_rules, filter_property_func, processed_this_units, checkblocked, is_block_phase)
+function process_this_rules(this_rules, filter_property_func, processed_this_units, checkblocked, curr_phase)
     local final_options = {}
 
     for i, rules in ipairs(this_rules) do
@@ -423,8 +484,8 @@ function process_this_rules(this_rules, filter_property_func, processed_this_uni
             end
         else
             local this_text_unitid = ids[3][1]
-            for _, unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
-                if filter_property_func(unitid) and is_unit_valid_this_property(unitid, verb) then
+            for _, unitid in ipairs(get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)) do
+                if filter_property_func(unitid) then
                     local rulename = ""
 
                     if unitid == 2 then
@@ -553,9 +614,9 @@ function do_subrule_this()
     this_mod_globals.blocked_tiles = {}
     local processed_this_units = {}
     update_raycast_units(false, false, processed_this_units)
-    process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, processed_this_units, false, true)
+    process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, processed_this_units, false, "block")
     update_raycast_units(true, false, processed_this_units)
-    process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, processed_this_units, true, false)
+    process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, processed_this_units, true, "pass")
     
     -- update_raycast_units(true, true, processed_this_units)
     -- process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, processed_this_units, true, true)
@@ -563,5 +624,5 @@ function do_subrule_this()
     -- process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, processed_this_units, true, false)
 
     update_raycast_units(true, true, processed_this_units)
-    process_this_rules(this_mod_globals.deferred_rules_with_this, other_filter, processed_this_units, true, false)
+    process_this_rules(this_mod_globals.deferred_rules_with_this, other_filter, processed_this_units, true, "other")
 end
