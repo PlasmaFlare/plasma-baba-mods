@@ -131,10 +131,10 @@ function delunit(unitid)
 	else
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))
 	end
-    if this_mod_globals.text_to_cursor[unitid] then
-        MF_cleanremove(this_mod_globals.text_to_cursor[unitid])
-        this_mod_globals.text_to_cursor[unitid] = nil
-    end
+
+	if this_mod_globals.text_to_cursor[unitid] then
+		on_delele_this_text(unitid)
+	end
 		
 	for i,v in ipairs(units) do
 		if (v.fixed == unitid) then

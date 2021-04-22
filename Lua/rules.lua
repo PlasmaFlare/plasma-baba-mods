@@ -1379,7 +1379,12 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	update_raycast_units(true, true)
+	if this_mod_globals.update_raycast_units_at_start_of_turn then
+		this_mod_globals.update_raycast_units_at_start_of_turn = false
+		update_raycast_units(false, false, true)
+	elseif this_mod_globals.undoed_after_called then
+		update_raycast_units(true, true, true)
+	end
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1

@@ -13,6 +13,7 @@ function reset_this_mod_globals()
         on_level_start = false,
         deferred_rules_with_this = {}, --     
         on_already_run = false,
+        update_raycast_units_at_start_of_turn = true,
     
         -- These two globals assist in making regular infix conditions with "this" work.
         -- Infix conditions have a list of parameters that determine what objects to compare the testing object
@@ -59,6 +60,12 @@ table.insert( mod_hook_functions["undoed_after"],
         -- update_raycast_units(true)
         -- update_all_cursors()
         this_mod_globals.undoed_after_called = true
+    end
+)
+
+table.insert( mod_hook_functions["command_given"],
+    function()
+        this_mod_globals.update_raycast_units_at_start_of_turn = true
     end
 )
 
@@ -138,6 +145,13 @@ function reset_this_mod()
     reset_this_mod_globals()
 end
 
+function on_delele_this_text(this_unitid)
+    MF_cleanremove(this_mod_globals.text_to_cursor[this_unitid])
+    this_mod_globals.text_to_cursor[this_unitid] = nil
+    this_mod_globals.text_to_raycast_units[this_unitid] = nil
+    this_mod_globals.text_to_raycast_pos[this_unitid] = nil
+end
+
 function make_cursor(unit)
     local unitid2 = MF_create("customsprite")
     local unit2 = mmf.newObject(unitid2)
@@ -209,7 +223,7 @@ function update_this_cursor(wordunit, cursorunit)
     end
 end
 
-function update_raycast_units(checkblocked_, checkpass_, processed_this_units_)
+function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, processed_this_units_)
     local checkblocked = checkblocked_ or false
     local checkpass = checkpass_ or false
     local processed_this_units = processed_this_units_ or {}
@@ -299,15 +313,13 @@ function update_raycast_units(checkblocked_, checkpass_, processed_this_units_)
 
             if blocked and tileid then
                 set_blocked_tile(tileid)
-                updatecode = 1
-            elseif checkpass then
-                updatecode = 1
-            elseif tileid and tileid ~= this_mod_globals.text_to_raycast_pos[unitid] then
-                updatecode = 1
-            elseif select_empty_tile then
-                updatecode = 1
-            else
-                if updatecode == 0 then
+                ray_unitids = {}
+            end
+
+            if affect_updatecode and updatecode == 0 then
+                if select_empty_tile then
+                    updatecode = 1
+                else
                     -- set updatecode to 1 if any of the raycast units changed
                     local prev_raycast_unitids = this_mod_globals.text_to_raycast_units[unitid] or {}
 
@@ -332,15 +344,14 @@ function update_raycast_units(checkblocked_, checkpass_, processed_this_units_)
                 end
             end
             if #ray_unitids == 0 then
-                new_raycast_units[unitid] = nil
+                this_mod_globals.text_to_raycast_units[unitid] = nil
             else
-                new_raycast_units[unitid] = ray_unitids
+                this_mod_globals.text_to_raycast_units[unitid] = ray_unitids
             end
 
             this_mod_globals.text_to_raycast_pos[unitid] = tileid
         end
     end
-    this_mod_globals.text_to_raycast_units = new_raycast_units
 end
 
 function set_blocked_tile(tileid)
@@ -577,9 +588,6 @@ function process_this_rules(this_rules, filter_property_func, processed_this_uni
                 local unit = mmf.newObject(id[1])
                 if is_name_text_this(unit.strings[NAME]) then
                     processed_this_units[id[1]] = true
-                    -- if is_block_phase then
-                    --    set_blocked_tile(get_raycast_tileid(id[1]))
-                    -- end
                 end
             end
 
@@ -613,16 +621,11 @@ function do_subrule_this()
     end
     this_mod_globals.blocked_tiles = {}
     local processed_this_units = {}
-    update_raycast_units(false, false, processed_this_units)
+    update_raycast_units(true, false, false, processed_this_units)
     process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, processed_this_units, false, "block")
-    update_raycast_units(true, false, processed_this_units)
+    update_raycast_units(true, true, false, processed_this_units)
     process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, processed_this_units, true, "pass")
     
-    -- update_raycast_units(true, true, processed_this_units)
-    -- process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, processed_this_units, true, true)
-    -- update_raycast_units(true, true, processed_this_units)
-    -- process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, processed_this_units, true, false)
-
-    update_raycast_units(true, true, processed_this_units)
+    update_raycast_units(true, true, false, processed_this_units)
     process_this_rules(this_mod_globals.deferred_rules_with_this, other_filter, processed_this_units, true, "other")
 end
