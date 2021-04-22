@@ -11,7 +11,7 @@ function reset_this_mod_globals()
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
         active_this_property_text = {}, -- keep track of texts 
         on_level_start = false,
-        deferred_rules_with_this = {}, --     
+        deferred_rules_with_this = {},
         on_already_run = false,
         update_raycast_units_at_start_of_turn = true,
     
@@ -35,6 +35,14 @@ table.insert(mod_hook_functions["rule_baserules"],
     end
 )
 
+table.insert(mod_hook_functions["effect_always"],
+    function()
+        -- for _, cursorunitid in pairs(this_mod_globals.text_to_cursor) do
+        --     local cursorunit = mmf.newObject()
+        update_all_cursors()
+    end
+)
+
 table.insert(mod_hook_functions["level_start"], 
     function()
         -- reset_this_mod()
@@ -46,7 +54,7 @@ table.insert(mod_hook_functions["level_start"],
         end
         this_mod_globals.on_level_start = true
         -- update_raycast_units(true)
-        update_all_cursors()
+        -- update_all_cursors()
     end
 )
 
@@ -66,6 +74,7 @@ table.insert( mod_hook_functions["undoed_after"],
 table.insert( mod_hook_functions["command_given"],
     function()
         this_mod_globals.update_raycast_units_at_start_of_turn = true
+        this_mod_globals.update_cursor_zoom = false
     end
 )
 
@@ -88,7 +97,7 @@ table.insert(mod_hook_functions["rule_update_after"],
         end
         if this_mod_globals.undoed_after_called then
             this_mod_globals.undoed_after_called = false
-            update_all_cursors()
+            -- update_all_cursors()
         end
     end
 )
@@ -96,7 +105,7 @@ table.insert(mod_hook_functions["rule_update_after"],
 table.insert(mod_hook_functions["turn_end"],
     function()
         -- update_raycast_units(true)
-        update_all_cursors()
+        -- update_all_cursors()
     end
 )
 
@@ -192,8 +201,9 @@ function update_this_cursor(wordunit, cursorunit)
     if tileid then
         local x = math.floor(tileid % roomsizex)
         local y = math.floor(tileid / roomsizex)
-        cursorunit.values[XPOS] = x * f_tilesize+ Xoffset + (f_tilesize / 2)
-        cursorunit.values[YPOS] = y * f_tilesize + Yoffset + (f_tilesize / 2)
+        local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+        cursorunit.values[XPOS] = x * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
+        cursorunit.values[YPOS] = y * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
         
         local c1 = nil
         local c2 = nil
@@ -221,6 +231,8 @@ function update_this_cursor(wordunit, cursorunit)
         cursorunit.values[XPOS] = -20
         cursorunit.values[YPOS] = -20
     end
+    cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
 end
 
 function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, processed_this_units_)
