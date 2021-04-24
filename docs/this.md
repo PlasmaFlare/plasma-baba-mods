@@ -23,10 +23,21 @@ Pass objects will be ignored by any other raycasts coming from THIS texts. This 
 
 ---
 
-### Note about Block and Pass edge cases
-- Blocks should have priority over passes
+## Notes about Block and Pass edge cases
+### This is pass/block + X is this(pass/block)
+I recommend not using these rules extensively since the behavior of each might be a bit counterintuitive to what might be expected. Most of these rules, when interpreted fully, would lead to infinite loops. So I implemented it slightly differently: 
+
+- If an object is applied BLOCK or PASS through either "this is pass/block" or "X is this(pass/block)", the effect is only applied to THIS's that are not in the main sentence.
+  - Ex: "(This -> rock) is pass" other THIS's will pass over the rock except for the first this.
+  - THIS's in conditionals will be applied the effect
+  - THIS's used in THIS redirection will *not* be applied the effect
+
+
+### Other notes
+- Block has priority over passes
 - Block and pass don't work with group. Since group is being reworked by Hempuli, I won't bother fixing this until the group code is stable.
-- "This is pass" or "This is block" only applies to other THISes that are *not* part of the original sentence. So if "This(rock) is pass", other THISes cannot refer to the rock pointed by the original THIS.
+
+
 - Mixing together block and pass will most likely reveal weird edge cases with some experimentation.
 - Since block and pass were designed to be used in constant rules (e.g: wall is stop and block), I'm not too inclined to fix edge cases where block and/or pass are being used dynamically.
 

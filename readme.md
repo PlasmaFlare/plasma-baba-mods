@@ -36,6 +36,12 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.1.1** (4/24/21)
+  - THIS can bounce off other THIS's when using THIS as a property.
+  - Empty is pass is now a baserule!
+  - Adjustments to backend code to try and reduce lag
+  - Fixed This indicator not changing scale based on zoom settings
+  - Fixed property text pointed by THIS not updating to active color after breaking "text is \<color\>"
 - **1.1.0** (4/17/21)
   - Updated for Beta 405 (Also works with beta 406 and 407)
   - New mod: THIS
