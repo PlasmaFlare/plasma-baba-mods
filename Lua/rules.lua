@@ -1831,6 +1831,7 @@ function postrules(alreadyrun_)
 
 	for unitid, _ in pairs(this_mod_globals.active_this_property_text) do
 		local unit = mmf.newObject(unitid)
+		unit.active = true
         setcolour(unitid,"active")
         newruleids[unitid] = 1
         if (ruleids[unitid] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
