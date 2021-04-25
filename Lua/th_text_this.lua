@@ -13,7 +13,6 @@ function reset_this_mod_globals()
         on_level_start = false,
         deferred_rules_with_this = {},
         on_already_run = false,
-        update_raycast_units_at_start_of_turn = true,
     
         -- These two globals assist in making regular infix conditions with "this" work.
         -- Infix conditions have a list of parameters that determine what objects to compare the testing object
@@ -73,7 +72,6 @@ table.insert( mod_hook_functions["undoed_after"],
 
 table.insert( mod_hook_functions["command_given"],
     function()
-        this_mod_globals.update_raycast_units_at_start_of_turn = true
         this_mod_globals.update_cursor_zoom = false
     end
 )
@@ -154,6 +152,13 @@ function reset_this_mod()
     reset_this_mod_globals()
 end
 
+function on_add_this_text(this_unitid)
+    if not this_mod_globals.text_to_cursor[this_unitid] then
+        local wordunit = mmf.newObject(this_unitid)
+        local cursorunit = make_cursor(wordunit)
+        this_mod_globals.text_to_cursor[this_unitid] = cursorunit
+    end
+end
 function on_delele_this_text(this_unitid)
     MF_cleanremove(this_mod_globals.text_to_cursor[this_unitid])
     this_mod_globals.text_to_cursor[this_unitid] = nil
@@ -175,19 +180,12 @@ function make_cursor(unit)
     return unitid2
 end
 
-function update_all_cursors(undo)
-    undo = undo or false
-    for i,unitid in ipairs(codeunits) do
-        local unit = mmf.newObject(unitid)
-        if this_mod_globals.text_to_cursor[unitid] then
-            local wordunit = mmf.newObject(unitid)
-            local cursorunit = mmf.newObject(this_mod_globals.text_to_cursor[unitid])
+function update_all_cursors()
+    for this_unitid, cursor_unitid in pairs(this_mod_globals.text_to_cursor) do
+        local wordunit = mmf.newObject(this_unitid)
+        local cursorunit = mmf.newObject(cursor_unitid)
 
-            update_this_cursor(wordunit, cursorunit)
-        elseif is_name_text_this(unit.strings[NAME]) then
-            local cursorunit = make_cursor(unit)
-            this_mod_globals.text_to_cursor[unitid] = cursorunit
-        end
+        update_this_cursor(wordunit, cursorunit)
     end
 end
 
@@ -249,9 +247,9 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, proc
     if checkpass then
         all_pass = findfeature("all", "is", "pass") ~= nil
     end
-    for i,unitid in ipairs(codeunits) do
-        local unit = mmf.newObject(unitid)
-        if is_name_text_this(unit.strings[NAME]) and not processed_this_units[unitid] then
+    for unitid, _ in pairs(this_mod_globals.text_to_cursor) do
+        if not processed_this_units[unitid] then
+            local unit = mmf.newObject(unitid)
             local x = unit.values[XPOS]
             local y = unit.values[YPOS]
             local dir = unit.values[DIR]
@@ -612,22 +610,23 @@ function process_this_rules(this_rules, filter_property_func, processed_this_uni
     end
 end
 
+local function block_filter(unitid)
+    if unitid == 2 then return true end
+    local unit = mmf.newObject(unitid)
+    return unit.strings[NAME] == "block"
+end
+local function pass_filter(unitid)
+    if unitid == 2 then return true end
+    local unit = mmf.newObject(unitid)
+    return unit.strings[NAME] == "pass"
+end
+local function other_filter(unitid)
+    if unitid == 2 then return true end
+    local unit = mmf.newObject(unitid)
+    return unit.strings[NAME] ~= "block" and unit.strings[NAME] ~= "pass"
+end
+
 function do_subrule_this()
-    function block_filter(unitid)
-        if unitid == 2 then return true end
-        local unit = mmf.newObject(unitid)
-        return unit.strings[NAME] == "block"
-    end
-    function pass_filter(unitid)
-        if unitid == 2 then return true end
-        local unit = mmf.newObject(unitid)
-        return unit.strings[NAME] == "pass"
-    end
-    function other_filter(unitid)
-        if unitid == 2 then return true end
-        local unit = mmf.newObject(unitid)
-        return unit.strings[NAME] ~= "block" and unit.strings[NAME] ~= "pass"
-    end
     this_mod_globals.blocked_tiles = {}
     local processed_this_units = {}
     update_raycast_units(true, false, false, processed_this_units)

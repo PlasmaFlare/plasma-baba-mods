@@ -1073,11 +1073,13 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	
 	-- @ Turning text
 	code()
+	tt_executing_code = true
 	final_turning_unit_dir = {}
 	finalize_turning_text_dir()
 	eval_turning_text_global = true
 	code()
 	final_turning_unit_dir = {}
+	tt_executing_code = false
 	-- @ Turning text
 	
 	if (dir_ ~= nil) then

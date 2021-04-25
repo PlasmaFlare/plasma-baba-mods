@@ -1,3 +1,99 @@
+function addunit(id,undoing_)
+	--@This - Override reason: provide hook for detecting when a "this" text is added, so that
+	-- we keep track of all "this" texts
+	local unitid = #units + 1
+	
+	units[unitid] = {}
+	units[unitid] = mmf.newObject(id)
+	
+	local unit = units[unitid]
+
+	getmetadata(unit)
+	
+	local truename = unit.className
+	
+	if (changes[truename] ~= nil) then
+		dochanges(id)
+	end
+	
+	if (unit.values[ID] == -1) then
+		unit.values[ID] = newid()
+	end
+
+	if (unit.values[XPOS] > 0) and (unit.values[YPOS] > 0) then
+		addunitmap(id,unit.values[XPOS],unit.values[YPOS],unit.strings[UNITNAME])
+	end
+	
+	if (unit.values[TILING] == 1) then
+		table.insert(tiledunits, unit.fixed)
+	end
+	
+	if (unit.values[TILING] > 1) then
+		table.insert(animunits, unit.fixed)
+	end
+	
+	local name = getname(unit)
+	local name_ = unit.strings[NAME]
+
+	if is_name_text_this(name_) then
+		on_add_this_text(unit.fixed)
+	end
+	
+	if (unitlists[name] == nil) then
+		unitlists[name] = {}
+	end
+	
+	table.insert(unitlists[name], unit.fixed)
+	
+	if (unit.strings[UNITTYPE] ~= "text") or ((unit.strings[UNITTYPE] == "text") and (unit.values[TYPE] == 0)) then
+		objectlist[name_] = 1
+	end
+	
+	if (unit.strings[UNITTYPE] == "text") then
+		table.insert(codeunits, unit.fixed)
+		updatecode = 1
+		
+		if (unit.values[TYPE] == 0) then
+			local matname = string.sub(unit.strings[UNITNAME], 6)
+			if (unitlists[matname] == nil) then
+				unitlists[matname] = {}
+			end
+		elseif (unit.values[TYPE] == 5) then
+			table.insert(letterunits, unit.fixed)
+		end
+	end
+	
+	unit.colour = {}
+	
+	if (unit.strings[UNITNAME] ~= "level") and (unit.className ~= "specialobject") then
+		local cc1,cc2 = setcolour(unit.fixed)
+		unit.colour = {cc1,cc2}
+	end
+	
+	local undoing = undoing_ or false
+	
+	unit.back_init = 0
+	unit.broken = 0
+	
+	if (unit.className ~= "path") and (unit.className ~= "specialobject") then
+		statusblock({id},undoing)
+		MF_animframe(id,math.random(0,2))
+	end
+	
+	unit.active = false
+	unit.new = true
+	unit.colours = {}
+	unit.currcolour = 0
+	unit.followed = -1
+	
+	if (spritedata.values[VISION] == 1) and (undoing == false) then
+		local hasvision = hasfeature(name,"is","3d",id,unit.values[XPOS],unit.values[YPOS])
+		if (hasvision ~= nil) then
+			table.insert(visiontargets, id)
+		end
+	end
+end
+
 function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
     --@This - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it doesn't have an actual object associated
     -- with it. Therefore, exclude "this" from "all" 

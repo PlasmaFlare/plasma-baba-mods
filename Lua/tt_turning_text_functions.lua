@@ -8,6 +8,7 @@ turning_dir_units = {}
 final_turning_unit_dir = {}
 eval_turning_text_global = true
 output_turning_dir_ids = false
+tt_executing_code = false
 turning_word_names = {
     fall=true, 
     nudge=true, 

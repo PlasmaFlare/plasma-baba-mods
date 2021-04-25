@@ -1379,17 +1379,14 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	if this_mod_globals.update_raycast_units_at_start_of_turn then
-		this_mod_globals.update_raycast_units_at_start_of_turn = false
-	end
 	if this_mod_globals.undoed_after_called then
 		update_raycast_units(true, true, true)
-	else
-		update_raycast_units(false, false, true)
-		updatecode = 1
+	elseif updatecode == 0 and not tt_executing_code then
+		update_raycast_units(true, true, true)
 	end
 	
 	if (updatecode == 1) then
+		print("updatecode")
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")
 		
