@@ -418,11 +418,8 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
             local raycast_units = this_mod_globals.text_to_raycast_units[curr_this_unitid]
             if raycast_units then
                 for i, ray_unitid in ipairs(raycast_units) do
-                    local ray_unit = mmf.newObject(ray_unitid)
 
-                    if is_name_text_this(ray_unit.strings[NAME]) then
-                        table.insert(raycast_this_texts, ray_unitid)
-                    elseif is_unit_valid_this_property(ray_unitid, verb) then
+                    if ray_unitid == 2 then
                         table.insert(out_raycast_units, ray_unitid)
                     else
                         local ray_unit = mmf.newObject(ray_unitid)
