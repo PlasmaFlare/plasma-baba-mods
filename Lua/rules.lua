@@ -845,10 +845,10 @@ function docode(firstwords)
 						end
 
 						if do_branching_and_sentence_elimination then
-							print("run eliminate on this sentence:")
-							for _,v in ipairs(current) do
-								print(v[1])
-							end
+							-- print("run eliminate on this sentence:")
+							-- for _,v in ipairs(current) do
+							-- 	print(v[1])
+							-- end
 							local and_units = {}
 							for _,v in ipairs(current) do
 								local tilename = v[1]
@@ -1379,14 +1379,19 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	if this_mod_globals.undoed_after_called then
-		update_raycast_units(true, true, true)
-	elseif updatecode == 0 and not tt_executing_code then
-		update_raycast_units(true, true, true)
+	for _,_ in pairs(this_mod_globals.text_to_cursor) do
+		if this_mod_globals.undoed_after_called then
+			update_raycast_units(true, true, true)
+		elseif updatecode == 0 and not tt_executing_code then
+			update_raycast_units(true, true, true)
+			if updatecode == 0 then
+				check_cond_rules_with_this_noun()
+			end
+		end
+		break
 	end
 	
 	if (updatecode == 1) then
-		print("updatecode")
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")
 		

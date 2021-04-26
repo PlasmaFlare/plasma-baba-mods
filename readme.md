@@ -36,6 +36,10 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.1.2** (4/27/21)
+  - Reworked how rules involving `this` and `block/pass` are processed. (Technical details [here](docs/this.md#block-and-pass-edge-cases))
+  - Added indicator when an object is refered to by `this is pass`.
+  - Various adjustments to backend code.
 - **1.1.1** (4/24/21)
   - THIS can bounce off other THIS's when using THIS as a property.
   - Empty is pass is now a baserule!

@@ -23,24 +23,6 @@ Pass objects will be ignored by any other raycasts coming from THIS texts. This 
 
 ---
 
-## Notes about Block and Pass edge cases
-### This is pass/block + X is this(pass/block)
-I recommend not using these rules extensively since the behavior of each might be a bit counterintuitive to what might be expected. Most of these rules, when interpreted fully, would lead to infinite loops. So I implemented it slightly differently: 
-
-- If an object is applied BLOCK or PASS through either "this is pass/block" or "X is this(pass/block)", the effect is only applied to THIS's that are not in the main sentence.
-  - Ex: "(This -> rock) is pass" other THIS's will pass over the rock except for the first this.
-  - THIS's in conditionals will be applied the effect
-  - THIS's used in THIS redirection will *not* be applied the effect
-
-
-### Other notes
-- Block has priority over passes
-- Block and pass don't work with group. Since group is being reworked by Hempuli, I won't bother fixing this until the group code is stable.
-
-
-- Mixing together block and pass will most likely reveal weird edge cases with some experimentation.
-- Since block and pass were designed to be used in constant rules (e.g: wall is stop and block), I'm not too inclined to fix edge cases where block and/or pass are being used dynamically.
-
 ## **Multiple thises with different colors**
 The THIS indicators change color depending on the color of THIS. This can help differentiate between the different THIS's and which objects each of the are pointing to.
 
@@ -56,3 +38,28 @@ Here are the steps to add a THIS with different color:
 7. Set "Text Type" to "baba"
 
 The THIS text should now be ready to use.
+
+---
+
+## **Block and Pass edge cases**
+*Warning: Technical stuff ahead. Feel free to ignore this if you don't want to bother with the details*
+
+Sentences involving `this is pass/block` or `X is this(pass/block)` are tricky to interpret without resorting to infinite loops. Generally, if you want to avoid weird interactions, I recommend not playing around with combinations of THIS and block/pass. However, as of version 1.1.2, these kind of interactions have a more solid set of rules that I feel should resolve most edge cases. 
+
+### Priorities
+The mod processes rules involving THIS and/or block/pass in the order below. The effects calculated from each bullet are only applied to THISes found in later bullets.
+
+(`X` = static noun or property, `this(X)` = THIS pointing to X):
+- `X is block` 
+- `X is pass`
+- `this(X) is block` | `X is this(block)` | `this(X) is this(block)`
+- `this(X) is pass` | `X is this(pass)` | `this(X) is this(pass)`
+- `<Other rules with THIS>`
+
+General rules of thumb:
+- Static rules get processed before THIS rules
+- Block rules get processed before pass rules
+- Other rules with THIS get processed last
+
+### Other Notes
+- Block and pass don't work with group. Since group is being reworked by Hempuli, I won't bother fixing this until the group code is stable.
