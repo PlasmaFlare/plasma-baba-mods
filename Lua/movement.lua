@@ -158,8 +158,8 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				
 				
 				
-				if (featureindex["debugtest"] ~= nil) then
-					players3,empty3 = findallfeature(nil,"is","debugtest")
+				if (featureindex["3d"] ~= nil) then
+					players3,empty3 = findallfeature(nil,"is","3d")
 				end
 				
 				local fdir = 4

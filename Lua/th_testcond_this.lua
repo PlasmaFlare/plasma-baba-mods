@@ -26,7 +26,7 @@ function get_this_parms_in_conds(conds, ids)
                     if string.sub(param, 1, 4) == "not " then
                         param = string.sub(param, 5)
                     end
-                    if is_name_text_this(param) or param == "not this" then
+                    if is_name_text_this(param) or is_name_text_this(param, true) then
                         local this_unitid = ids[id_index][1]
                         if not conds_with_this_as_param[cond] then
                             conds_with_this_as_param[cond] = {}

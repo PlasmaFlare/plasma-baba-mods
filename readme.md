@@ -36,6 +36,8 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.1.3** (5/6/21)
+  - Updated for Beta 410
 - **1.1.2** (4/27/21)
   - Reworked how rules involving `this` and `block/pass` are processed. (Technical details [here](docs/this.md#block-and-pass-edge-cases))
   - Added indicator when an object is refered to by `this is pass`.

@@ -168,11 +168,17 @@ function writerules(parent,name,x_,y_)
 	local count = 0
 	local allrules = {}
 	
+	local custom = MF_read("level","general","customruleword")
+	
 	for i,rules in ipairs(visualfeatures) do
 		local text = ""
 		local rule = rules[1]
 		
-		text = text .. rule[1] .. " "
+		if (#custom == 0) then
+			text = text .. rule[1] .. " "
+		else
+			text = text .. custom .. " "
+		end
 		
 		local conds = rules[2]
 		local ids = rules[3]
@@ -209,10 +215,13 @@ function writerules(parent,name,x_,y_)
 					if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
 						middlecond = false
 					end
-
 					if cond[1] == "this" or cond[1] == "not this" then
 					elseif middlecond then
-						text = text .. cond[1] .. " "
+						if (#custom == 0) then
+							text = text .. cond[1] .. " "
+						else
+							text = text .. custom .. " "
+						end
 						
 						if (cond[2] ~= nil) then
 							if (#cond[2] > 0) then
@@ -221,7 +230,12 @@ function writerules(parent,name,x_,y_)
 									if this_param_name then
 										text = text .. this_param_name
 									else
-										text = text .. d .. " "
+										if (#custom == 0) then
+											text = text .. d .. " "
+										else
+											text = text .. custom .. " "
+										end
+										
 										if (#cond[2] > 1) and (c ~= #cond[2]) then
 											text = text .. "& "
 										end
@@ -234,7 +248,11 @@ function writerules(parent,name,x_,y_)
 							text = text .. "& "
 						end
 					else
-						text = cond[1] .. " " .. text
+						if (#custom == 0) then
+							text = cond[1] .. " " .. text
+						else
+							text = custom .. " " .. text
+						end
 					end
 				end
 			end
@@ -253,7 +271,11 @@ function writerules(parent,name,x_,y_)
 				target = isnot .. word_names[target_]
 			end
 			
-			text = text .. rule[2] .. " " .. target
+			if (#custom == 0) then
+				text = text .. rule[2] .. " " .. target
+			else
+				text = text .. custom .. " " .. custom
+			end
 			
 			for a,b in ipairs(tags) do
 				if (b == "mimic") then

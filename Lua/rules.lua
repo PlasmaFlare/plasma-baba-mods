@@ -1,5 +1,5 @@
 -- @mods turning text
-function codecheck(unitid,ox,oy,cdir_,ignore_end_)
+function codecheck(unitid,ox,oy,cdir_,ignore_end_,old_)
 	local unit = mmf.newObject(unitid)
 	local ux,uy = unit.values[XPOS],unit.values[YPOS]
 	local x = unit.values[XPOS] + ox
@@ -8,6 +8,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	local letters = false
 	local justletters = false
 	local cdir = cdir_ or 0
+	local old = old_ or 0
 	
 	local ignore_end = false
 	if (ignore_end_ ~= nil) then
@@ -30,7 +31,9 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 					local v_name = get_turning_text_interpretation(b)
 					--@ Turning text
 
-					table.insert(result, {{b}, w, v_name, v.values[TYPE], cdir})
+					if (ox ~= 0) or (oy ~= 0) or (old == 0) or (b == unitid) then
+						table.insert(result, {{b}, w, v_name, v.values[TYPE], cdir})
+					end
 				else
 					if (#wordunits > 0) then
 						for c,d in ipairs(wordunits) do
@@ -210,7 +213,7 @@ function calculatesentences(unitid,x,y,dir)
 						local t = {
 							branching_texts = branching_texts,
 							step_index = step, 
-							lhs_totalvariants = totalvariants/#words*#branching_texts,
+							lhs_totalvariants = math.floor(totalvariants/#words*#branching_texts),
 							x = br_x,
 							y = br_y,
 							firstwords = br_firstwords,
@@ -845,10 +848,6 @@ function docode(firstwords)
 						end
 
 						if do_branching_and_sentence_elimination then
-							-- print("run eliminate on this sentence:")
-							-- for _,v in ipairs(current) do
-							-- 	print(v[1])
-							-- end
 							local and_units = {}
 							for _,v in ipairs(current) do
 								local tilename = v[1]

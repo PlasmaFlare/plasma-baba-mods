@@ -321,7 +321,7 @@ function moveblock(onlystartblock_)
 											end
 										end
 										
-										table.insert(delname, {newunit.strings[UNITNAME], bline[6]})
+										table.insert(delname, {newunit.strings[UNITNAME], bline[6], newunit.values[XPOS], newunit.values[YPOS], newunit.values[DIR]})
 									end
 								end
 								
@@ -329,7 +329,7 @@ function moveblock(onlystartblock_)
 								
 								for a,b in ipairs(delname) do
 									MF_alert("added undo for " .. b[1] .. " with ID " .. tostring(b[2]))
-									addundo({"create",b[1],b[2],b[2],"back"})
+									addundo({"create",b[1],b[2],b[2],"back",b[3],b[4],b[5]})
 								end
 								
 								delunit(unitid)
@@ -486,6 +486,18 @@ function block(small_)
 			
 			if (#doned > 0) then
 				setsoundname("turn",10)
+			end
+			
+			for i,unit in ipairs(doned) do
+				addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
+				updateundo = true
+				
+				unit.values[FLOAT] = 2
+				unit.values[EFFECTCOUNT] = math.random(-10,10)
+				unit.values[POSITIONING] = 7
+				unit.flags[DEAD] = true
+				
+				delunit(unit.fixed)
 			end
 		end
 		
@@ -920,18 +932,6 @@ function block(small_)
 					end
 				end
 			end
-		end
-		
-		for i,unit in ipairs(doned) do
-			addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
-			updateundo = true
-			
-			unit.values[FLOAT] = 2
-			unit.values[EFFECTCOUNT] = math.random(-10,10)
-			unit.values[POSITIONING] = 7
-			unit.flags[DEAD] = true
-			
-			delunit(unit.fixed)
 		end
 	end
 	

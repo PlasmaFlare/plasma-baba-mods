@@ -1,4 +1,4 @@
-function addunit(id,undoing_)
+function addunit(id,undoing_,levelstart_)
 	--@This - Override reason: provide hook for detecting when a "this" text is added, so that
 	-- we keep track of all "this" texts
 	local unitid = #units + 1
@@ -7,7 +7,9 @@ function addunit(id,undoing_)
 	units[unitid] = mmf.newObject(id)
 	
 	local unit = units[unitid]
-
+	local undoing = undoing_ or false
+	local levelstart = levelstart_ or false
+	
 	getmetadata(unit)
 	
 	local truename = unit.className
@@ -70,8 +72,6 @@ function addunit(id,undoing_)
 		unit.colour = {cc1,cc2}
 	end
 	
-	local undoing = undoing_ or false
-	
 	unit.back_init = 0
 	unit.broken = 0
 	
@@ -90,6 +90,14 @@ function addunit(id,undoing_)
 		local hasvision = hasfeature(name,"is","3d",id,unit.values[XPOS],unit.values[YPOS])
 		if (hasvision ~= nil) then
 			table.insert(visiontargets, id)
+		end
+	end
+	
+	if generaldata.flags[LOGGING] then
+		if levelstart then
+			dolog("init_object","event",unit.strings[UNITNAME] .. ":" .. tostring(unit.values[XPOS]) .. ":" .. tostring(unit.values[YPOS]))
+		elseif (undoing == false) then
+			dolog("new_object","event",unit.strings[UNITNAME] .. ":" .. tostring(unit.values[XPOS]) .. ":" .. tostring(unit.values[YPOS]))
 		end
 	end
 end

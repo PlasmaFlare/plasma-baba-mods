@@ -2440,13 +2440,15 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					valid = true
 					local failure = false
 					
-					if (unitid ~= 1) then
+					if (unitid ~= 1) and (unitid ~= 2) then
 						local tileid = x + y * roomsizex
 						if (unitmap[tileid] ~= nil) then
 							if (#unitmap[tileid] == 1) then
 								failure = true
 							end
 						end
+					elseif (unitid == 2) then
+						failure = true
 					end
 					
 					if failure then
