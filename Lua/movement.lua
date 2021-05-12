@@ -1,5 +1,6 @@
 function movecommand(ox,oy,dir_,playerid_,dir_2)
-	---@Turning Text
+	---@mods - Turning Text - Override reason - handle multiple directional text cases and added additional calls to code() to handle turning text resolution
+	--- 	 - Text splicing - Override reason - update mod global to allow text stacking per movement phase ("you" phase, "move" phase, etc)
 	eval_turning_text_global = false
 	---------------------------
 
@@ -90,6 +91,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	end
 	
 	while (take <= takecount) or finaltake do
+		splice_mod_globals.exclude_from_cut_blocking = {}
 		local moving_units = {}
 		local been_seen = {}
 		local skiptake = false
@@ -542,6 +544,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				break
 			end
 		end
+		add_moving_units_to_exclude_from_cut_blocking(moving_units)
 		
 		local done = false
 		local state = 0
@@ -1099,7 +1102,221 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 
 end
 
+function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
+	-- @mods text splicing - Override reason - handle actually cutting text into letterunits
+	local instant = instant_ or false
+	local simulate = simulate_ or false
+	
+	local x,y = 0,0
+	local unit = {}
+	
+	if (unitid ~= 2) then
+		unit = mmf.newObject(unitid)
+		x,y = unit.values[XPOS],unit.values[YPOS]
+	else
+		x = x_
+		y = y_
+	end
+	
+	local specials = {}
+	if (specials_ ~= nil) then
+		specials = specials_
+	end
+	
+	local gone = false
+	
+	for i,v in pairs(specials) do
+		if (gone == false) then
+			local b = v[1]
+			local reason = v[2]
+			local dodge = false
+			
+			local bx,by = 0,0
+			if (b ~= 2) then
+				local bunit = mmf.newObject(b)
+				bx,by = bunit.values[XPOS],bunit.values[YPOS]
+				
+				if (bx ~= x+ox) or (by ~= y+oy) then
+					dodge = true
+				else
+					for c,d in ipairs(movelist) do
+						if (d[1] == b) then
+							local nx,ny = d[2],d[3]
+							
+							--print(tostring(nx) .. "," .. tostring(ny) .. " --> " .. tostring(x+ox) .. "," .. tostring(y+oy) .. " (" .. tostring(bx) .. "," .. tostring(by) .. ")")
+							if (nx ~= x+ox) or (ny ~= y+oy) then
+								dodge = true
+							end
+						end
+					end
+				end
+			else
+				bx,by = x+ox,y+oy
+			end
+
+			if (dodge == false) then
+				if (reason == "lock") then
+					local unlocked = false
+					local valid = true
+					local soundshort = ""
+					
+					if (b ~= 2) then
+						local bunit = mmf.newObject(b)
+						
+						if bunit.flags[DEAD] then
+							valid = false
+						end
+					end
+					
+					if (unitid ~= 2) and unit.flags[DEAD] then
+						valid = false
+					end
+					
+					if valid then
+						local pmult = 1.0
+						local effect1 = false
+						local effect2 = false
+						
+						if (issafe(b,bx,by) == false) then
+							delete(b,bx,by)
+							unlocked = true
+							effect1 = true
+						end
+						
+						if (issafe(unitid,x,y) == false) then
+							delete(unitid,x,y)
+							unlocked = true
+							gone = true
+							effect2 = true
+						end
+						
+						if effect1 or effect2 then
+							local pmult,sound = checkeffecthistory("unlock")
+							soundshort = sound
+						end
+						
+						if effect1 then
+							MF_particles("unlock",bx,by,15 * pmult,2,4,1,1)
+							generaldata.values[SHAKE] = 8
+						end
+						
+						if effect2 then
+							MF_particles("unlock",x,y,15 * pmult,2,4,1,1)
+							generaldata.values[SHAKE] = 8
+						end
+					end
+					
+					if unlocked then
+						setsoundname("turn",7,soundshort)
+					end
+				elseif (reason == "eat") then
+					local pmult,sound = checkeffecthistory("eat")
+					MF_particles("eat",bx,by,10 * pmult,0,3,1,1)
+					generaldata.values[SHAKE] = 3
+					delete(b,bx,by)
+					
+					setsoundname("removal",1,sound)
+				elseif (reason == "weak") then
+					if (b == 2) and (unitid ~= 2) then
+						local pmult,sound = checkeffecthistory("weak")
+						MF_particles("destroy",bx,by,5 * pmult,0,3,1,1)
+						generaldata.values[SHAKE] = 3
+						delete(b,bx,by)
+						
+						setsoundname("removal",1,sound)
+					end
+				elseif reason == "cut" then
+					if b == 2 then
+						handle_text_cutting(unitid, dir, false)
+					else
+						handle_text_cutting(b, dir, false)
+					end
+				end
+			end
+		end
+	end
+	
+	if (gone == false) and (simulate == false) and (unitid ~= 2) then
+		if instant then
+			update(unitid,x+ox,y+oy,dir)
+			MF_alert("Instant movement on " .. tostring(unitid))
+		else
+			addaction(unitid,{"update",x+ox,y+oy,dir})
+		end
+		
+		if unit.visible and (#movelist < 700) and (spritedata.values[VISION] == 0) then
+			if (generaldata.values[DISABLEPARTICLES] == 0) and (generaldata5.values[LEVEL_DISABLEPARTICLES] == 0) then
+				local effectid = MF_effectcreate("effect_bling")
+				local effect = mmf.newObject(effectid)
+				
+				local midx = math.floor(roomsizex * 0.5)
+				local midy = math.floor(roomsizey * 0.5)
+				local mx = x - midx
+				local my = y - midy
+				
+				local c1,c2 = 0,0
+				
+				if (unit.active == false) then
+					c1,c2 = getcolour(unitid)
+				else
+					c1,c2 = getcolour(unitid,"active")
+				end
+				MF_setcolour(effectid,c1,c2)
+				
+				local xvel,yvel = 0,0
+				
+				if (ox ~= 0) then
+					xvel = 0 - ox / math.abs(ox)
+				end
+				
+				if (oy ~= 0) then
+					yvel = 0 - oy / math.abs(oy)
+				end
+				
+				local dx = mx + 0.5
+				local dy = my + 0.75
+				local dxvel = xvel
+				local dyvel = yvel
+				
+				if (generaldata2.values[ROOMROTATION] == 90) then
+					dx = my + 0.75
+					dy = 0 - mx - 0.5
+					dxvel = yvel
+					dyvel = 0 - xvel
+				elseif (generaldata2.values[ROOMROTATION] == 180) then
+					dx = 0 - mx - 0.5
+					dy = 0 - my - 0.75
+					dxvel = 0 - xvel
+					dyvel = 0 - yvel
+				elseif (generaldata2.values[ROOMROTATION] == 270) then
+					dx = 0 - my - 0.75
+					dy = mx + 0.5
+					dxvel = 0 - yvel
+					dyvel = xvel
+				end
+				
+				effect.values[ONLINE] = 3
+				effect.values[XPOS] = Xoffset + (midx + (dx) * generaldata2.values[ZOOM]) * tilesize * spritedata.values[TILEMULT]
+				effect.values[YPOS] = Yoffset + (midy + (dy) * generaldata2.values[ZOOM]) * tilesize * spritedata.values[TILEMULT]
+				effect.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+				effect.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+				
+				effect.values[XVEL] = dxvel * math.random(10,30) * 0.1 * spritedata.values[TILEMULT] * generaldata2.values[ZOOM]
+				effect.values[YVEL] = dyvel * math.random(10,30) * 0.1 * spritedata.values[TILEMULT] * generaldata2.values[ZOOM]
+			end
+			
+			if (unit.values[TILING] == 2) then
+				unit.values[VISUALDIR] = ((unit.values[VISUALDIR] + 1) + 4) % 4
+			end
+		end
+	end
+	
+	return gone
+end
+
 function check(unitid,x,y,dir,pulling_,reason)
+	-- @mods turning text - Override reason: directional push/pull/swap/stop
+	-- @mods text splicing - Override reason - add collision check for "cut"
 	local pulling = false
 	if (pulling_ ~= nil) then
 		pulling = pulling_
@@ -1150,6 +1367,7 @@ function check(unitid,x,y,dir,pulling_,reason)
 	local shut = hasfeature(name,"is","shut",unitid,x,y)
 	local eat = hasfeature(name,"eat",nil,unitid,x,y)
 	local phantom = hasfeature(name,"is","phantom",unitid,x,y)
+	local cut = hasfeature(name,"is","cut",unitid,x,y)
 	
 	if pulling then
 		phantom = nil
@@ -1214,6 +1432,17 @@ function check(unitid,x,y,dir,pulling_,reason)
 					if (issafe(id,x+ox,y+oy) == false) and floating(id,unitid,x+ox,y+oy) then
 						--valid = false
 						table.insert(specials, {id, "weak"})
+					end
+				end
+
+				if cut ~= nil and check_text_cutting(unitid, id, pulling) then
+					valid = false
+					table.insert(specials, {id, "cut"})
+				else
+					local obscut = hasfeature(obsname,"is","cut",id,x+ox,y+oy)
+					if obscut ~= nil and check_text_cutting(id, unitid, pulling) then
+						valid = false
+						table.insert(specials, {unitid, "cut"})
 					end
 				end
 				
@@ -1319,6 +1548,15 @@ function check(unitid,x,y,dir,pulling_,reason)
 				valid = false
 				table.insert(specials, {2, "weak"})
 			end
+		end
+
+		local cut = hasfeature("empty","is","cut",2,x+ox,y+oy)
+		if (cut ~= nil) and check_text_cutting(2, unitid, pulling, x+ox,y+oy) then
+			-- @Note: if "text is cut" and you push a regular text onto a lettertext, the regular text doesn't do the cutting since the lettertext cannot be cut. 
+			-- But in blocks.lua, the lettertext will cut the regular text. Making valid true here and not interting into specials prevents this from happening.
+			-- Does it make sense intuitively to make valid = true in this specific cornercase?
+			valid = false
+			table.insert(specials, {2, "cut"})
 		end
 		
 		local added = false
