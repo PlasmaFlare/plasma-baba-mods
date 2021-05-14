@@ -1231,6 +1231,8 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 					else
 						handle_text_cutting(b, dir, false)
 					end
+				elseif reason == "pack" then
+					handle_text_packing(b, dir)
 				end
 			end
 		end
@@ -1368,6 +1370,7 @@ function check(unitid,x,y,dir,pulling_,reason)
 	local eat = hasfeature(name,"eat",nil,unitid,x,y)
 	local phantom = hasfeature(name,"is","phantom",unitid,x,y)
 	local cut = hasfeature(name,"is","cut",unitid,x,y)
+	local pack = hasfeature(name,"is","pack",unitid,x,y)
 	
 	if pulling then
 		phantom = nil
@@ -1444,6 +1447,10 @@ function check(unitid,x,y,dir,pulling_,reason)
 						valid = false
 						table.insert(specials, {unitid, "cut"})
 					end
+				end
+				if pack ~= nil and check_text_packing(unitid, id, dir, pulling) then
+					valid = false
+					table.insert(specials, {id, "pack"})
 				end
 				
 				local added = false

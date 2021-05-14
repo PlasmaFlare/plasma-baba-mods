@@ -4,6 +4,8 @@ function reset_splice_mod_globals()
     splice_mod_globals = {
         editor_objlist_letter_indexes = {},
         exclude_from_cut_blocking = {},
+        cut_texts = {},
+        calculated_text_packs = {},
     }
 end
 
@@ -14,8 +16,9 @@ function splice_initialize()
         if v.type == 5 and v.unittype == "text" then
             if string.sub(v.name, 1, 5) == "text_" then
                 local character = string.sub(v.name, 6)
-                table.insert(splice_mod_globals.editor_objlist_letter_indexes, i)
-                print(character)
+                if character ~= "sharp" and character ~= "flat" and not tonumber(character) then
+                    table.insert(splice_mod_globals.editor_objlist_letter_indexes, i)
+                end
             end
         end
     end     
@@ -26,6 +29,8 @@ splice_initialize()
 table.insert(mod_hook_functions["command_given"], 
     function()
         splice_mod_globals.exclude_from_cut_blocking = {}
+        splice_mod_globals.calculated_text_packs = {}
+        splice_mod_globals.cut_texts = {}
     end
 )
 
@@ -64,7 +69,7 @@ function check_text_cutting(cutterunitid, textunitid, pulling, x, y, levelcut)
     end
 
     local textunit = mmf.newObject(textunitid)
-    if pulling or textunit.strings[UNITTYPE] ~= "text" or textunit.values[TYPE] == 5 then
+    if pulling or textunit.strings[UNITTYPE] ~= "text" or (textunit.values[TYPE] == 5 and #textunit.strings[NAME] == 1) then
         return false
     end
 
@@ -98,6 +103,11 @@ function check_text_cutting(cutterunitid, textunitid, pulling, x, y, levelcut)
 end
 
 function handle_text_cutting(unitid, dir, overlap_case)
+    -- This is to prevent stacked cut objects cutting the same text
+    if splice_mod_globals.cut_texts[unitid] then
+        return
+    end
+
     local bunit = mmf.newObject(unitid)
     local bname = bunit.strings[NAME]
     local leveldata = {bunit.strings[U_LEVELFILE],bunit.strings[U_LEVELNAME],bunit.flags[MAPLEVEL],bunit.values[VISUALLEVEL],bunit.values[VISUALSTYLE],bunit.values[COMPLETED],bunit.strings[COLOUR],bunit.strings[CLEARCOLOUR]}
@@ -149,7 +159,7 @@ function handle_text_cutting(unitid, dir, overlap_case)
 
             if valid then
                 objectlist[c] = 1
-                local newunitid = create("text_"..c, x + ox, y - oy, 0, x, y, nil, nil, leveldata)
+                local newunitid = create("text_"..c, x + ox, y - oy, dir, x, y, nil, nil, leveldata)
 
                 splice_mod_globals.exclude_from_cut_blocking[newunitid] = true
                 ox = ox + dirvec[1]
@@ -163,16 +173,15 @@ function handle_text_cutting(unitid, dir, overlap_case)
         MF_particles("destroy",x,y,5 * pmult,0,3,1,1)
         generaldata.values[SHAKE] = 3
 
-        -- @Note: if
         if not overlap_case then
             delete(unitid,x,y)
         end
+        splice_mod_globals.cut_texts[unitid] = true
         setsoundname("removal",1,sound)
     end
 end
 
 function handle_level_cutting()
-    --@BIG NOTE: 
     splice_mod_globals.exclude_from_cut_blocking = {}
     local cut_textunits = {} 
     timedmessage(#codeunits)
@@ -186,4 +195,148 @@ function handle_level_cutting()
         handle_text_cutting(unitid, textunit.values[DIR], false)
     end
     splice_mod_globals.exclude_from_cut_blocking = {}
+end
+
+
+function check_text_packing(packerunitid, textunitid, dir, pulling)
+    if textunitid == 2 then
+        return false
+    end
+
+    local textunit = mmf.newObject(textunitid)
+    if pulling or textunit.strings[UNITTYPE] ~= "text" or textunit.values[TYPE] ~= 5 then
+        return false
+    end
+
+    local x = textunit.values[XPOS]
+    local y = textunit.values[YPOS]
+
+    local reverse = dir == 1 or dir == 2
+    local dirvec = dirs[dir+1]
+    local ox = 0
+    local oy = 0
+
+    local letterunits = {}
+    local packed_text_name = ""
+    local packed_text_pos = {x + dirvec[1],y - dirvec[2]}
+
+    local pushtest = trypush(textunitid, dirvec[1], dirvec[2], dir, false, nil, nil, "pack", packerunitid)
+    -- Note: pushtest == 1 means that the push attempt was stopped by a wall/ stop object
+    if pushtest ~= 1 then
+        return false
+    end
+
+    local letterwidths = {}
+
+    while true do
+        local texts = findtext(x+ox, y-oy)
+        -- Stop at stacked texts or when there's no texts
+        if #texts ~= 1 then
+            break
+        end
+
+        local letterunitid = texts[1]
+        local letterunit = mmf.newObject(letterunitid)
+        if letterunit.values[TYPE] ~= 5 then
+            break
+        end
+
+        if reverse then
+            packed_text_name = letterunit.strings[NAME]..packed_text_name
+            table.insert(letterunits, 1, letterunitid)
+            table.insert(letterwidths, 1, #letterunit.strings[NAME])
+        else
+            packed_text_name = packed_text_name..letterunit.strings[NAME]
+            table.insert(letterunits, letterunitid)
+            table.insert(letterwidths, #letterunit.strings[NAME])
+        end
+
+        -- packed_text_pos[1] = x+ox
+        -- packed_text_pos[2] = y-oy
+
+        ox = ox + dirvec[1]
+        oy = oy + dirvec[2]
+    end
+
+    if #letterunits == 0 then
+        return false
+    end
+
+    local length = #packed_text_name 
+    for i=1,length do
+        if #packed_text_name > 1 and unitreference["text_"..packed_text_name] ~= nil then
+            -- Due to weird legacy systems of object indexing, we have to check if the current
+            -- packed text name's unit reference (i.e "object034") refers to the actual text object
+            local realname = unitreference["text_"..packed_text_name]
+            local dname = getactualdata_objlist(realname,"name")
+            if dname == "text_"..packed_text_name then
+                objectlist["text_"..packed_text_name] = 1
+                break
+            end
+        end
+        
+        if reverse then
+            if #letterwidths > 0 then
+                for c=1,letterwidths[1] do
+                    packed_text_name = packed_text_name:sub(2)
+                end
+            end
+            table.remove(letterunits, 1)
+            table.remove(letterwidths, 1)
+        else
+            if #letterwidths > 0 then
+                for c=1,letterwidths[#letterwidths] do
+                    packed_text_name = packed_text_name:sub(1,-2)
+                end
+            end
+            table.remove(letterunits, #letterunits)
+            table.remove(letterwidths, #letterwidths)
+        end
+        -- packed_text_pos[1] = packed_text_pos[1] - dirvec[1]
+        -- packed_text_pos[2] = packed_text_pos[2] + dirvec[2]
+    end
+
+    if #letterunits <= 1 or #packed_text_name <= 1 then
+        return false
+    end
+    
+    splice_mod_globals.calculated_text_packs[textunitid] = {
+        letterunits = letterunits,
+        packed_text_name = packed_text_name,
+        packed_text_pos = packed_text_pos,
+    }
+
+    return true
+end
+
+function handle_text_packing(unitid, dir)
+    if splice_mod_globals.cut_texts[unitid] then
+        return false
+    end
+    local pack_entry = splice_mod_globals.calculated_text_packs[unitid]
+
+    if pack_entry then
+        local firstunit = mmf.newObject(unitid)
+        local old_x = firstunit.values[XPOS]
+        local old_y = firstunit.values[YPOS]
+        for _,letterunit in ipairs(pack_entry.letterunits) do
+            local u = mmf.newObject(letterunit)
+            u.values[EFFECT] = 1
+
+            local pmult,sound = checkeffecthistory("smoke")
+            MF_particles("eat",u.values[XPOS],u.values[YPOS],5 * pmult,0,3,1,1)
+            delete(letterunit,u.values[XPOS],u.values[YPOS])
+        end
+        -- timedmessage(unitreference["text_"..pack_entry.packed_text_name])
+        local newunitid = create("text_"..pack_entry.packed_text_name, pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2], dir, old_x, old_y, nil, nil, nil)
+        local newunit = mmf.newObject(newunitid)
+        newunit.values[EFFECT] = 1
+
+        local c1,c2 = getcolour(newunitid)
+        local pmult,sound = checkeffecthistory("bling")
+        MF_particles("bling",pack_entry.packed_text_pos[1],pack_entry.packed_text_pos[2],5 * pmult,c1,c2,1,1)
+        generaldata.values[SHAKE] = 3
+        setsoundname("turn",9,sound)
+    end 
+
 end
