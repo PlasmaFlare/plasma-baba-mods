@@ -6,7 +6,17 @@ function reset_splice_mod_globals()
         exclude_from_cut_blocking = {},
         cut_texts = {},
         calculated_text_packs = {},
+        pack_texts = {},
+        calling_push_check_on_pull = false,
     }
+end
+
+function reset_splice_mod_globals_per_take()
+    splice_mod_globals.exclude_from_cut_blocking = {}
+    splice_mod_globals.cut_texts = {}
+    splice_mod_globals.calculated_text_packs = {}
+    splice_mod_globals.pack_texts = {}
+    splice_mod_globals.calling_push_check_on_pull = false
 end
 
 function splice_initialize()
@@ -31,6 +41,7 @@ table.insert(mod_hook_functions["command_given"],
         splice_mod_globals.exclude_from_cut_blocking = {}
         splice_mod_globals.calculated_text_packs = {}
         splice_mod_globals.cut_texts = {}
+        splice_mod_globals.pack_texts = {}
     end
 )
 
@@ -184,7 +195,6 @@ end
 function handle_level_cutting()
     splice_mod_globals.exclude_from_cut_blocking = {}
     local cut_textunits = {} 
-    timedmessage(#codeunits)
     for a,unitid in ipairs(codeunits) do
         if check_text_cutting(nil, unitid, false, nil, nil, true) then
             table.insert(cut_textunits, unitid)
@@ -198,8 +208,16 @@ function handle_level_cutting()
 end
 
 
-function check_text_packing(packerunitid, textunitid, dir, pulling)
+function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushed_against)
     if textunitid == 2 then
+        return false
+    end
+    if splice_mod_globals.calling_push_check_on_pull then
+        return false
+    end
+    local packerunit = mmf.newObject(packerunitid)
+    if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
+        -- NOTE: disable any letterunits from packing for now. Actually making this work seems like a lot of wrangling with the movement system
         return false
     end
 
@@ -208,22 +226,38 @@ function check_text_packing(packerunitid, textunitid, dir, pulling)
         return false
     end
 
-    local x = textunit.values[XPOS]
-    local y = textunit.values[YPOS]
-
     local reverse = dir == 1 or dir == 2
     local dirvec = dirs[dir+1]
+    
+    -- local is_packer_text = false
+    -- local packerunit = mmf.newObject(packerunitid)
+    -- if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
+    --     is_packer_text = true
+    --     local pushtest = trypush(textunitid, dirvec[1], dirvec[2], dir, false, nil, nil, "pack", packerunitid)
+    --     if pushtest ~= 1 then
+    --         return false
+    --     end
+    -- end
+
+    local x = nil
+    local y = nil
+    -- if is_packer_text then
+    --     x = packerunit.values[XPOS]
+    --     y = packerunit.values[YPOS]
+    -- else
+    x = textunit.values[XPOS]
+    y = textunit.values[YPOS]
+    -- end
+
     local ox = 0
     local oy = 0
-
     local letterunits = {}
     local packed_text_name = ""
-    local packed_text_pos = {x + dirvec[1],y - dirvec[2]}
+    local packed_text_pos = {x,y}
 
-    local pushtest = trypush(textunitid, dirvec[1], dirvec[2], dir, false, nil, nil, "pack", packerunitid)
-    -- Note: pushtest == 1 means that the push attempt was stopped by a wall/ stop object
-    if pushtest ~= 1 then
-        return false
+    if not packer_pushed_against then
+        packed_text_pos[1] = packed_text_pos[1] + dirvec[1]
+        packed_text_pos[2] = packed_text_pos[2] - dirvec[2]
     end
 
     local letterwidths = {}
@@ -238,6 +272,10 @@ function check_text_packing(packerunitid, textunitid, dir, pulling)
         local letterunitid = texts[1]
         local letterunit = mmf.newObject(letterunitid)
         if letterunit.values[TYPE] ~= 5 then
+            break
+        end
+
+        if splice_mod_globals.pack_texts[letterunitid] then
             break
         end
 
@@ -300,20 +338,24 @@ function check_text_packing(packerunitid, textunitid, dir, pulling)
         return false
     end
     
-    splice_mod_globals.calculated_text_packs[textunitid] = {
+    for _, letter in ipairs(letterunits) do
+        splice_mod_globals.pack_texts[letter] = true
+    end
+    splice_mod_globals.calculated_text_packs[textunitid] = true
+    data = {
         letterunits = letterunits,
         packed_text_name = packed_text_name,
         packed_text_pos = packed_text_pos,
+        packerunitid = packerunitid,
     }
 
-    return true
+    return true, data
 end
 
-function handle_text_packing(unitid, dir)
+function handle_text_packing(unitid, dir, pack_entry)
     if splice_mod_globals.cut_texts[unitid] then
-        return false
+        return
     end
-    local pack_entry = splice_mod_globals.calculated_text_packs[unitid]
 
     if pack_entry then
         local firstunit = mmf.newObject(unitid)
@@ -327,7 +369,6 @@ function handle_text_packing(unitid, dir)
             MF_particles("eat",u.values[XPOS],u.values[YPOS],5 * pmult,0,3,1,1)
             delete(letterunit,u.values[XPOS],u.values[YPOS])
         end
-        -- timedmessage(unitreference["text_"..pack_entry.packed_text_name])
         local newunitid = create("text_"..pack_entry.packed_text_name, pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2], dir, old_x, old_y, nil, nil, nil)
         local newunit = mmf.newObject(newunitid)
         newunit.values[EFFECT] = 1

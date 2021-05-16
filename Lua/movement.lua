@@ -91,10 +91,11 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	end
 	
 	while (take <= takecount) or finaltake do
-		splice_mod_globals.exclude_from_cut_blocking = {}
 		local moving_units = {}
 		local been_seen = {}
 		local skiptake = false
+		
+		reset_splice_mod_globals_per_take()
 		
 		if (finaltake == false) then
 			if (take == 1) then
@@ -1130,28 +1131,35 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 			local b = v[1]
 			local reason = v[2]
 			local dodge = false
-			
-			local bx,by = 0,0
-			if (b ~= 2) then
-				local bunit = mmf.newObject(b)
-				bx,by = bunit.values[XPOS],bunit.values[YPOS]
-				
-				if (bx ~= x+ox) or (by ~= y+oy) then
-					dodge = true
-				else
-					for c,d in ipairs(movelist) do
-						if (d[1] == b) then
-							local nx,ny = d[2],d[3]
-							
-							--print(tostring(nx) .. "," .. tostring(ny) .. " --> " .. tostring(x+ox) .. "," .. tostring(y+oy) .. " (" .. tostring(bx) .. "," .. tostring(by) .. ")")
-							if (nx ~= x+ox) or (ny ~= y+oy) then
-								dodge = true
+
+			local checkdodge = true
+			if reason == "pack" then
+				checkdodge = false
+			end
+
+			if checkdodge then
+				local bx,by = 0,0
+				if (b ~= 2) then
+					local bunit = mmf.newObject(b)
+					bx,by = bunit.values[XPOS],bunit.values[YPOS]
+					
+					if (bx ~= x+ox) or (by ~= y+oy) then
+						dodge = true
+					else
+						for c,d in ipairs(movelist) do
+							if (d[1] == b) then
+								local nx,ny = d[2],d[3]
+								
+								--print(tostring(nx) .. "," .. tostring(ny) .. " --> " .. tostring(x+ox) .. "," .. tostring(y+oy) .. " (" .. tostring(bx) .. "," .. tostring(by) .. ")")
+								if (nx ~= x+ox) or (ny ~= y+oy) then
+									dodge = true
+								end
 							end
 						end
 					end
+				else
+					bx,by = x+ox,y+oy
 				end
-			else
-				bx,by = x+ox,y+oy
 			end
 
 			if (dodge == false) then
@@ -1232,7 +1240,7 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 						handle_text_cutting(b, dir, false)
 					end
 				elseif reason == "pack" then
-					handle_text_packing(b, dir)
+					handle_text_packing(b, dir, v[3])
 				end
 			end
 		end
@@ -1448,9 +1456,25 @@ function check(unitid,x,y,dir,pulling_,reason)
 						table.insert(specials, {unitid, "cut"})
 					end
 				end
-				if pack ~= nil and check_text_packing(unitid, id, dir, pulling) then
-					valid = false
-					table.insert(specials, {id, "pack"})
+				if reason ~= "pack" then
+					local dopack, data = nil, nil
+					if pack ~= nil then
+						dopack, data = check_text_packing(unitid, id, dir, pulling)
+						if dopack then
+							valid = false
+							table.insert(specials, {id, "pack", data})
+						end
+					end
+					if not dopack then
+						local obspack = hasfeature(obsname,"is","pack",id,x+ox,y+oy)
+						if obspack ~= nil then
+							local dopack, data = check_text_packing(id, unitid, rotate(dir), pulling, true)
+							if dopack then
+								valid = false
+								table.insert(specials, {unitid, "pack", data})
+							end
+						end
+					end
 				end
 				
 				local added = false
@@ -1730,7 +1754,14 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 	local movedata = movemap[moveid]
 	
 	if (HACK_MOVES < 10000) then
+		if pulling then
+			splice_mod_globals.calling_push_check_on_pull = true
+		end
 		local hmlist,hms,specials = check(unitid,x,y,dir,false,reason)
+		
+		if pulling then
+			splice_mod_globals.calling_push_check_on_pull = false
+		end
 		local pullhmlist,pullhms,pullspecials = check(unitid,x,y,dir,true,reason)
 		local result = 0
 		
