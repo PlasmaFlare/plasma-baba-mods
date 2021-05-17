@@ -1132,34 +1132,27 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 			local reason = v[2]
 			local dodge = false
 
-			local checkdodge = true
-			if reason == "pack" then
-				checkdodge = false
-			end
-
-			if checkdodge then
-				local bx,by = 0,0
-				if (b ~= 2) then
-					local bunit = mmf.newObject(b)
-					bx,by = bunit.values[XPOS],bunit.values[YPOS]
-					
-					if (bx ~= x+ox) or (by ~= y+oy) then
-						dodge = true
-					else
-						for c,d in ipairs(movelist) do
-							if (d[1] == b) then
-								local nx,ny = d[2],d[3]
-								
-								--print(tostring(nx) .. "," .. tostring(ny) .. " --> " .. tostring(x+ox) .. "," .. tostring(y+oy) .. " (" .. tostring(bx) .. "," .. tostring(by) .. ")")
-								if (nx ~= x+ox) or (ny ~= y+oy) then
-									dodge = true
-								end
+			local bx,by = 0,0
+			if (b ~= 2) then
+				local bunit = mmf.newObject(b)
+				bx,by = bunit.values[XPOS],bunit.values[YPOS]
+				
+				if (bx ~= x+ox) or (by ~= y+oy) then
+					dodge = true
+				else
+					for c,d in ipairs(movelist) do
+						if (d[1] == b) then
+							local nx,ny = d[2],d[3]
+							
+							--print(tostring(nx) .. "," .. tostring(ny) .. " --> " .. tostring(x+ox) .. "," .. tostring(y+oy) .. " (" .. tostring(bx) .. "," .. tostring(by) .. ")")
+							if (nx ~= x+ox) or (ny ~= y+oy) then
+								dodge = true
 							end
 						end
 					end
-				else
-					bx,by = x+ox,y+oy
 				end
+			else
+				bx,by = x+ox,y+oy
 			end
 
 			if (dodge == false) then
@@ -1235,9 +1228,9 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 					end
 				elseif reason == "cut" then
 					if b == 2 then
-						handle_text_cutting(unitid, dir, false)
+						handle_text_cutting(v[3], dir, false)
 					else
-						handle_text_cutting(b, dir, false)
+						handle_text_cutting(v[3], dir, false)
 					end
 				elseif reason == "pack" then
 					handle_text_packing(b, dir, v[3])
@@ -1391,12 +1384,20 @@ function check(unitid,x,y,dir,pulling_,reason)
 	end
 	
 	local obs = findobstacle(x+ox,y+oy)
+	local queued_pack_specials = {}
 	
 	if (#obs > 0) and (phantom == nil) then
 		for i,id in ipairs(obs) do
 			if (id == -1) then
 				table.insert(result, -1)
 				table.insert(results, -1)
+
+				-- if reason ~= "pack" then
+				-- 	if hasfeature("level","is","pack") then
+				-- 		local data = check_text_packing(-1, unitid, rotate(dir), pulling, true)
+				-- 		table.insert(specials, {-1, "pack", data})
+				-- 	end
+				-- end
 			else
 				local obsunit = mmf.newObject(id)
 				local obsname = getname(obsunit)
@@ -1446,32 +1447,40 @@ function check(unitid,x,y,dir,pulling_,reason)
 					end
 				end
 
-				if cut ~= nil and check_text_cutting(unitid, id, pulling) then
-					valid = false
-					table.insert(specials, {id, "cut"})
-				else
-					local obscut = hasfeature(obsname,"is","cut",id,x+ox,y+oy)
-					if obscut ~= nil and check_text_cutting(id, unitid, pulling) then
+				local cutdata = nil
+				if cut ~= nil then
+					cutdata = check_text_cutting(unitid, id, pulling) 
+					if cutdata then
 						valid = false
-						table.insert(specials, {unitid, "cut"})
+						table.insert(specials, {id, "cut", cutdata})
+					end
+				end
+				if not cutdata then
+					local obscut = hasfeature(obsname,"is","cut",id,x+ox,y+oy)
+					if obscut ~= nil then
+						cutdata = check_text_cutting(id, unitid, pulling)
+						if cutdata then
+							valid = false
+							table.insert(specials, {id, "cut", cutdata})
+						end
 					end
 				end
 				if reason ~= "pack" then
-					local dopack, data = nil, nil
+					local data = nil
 					if pack ~= nil then
-						dopack, data = check_text_packing(unitid, id, dir, pulling)
-						if dopack then
+						data = check_text_packing(unitid, id, dir, pulling)
+						if data then
 							valid = false
-							table.insert(specials, {id, "pack", data})
+							table.insert(queued_pack_specials, {id, "pack", data})
 						end
 					end
 					if not dopack then
 						local obspack = hasfeature(obsname,"is","pack",id,x+ox,y+oy)
 						if obspack ~= nil then
-							local dopack, data = check_text_packing(id, unitid, rotate(dir), pulling, true)
-							if dopack then
+							local data = check_text_packing(id, unitid, rotate(dir), pulling, true)
+							if data then
 								valid = false
-								table.insert(specials, {unitid, "pack", data})
+								table.insert(queued_pack_specials, {id, "pack", data})
 							end
 						end
 					end
@@ -1643,6 +1652,34 @@ function check(unitid,x,y,dir,pulling_,reason)
 		result = {0}
 		results = {0}
 	end
+
+	if #queued_pack_specials > 0 and #specials == 0 then
+		-- This section has two purposes:
+		-- 1) Ensure that all other collision-based interactions take priority over pack
+		-- 2) In the event of a pack, do not move any nearby units.
+		--		This covers if a push object is on a wall and "wall is pack" and other text is packing against the wall, 
+		--      the push object will be moved.
+		for _, special in ipairs(queued_pack_specials) do
+			table.insert(specials, special)
+		end
+		result = {0}
+		-- results = {0}
+	end
+
+	-- if #specials == 0 and (#queued_pack_specials > 0 or #queued_passive_pack_specials > 0)  then
+	-- 	result = {}
+	-- 	for _, special in ipairs(queued_pack_specials) do
+	-- 		table.insert(specials, special)
+	-- 	end
+	-- 	for _, special in ipairs(queued_passive_pack_specials) do
+	-- 		table.insert(specials, special)
+	-- 		-- table.insert(result, special[1])
+	-- 	end
+
+	-- 	if #result == 0 then
+	-- 		result = {0}
+	-- 	end
+	-- end
 	
 	return result,results,specials
 end

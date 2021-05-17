@@ -868,10 +868,11 @@ function block(small_)
 
         for _, textunitid in ipairs(texts) do
             if textunitid ~= unit.fixed then
-                local textunit = mmf.newObject(textunitid)
-				if check_text_cutting(unit.fixed, textunitid, false) then
+				local textunit = mmf.newObject(textunitid)
+				local cutdata = check_text_cutting(unit.fixed, textunitid, false)
+				if cutdata then
                     local dir = textunit.values[DIR]
-                    handle_text_cutting(textunit.fixed, dir, true)
+                    handle_text_cutting(cutdata, dir, true)
                     table.insert(delthese, textunit.fixed)
                 end            
             end

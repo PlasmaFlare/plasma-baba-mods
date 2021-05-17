@@ -5,6 +5,7 @@ function reset_splice_mod_globals()
         editor_objlist_letter_indexes = {},
         exclude_from_cut_blocking = {},
         cut_texts = {},
+        queued_cut_texts = {},
         calculated_text_packs = {},
         pack_texts = {},
         calling_push_check_on_pull = false,
@@ -14,6 +15,7 @@ end
 function reset_splice_mod_globals_per_take()
     splice_mod_globals.exclude_from_cut_blocking = {}
     splice_mod_globals.cut_texts = {}
+    splice_mod_globals.queued_cut_texts = {}
     splice_mod_globals.calculated_text_packs = {}
     splice_mod_globals.pack_texts = {}
     splice_mod_globals.calling_push_check_on_pull = false
@@ -110,16 +112,20 @@ function check_text_cutting(cutterunitid, textunitid, pulling, x, y, levelcut)
     end
 
     splice_mod_globals.exclude_from_cut_blocking[textunitid] = true
-    return true
+    splice_mod_globals.queued_cut_texts[textunitid] = true
+    local data = {
+        cut_text = textunitid
+    }
+    return data
 end
 
-function handle_text_cutting(unitid, dir, overlap_case)
+function handle_text_cutting(data, dir, overlap_case)
     -- This is to prevent stacked cut objects cutting the same text
-    if splice_mod_globals.cut_texts[unitid] then
+    if splice_mod_globals.cut_texts[data.cut_text] then
         return
     end
 
-    local bunit = mmf.newObject(unitid)
+    local bunit = mmf.newObject(data.cut_text)
     local bname = bunit.strings[NAME]
     local leveldata = {bunit.strings[U_LEVELFILE],bunit.strings[U_LEVELNAME],bunit.flags[MAPLEVEL],bunit.values[VISUALLEVEL],bunit.values[VISUALSTYLE],bunit.values[COMPLETED],bunit.strings[COLOUR],bunit.strings[CLEARCOLOUR]}
     local x = bunit.values[XPOS]
@@ -185,9 +191,9 @@ function handle_text_cutting(unitid, dir, overlap_case)
         generaldata.values[SHAKE] = 3
 
         if not overlap_case then
-            delete(unitid,x,y)
+            delete(data.cut_text,x,y)
         end
-        splice_mod_globals.cut_texts[unitid] = true
+        splice_mod_globals.cut_texts[data.cut_text] = true
         setsoundname("removal",1,sound)
     end
 end
@@ -196,13 +202,14 @@ function handle_level_cutting()
     splice_mod_globals.exclude_from_cut_blocking = {}
     local cut_textunits = {} 
     for a,unitid in ipairs(codeunits) do
-        if check_text_cutting(nil, unitid, false, nil, nil, true) then
-            table.insert(cut_textunits, unitid)
+        local docut, data = check_text_cutting(nil, unitid, false, nil, nil, true)
+        if docut then
+            table.insert(cut_textunits, data)
         end
     end
-    for _, unitid in ipairs(cut_textunits) do
-        local textunit = mmf.newObject(unitid)
-        handle_text_cutting(unitid, textunit.values[DIR], false)
+    for _, cut_entry in ipairs(cut_textunits) do
+        local textunit = mmf.newObject(cut_entry.cut_text)
+        handle_text_cutting(cut_entry, textunit.values[DIR], false)
     end
     splice_mod_globals.exclude_from_cut_blocking = {}
 end
@@ -215,11 +222,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     if splice_mod_globals.calling_push_check_on_pull then
         return false
     end
-    local packerunit = mmf.newObject(packerunitid)
-    if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
-        -- NOTE: disable any letterunits from packing for now. Actually making this work seems like a lot of wrangling with the movement system
-        return false
-    end
 
     local textunit = mmf.newObject(textunitid)
     if pulling or textunit.strings[UNITTYPE] ~= "text" or textunit.values[TYPE] ~= 5 then
@@ -229,31 +231,29 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     local reverse = dir == 1 or dir == 2
     local dirvec = dirs[dir+1]
     
-    -- local is_packer_text = false
-    -- local packerunit = mmf.newObject(packerunitid)
-    -- if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
-    --     is_packer_text = true
-    --     local pushtest = trypush(textunitid, dirvec[1], dirvec[2], dir, false, nil, nil, "pack", packerunitid)
-    --     if pushtest ~= 1 then
-    --         return false
-    --     end
-    -- end
-
     local x = nil
     local y = nil
-    -- if is_packer_text then
-    --     x = packerunit.values[XPOS]
-    --     y = packerunit.values[YPOS]
-    -- else
-    x = textunit.values[XPOS]
-    y = textunit.values[YPOS]
-    -- end
+    local check_unitid = nil
+    if packerunitid == -1 then
+        x = textunit.values[XPOS]
+        y = textunit.values[YPOS]
+        check_unitid = textunitid
+    else
+        local packerunit = mmf.newObject(packerunitid)
+        if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
+            -- NOTE: disable any letterunits from packing for now. Actually making this work seems like a lot of wrangling with the movement system
+            return false
+        end
+        x = packerunit.values[XPOS]
+        y = packerunit.values[YPOS]
+        check_unitid = packerunitid
+    end
 
     local ox = 0
     local oy = 0
     local letterunits = {}
     local packed_text_name = ""
-    local packed_text_pos = {x,y}
+    local packed_text_pos = {textunit.values[XPOS],textunit.values[YPOS]}
 
     if not packer_pushed_against then
         packed_text_pos[1] = packed_text_pos[1] + dirvec[1]
@@ -261,22 +261,65 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     end
 
     local letterwidths = {}
-
+    local processed_first_level_pack = false
     while true do
-        local texts = findtext(x+ox, y-oy)
-        -- Stop at stacked texts or when there's no texts
-        if #texts ~= 1 then
+        local letterunitid = text_packing_get_letter(check_unitid, x+ox, y-oy, dir, packer_pushed_against)
+        if not letterunitid then
             break
         end
+        -- local collisions, obstacle_list, specials = check(check_unitid, x+ox, y-oy, dir, false, "pack")
+        -- local letterunitid = nil
+        -- local valid = true
+        -- for _, obs in ipairs(collisions) do
+        --     if obs == 1 or obs == -1 then
+        --         valid = false
+        --         break
+        --     end
+        --     if (obs ~= 2 and obs ~= 0) then
+        --         local obsunit = mmf.newObject(obs)
+        --         if obsunit.strings[UNITTYPE] == "text" and obsunit.values[TYPE] == 5 then
+        --             if not letterunitid then
+        --                 letterunitid = obs
+        --             else
+        --                 valid = false
+        --                 break
+        --             end
+        --         else
+        --             valid = false
+        --             break
+        --         end
+        --     end
+        -- end
+        -- if not valid or not letterunitid then
+        --     break
+        -- end
+        -- if splice_mod_globals.pack_texts[letterunitid] and not packer_pushed_against then
+        --     break
+        -- end
+        if splice_mod_globals.queued_cut_texts[letterunitid] then
+            return false
+        end
 
-        local letterunitid = texts[1]
         local letterunit = mmf.newObject(letterunitid)
-        if letterunit.values[TYPE] ~= 5 then
-            break
-        end
+        -- if letterunit.values[TYPE] ~= 5 then
+        --     break
+        -- end
 
-        if splice_mod_globals.pack_texts[letterunitid] then
-            break
+        if packerunitid == -1 and not processed_first_level_pack then
+            processed_first_level_pack = true
+            local rx, ry = dirvec[1] * -1, dirvec[2] * -1
+            local first_letterunitid = text_packing_get_letter(letterunitid, letterunit.values[XPOS], letterunit.values[YPOS], rotate(dir), packer_pushed_against)
+            if not first_letterunitid then
+                return false
+            end
+            if splice_mod_globals.queued_cut_texts[first_letterunitid] then
+                return false
+            end
+
+            local first_letterunit = mmf.newObject(first_letterunitid)
+            packed_text_name = packed_text_name..first_letterunit.strings[NAME]
+            table.insert(letterunits, first_letterunit)
+            table.insert(letterwidths, #first_letterunit.strings[NAME])
         end
 
         if reverse then
@@ -292,6 +335,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         -- packed_text_pos[1] = x+ox
         -- packed_text_pos[2] = y-oy
 
+        check_unitid = letterunitid
         ox = ox + dirvec[1]
         oy = oy + dirvec[2]
     end
@@ -347,20 +391,54 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         packed_text_name = packed_text_name,
         packed_text_pos = packed_text_pos,
         packerunitid = packerunitid,
+        packer_pushed_against = packer_pushed_against,
     }
+    return data
+end
 
-    return true, data
+function text_packing_get_letter(unitid, x, y, dir, packer_pushed_against)
+    local unit = mmf.newObject(unitid)
+    local collisions, obstacle_list, specials = check(unitid, x, y, dir, false, "pack")
+    local letterunitid = nil
+    local valid = true
+    for _, obs in ipairs(collisions) do
+        if obs == 1 or obs == -1 then
+            valid = false
+            break
+        end
+        if (obs ~= 2 and obs ~= 0) then
+            local obsunit = mmf.newObject(obs)
+            if obsunit.strings[UNITTYPE] == "text" and obsunit.values[TYPE] == 5 then
+                if not letterunitid then
+                    letterunitid = obs
+                else
+                    valid = false
+                    break
+                end
+            else
+                valid = false
+                break
+            end
+        end
+    end
+    if not valid or not letterunitid then
+        return false
+    end
+    if splice_mod_globals.pack_texts[letterunitid] and not packer_pushed_against then
+        return false
+    end
+
+    return letterunitid
 end
 
 function handle_text_packing(unitid, dir, pack_entry)
-    if splice_mod_globals.cut_texts[unitid] then
-        return
-    end
-
     if pack_entry then
         local firstunit = mmf.newObject(unitid)
         local old_x = firstunit.values[XPOS]
         local old_y = firstunit.values[YPOS]
+        if pack_entry.packer_pushed_against then
+            old_x, old_y = pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2]
+        end
         for _,letterunit in ipairs(pack_entry.letterunits) do
             local u = mmf.newObject(letterunit)
             u.values[EFFECT] = 1
