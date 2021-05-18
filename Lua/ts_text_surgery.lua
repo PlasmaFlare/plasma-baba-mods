@@ -76,7 +76,7 @@ function add_moving_units_to_exclude_from_cut_blocking(moving_units)
     end
 end
 
-function check_text_cutting(cutterunitid, textunitid, pulling, x, y, levelcut)
+function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_against, x, y, levelcut)
     if textunitid == 2 then
         return false
     end
@@ -114,7 +114,9 @@ function check_text_cutting(cutterunitid, textunitid, pulling, x, y, levelcut)
     splice_mod_globals.exclude_from_cut_blocking[textunitid] = true
     splice_mod_globals.queued_cut_texts[textunitid] = true
     local data = {
-        cut_text = textunitid
+        cut_text = textunitid,
+        cutter_pushed_against = cutter_pushed_against,
+        cutterunitid = cutterunitid,
     }
     return data
 end
@@ -130,6 +132,14 @@ function handle_text_cutting(data, dir, overlap_case)
     local leveldata = {bunit.strings[U_LEVELFILE],bunit.strings[U_LEVELNAME],bunit.flags[MAPLEVEL],bunit.values[VISUALLEVEL],bunit.values[VISUALSTYLE],bunit.values[COMPLETED],bunit.strings[COLOUR],bunit.strings[CLEARCOLOUR]}
     local x = bunit.values[XPOS]
     local y = bunit.values[YPOS]
+
+    if data.cutter_pushed_against then
+        if data.cutterunitid ~= -1 then
+            local cutterunit = mmf.newObject(data.cutterunitid)
+            x = cutterunit.values[XPOS]
+            y = cutterunit.values[YPOS]
+        end
+    end
 
     local dirvec = dirs[dir+1]
     local ox = dirvec[1]
@@ -202,8 +212,8 @@ function handle_level_cutting()
     splice_mod_globals.exclude_from_cut_blocking = {}
     local cut_textunits = {} 
     for a,unitid in ipairs(codeunits) do
-        local docut, data = check_text_cutting(nil, unitid, false, nil, nil, true)
-        if docut then
+        local data = check_text_cutting(nil, unitid, false, false, nil, nil, true)
+        if data then
             table.insert(cut_textunits, data)
         end
     end

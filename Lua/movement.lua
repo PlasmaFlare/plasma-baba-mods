@@ -1458,7 +1458,7 @@ function check(unitid,x,y,dir,pulling_,reason)
 				if not cutdata then
 					local obscut = hasfeature(obsname,"is","cut",id,x+ox,y+oy)
 					if obscut ~= nil then
-						cutdata = check_text_cutting(id, unitid, pulling)
+						cutdata = check_text_cutting(id, unitid, pulling, true)
 						if cutdata then
 							valid = false
 							table.insert(specials, {id, "cut", cutdata})
