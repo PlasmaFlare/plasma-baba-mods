@@ -232,6 +232,9 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     if splice_mod_globals.calling_push_check_on_pull then
         return false
     end
+    if issafe(textunitid) then
+        return false
+    end
 
     local textunit = mmf.newObject(textunitid)
     if pulling or textunit.strings[UNITTYPE] ~= "text" or textunit.values[TYPE] ~= 5 then
@@ -307,7 +310,10 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         --     break
         -- end
         if splice_mod_globals.queued_cut_texts[letterunitid] then
-            return false
+            break
+        end
+        if issafe(letterunitid) or not floating(letterunitid, check_unitid) then
+            break
         end
 
         local letterunit = mmf.newObject(letterunitid)
@@ -323,6 +329,9 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
                 return false
             end
             if splice_mod_globals.queued_cut_texts[first_letterunitid] then
+                return false
+            end
+            if not floating_level(first_letterunitid) then
                 return false
             end
 
