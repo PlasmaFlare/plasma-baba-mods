@@ -337,7 +337,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
 
             local first_letterunit = mmf.newObject(first_letterunitid)
             packed_text_name = packed_text_name..first_letterunit.strings[NAME]
-            table.insert(letterunits, first_letterunit)
+            table.insert(letterunits, first_letterunitid)
             table.insert(letterwidths, #first_letterunit.strings[NAME])
         end
 
@@ -452,9 +452,13 @@ end
 
 function handle_text_packing(unitid, dir, pack_entry)
     if pack_entry then
-        local firstunit = mmf.newObject(unitid)
-        local old_x = firstunit.values[XPOS]
-        local old_y = firstunit.values[YPOS]
+        local old_x = nil
+        local old_y = nil
+        if unitid ~= -1 and unitid ~= 2 then
+            local firstunit = mmf.newObject(unitid)
+            old_x = firstunit.values[XPOS]
+            old_y = firstunit.values[YPOS]
+        end
         if pack_entry.packer_pushed_against then
             old_x, old_y = pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2]
         end

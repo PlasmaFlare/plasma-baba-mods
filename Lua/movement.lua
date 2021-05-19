@@ -1133,7 +1133,7 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 			local dodge = false
 
 			local bx,by = 0,0
-			if (b ~= 2) then
+			if (b ~= 2 and b ~= -1) then
 				local bunit = mmf.newObject(b)
 				bx,by = bunit.values[XPOS],bunit.values[YPOS]
 				
@@ -1392,12 +1392,16 @@ function check(unitid,x,y,dir,pulling_,reason)
 				table.insert(result, -1)
 				table.insert(results, -1)
 
-				-- if reason ~= "pack" then
-				-- 	if hasfeature("level","is","pack") then
-				-- 		local data = check_text_packing(-1, unitid, rotate(dir), pulling, true)
-				-- 		table.insert(specials, {-1, "pack", data})
-				-- 	end
-				-- end
+				if reason ~= "pack" then
+					if hasfeature("level","is","pack", 1) then
+						local data = check_text_packing(-1, unitid, rotate(dir), pulling, true)
+						if data then
+							table.insert(specials, {-1, "pack", data})
+							result = {0}
+							results = {0}
+						end
+					end
+				end
 			else
 				local obsunit = mmf.newObject(id)
 				local obsname = getname(obsunit)
