@@ -1,5 +1,5 @@
--- @mods turning text
-function codecheck(unitid,ox,oy,cdir_,ignore_end_,old_)
+function codecheck(unitid,ox,oy,cdir_,ignore_end_)
+	-- @mods turning text
 	local unit = mmf.newObject(unitid)
 	local ux,uy = unit.values[XPOS],unit.values[YPOS]
 	local x = unit.values[XPOS] + ox
@@ -8,7 +8,6 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_,old_)
 	local letters = false
 	local justletters = false
 	local cdir = cdir_ or 0
-	local old = old_ or 0
 	
 	local ignore_end = false
 	if (ignore_end_ ~= nil) then
@@ -31,9 +30,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_,old_)
 					local v_name = get_turning_text_interpretation(b)
 					--@ Turning text
 
-					if (ox ~= 0) or (oy ~= 0) or (old == 0) or (b == unitid) then
-						table.insert(result, {{b}, w, v_name, v.values[TYPE], cdir})
-					end
+					table.insert(result, {{b}, w, v_name, v.values[TYPE], cdir})
 				else
 					if (#wordunits > 0) then
 						for c,d in ipairs(wordunits) do
@@ -84,13 +81,15 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_,old_)
 	return result,letters,justletters
 end
 
--- @mods omni connectors
 function calculatesentences(unitid,x,y,dir)
+	-- @mods omni connectors, filler text
 	local drs = dirs[dir]
 	local ox,oy = drs[1],drs[2]
 	
 	local finals = {}
 	local sentences = {}
+	local sentence_ids = {}
+	
 	local sents = {}
 	local done = false
 	
@@ -120,7 +119,8 @@ function calculatesentences(unitid,x,y,dir)
 	br_dir_vec = dirs[br_dir]
 	
 	local done = false
-	-- @Phase 1
+	-- @Phase 1 - Go through units sequentially and build array of slots. Each slot contains a record of a text unit. So each slot can have stacked text.
+	-- Also record combo information to use in phase 2.
 	while (done == false) and (totalvariants < limiter) do
 		local words,letters,jletters = codecheck(unitid,ox*step,oy*step,dir,true)
 		
@@ -268,10 +268,11 @@ function calculatesentences(unitid,x,y,dir)
 	
 	local combostep = 0
 	
-	-- @Phase 2
+	-- @Phase 2 - Go through array of slots and extract every word permutation as a sentence. This takes into account stacked text and outputs all possible sentences with the stacked text
 	for i=1,totalvariants do
 		step = 1
 		sentences[i] = {}
+		sentence_ids[i] = ""
 		
 		while (step < maxpos) do
 			local c = combo[step]
@@ -289,6 +290,7 @@ function calculatesentences(unitid,x,y,dir)
 						text_name = word[3]
 					end
 					table.insert(sentences[i], {text_name, word[4], word[1], word[2]})
+					sentence_ids[i] = sentence_ids[i] .. tostring(c - 1)
 					
 					step = step + w
 				else
@@ -320,7 +322,7 @@ function calculatesentences(unitid,x,y,dir)
 	end
 	-- @End Phase 2
 	for br_index, branch in ipairs(branches) do
-		br_sentences,br_finals,br_maxpos,br_totalvariants,perp_br_and_texts_with_split_parsing = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir)
+		br_sentences,br_finals,br_maxpos,br_totalvariants,br_sent_ids,perp_br_and_texts_with_split_parsing = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir)
 		maxpos = math.max(maxpos, br_maxpos + branch.step_index)
 
 		if (br_totalvariants >= limiter) then
@@ -351,10 +353,11 @@ function calculatesentences(unitid,x,y,dir)
 						for _, word in ipairs(rhs_sentence) do
 							table.insert(lhs_sentence, word)
 						end
+						sentence_ids[a] = sentence_ids[a]..br_sent_ids[s]
 					end
 				else
-					local final_sentence = {}
 					for a=1,oldtotalvariants do
+						local final_sentence = {}
 						local lhs_sentence = sentences[a]
 						for _, word in ipairs(lhs_sentence) do
 							table.insert(final_sentence, word)
@@ -362,9 +365,10 @@ function calculatesentences(unitid,x,y,dir)
 						for _, word in ipairs(rhs_sentence) do
 							table.insert(final_sentence, word)
 						end
+						table.insert(sentences, final_sentence)
+						table.insert(finals, {})
+						table.insert(sentence_ids, sentence_ids[a]..br_sent_ids[s])
 					end
-					table.insert(sentences, final_sentence)
-					table.insert(finals, {})
 				end
 			end
 		else
@@ -385,7 +389,9 @@ function calculatesentences(unitid,x,y,dir)
 				for i = 1, branch.lhs_totalvariants do
 					local br_step = 1
 					local lhs_sentence = {}
+					local lhs_sent_id_base = ""
 
+					-- Determine the lhs sentence before the branching point. Also build the sentence id base based off a similar algorithm to how an entry in the table "sentence_ids" gets calculated (See phase 2)
 					while (br_step <= branch.step_index) do
 						local c = combo[br_step]
 						
@@ -408,6 +414,8 @@ function calculatesentences(unitid,x,y,dir)
 									text_name = word[3]
 								end
 								table.insert(lhs_sentence, {text_name, word[4], word[1], word[2]})
+
+								lhs_sent_id_base = lhs_sent_id_base..tostring(c - 1)
 								
 								br_step = br_step + w
 							else
@@ -419,8 +427,10 @@ function calculatesentences(unitid,x,y,dir)
 						end
 					end
 
-					for _, rhs_sent in ipairs(br_sentences) do
+					-- Construct all sentences by cross producting the lhs sentences and all sentences after the branching point
+					for i, rhs_sent in ipairs(br_sentences) do
 						local final_sentence = {}
+						local final_sentid = lhs_sent_id_base
 						for _, sent_word in ipairs(lhs_sentence) do
 							table.insert(final_sentence, sent_word)
 						end
@@ -429,8 +439,35 @@ function calculatesentences(unitid,x,y,dir)
 							table.insert(final_sentence, sent_word)
 						end
 
+						-- Omni text does sentence ids a bit differently than the main game. For context a "sentence id" is a unique id within the scope of a single calculatesentences() call that identifies the sentence by
+						-- a concatenation of indexes of each word within its slot. For example, if the game has Baba/Keke is you/push, and we parse the sentence "Baba is push", the sentence id would look like "112" where 
+						-- the two 1s represent the first word of the first slot (Baba) and the first word of the second slot (is), while the "2" represents the second word of the third slot (push).
+
+						-- The problem with this id scheme is that if the index is at least two digits, then you store more characters to represent a single slot. If in the previous example, the index of "push" was 10, then
+						-- the sentence id of "baba is push" would be "1110", where the last two characters represent the third slot. However, these sentence ids also get spliced to represent sub sentences and the splicing
+						-- assumes that each character in a sentence id = 1 slot (look for "string.sub(sent_id,...)"). This could lead to id collisions since splicing "1112" and "1113" after the third "1" will yield the
+						-- same sub sentence id, even if "1113" actually represents 3 slots while "1112" represents 4 slots.
+
+						-- As of 5/19/21, we don't know how Hempuli will resolve this, if at all. So in omni text, we do our own implementation of this. A BIG assumption is that the game does not interpret the index information
+						-- directly from the sentence id. It only uses the combination of indexes to uniquely identify a sentence. So knowing this, we can put in any character to represent an index within each slot, which includes
+						-- letters. With this implementation, ascii values from 58-126 are supported, which significantly increases the max num of stacked text it could handle without losing support of detecting stacked text bugs.
+
+						-- One thing to note is that the lhs sentences still uses the old algorithm while the branched sentences uses the new algorithm. This is so that splicing the lhs part of the sent id will match other sentences
+						-- that share the same slots.
+						local id_index = 1
+						for c in br_sent_ids[i]:gmatch"." do
+							local maxcombo = combo[branch.step_index + id_index] or 0
+							local asciicode = string.byte(c) + maxcombo
+							if asciicode > 126 then
+								asciicode = 126
+							end
+							final_sentid = final_sentid..string.char(asciicode)
+							id_index = id_index + 1
+						end
+						
 						table.insert(sentences, final_sentence)
 						table.insert(finals, {})
+						table.insert(sentence_ids, final_sentid)
 					end
 
 					if (branch.num_combospots > 0) then
@@ -490,12 +527,13 @@ function calculatesentences(unitid,x,y,dir)
 	end
 	]]--
 	
-	return sentences,finals,maxpos,totalvariants,br_and_text_with_split_parsing
+	return sentences,finals,maxpos,totalvariants,sentence_ids,br_and_text_with_split_parsing
 end
 
--- @mods omni connectors
 function docode(firstwords)
+	-- @mods omni connectors
 	local donefirstwords = {}
+	local existingfinals = {}
 	local limiter = 0
 	local no_firstword_br_text = {} -- Record of branching texts that should not be processed as a firstword (prevents double parsing in certain cases)
 	
@@ -511,6 +549,10 @@ function docode(firstwords)
 			local width = unitdata[3]
 			local word = unitdata[4]
 			local wtype = unitdata[5]
+			local existing = unitdata[6] or {}
+			local existing_wordid = unitdata[7] or 1
+			local existing_id = unitdata[8] or ""
+			local existing_br_and_text_with_split_parsing = unitdata[9] or {}
 			
 			if (string.sub(word, 1, 5) == "text_") then
 				word = string.sub(word, 6)
@@ -518,9 +560,11 @@ function docode(firstwords)
 			
 			local unit = mmf.newObject(unitid)
 			local x,y = unit.values[XPOS],unit.values[YPOS]
-			local tileid = x + y * roomsizex
+			local tileid_id = x + y * roomsizex
+			local unique_id = tostring(tileid_id) .. "_" .. existing_id
 			
-			--MF_alert("Testing " .. word .. ": " .. tostring(donefirstwords[tileid]) .. ", " .. tostring(dir) .. ", " .. tostring(unitid))
+			-- MF_alert("Testing " .. word .. ": " .. tostring(donefirstwords[unique_id]) .. ", " .. tostring(dir) .. ", " .. tostring(unitid) .. ", " .. tostring(unique_id))
+			
 			limiter = limiter + 1
 			
 			if (limiter > 5000) then
@@ -529,7 +573,15 @@ function docode(firstwords)
 				return
 			end
 			
-			if (not no_firstword_br_text[unitid]) and ((donefirstwords[tileid] == nil) or ((donefirstwords[tileid] ~= nil) and (donefirstwords[tileid][dir] == nil)) and (limiter < 5000)) then
+			--[[
+			MF_alert("Current unique id: " .. tostring(unique_id))
+			
+			if (donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] ~= nil) then
+				MF_alert("Already used: " .. tostring(unitid) .. ", " .. tostring(unique_id))
+			end
+			]]--
+			
+			if (not no_firstword_br_text[unitid]) and ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil)) and (limiter < 5000)) then
 				local ox,oy = 0,0
 				local name = word
 				
@@ -537,25 +589,82 @@ function docode(firstwords)
 				ox = drs[1]
 				oy = drs[2]
 				
-				if (donefirstwords[tileid] == nil) then
-					donefirstwords[tileid] = {}
+				if (donefirstwords[unique_id] == nil) then
+					donefirstwords[unique_id] = {}
 				end
 				
-				donefirstwords[tileid][dir] = 1
+-- <<<<<<< temp-baba-merge\mod
+-- 				donefirstwords[tileid][dir] = 1
+
+-- 				local sents_that_might_be_removed = {}
+-- 				local and_index = 0
+-- 				local and_unitid_to_index = {}
+				
+-- 				local sentences,finals,maxlen,variations,br_and_text_with_split_parsing = calculatesentences(unitid,x,y,dir)
+-- =======
+-- 				donefirstwords[unique_id][dir] = 1
+				
+-- 				local sentences = {}
+-- 				local finals = {}
+-- 				local maxlen = 0
+-- 				local variations = 1
+-- 				local sent_ids = {}
+				
+-- 				if (#existing == 0) then
+-- 					sentences,finals,maxlen,variations,sent_ids = calculatesentences(unitid,x,y,dir)
+-- 				else
+-- 					sentences[1] = existing
+-- 					maxlen = 3
+-- 					finals[1] = {}
+-- 					sent_ids = {existing_id}
+-- 				end
+-- >>>>>>> temp-baba-merge\curr
+				donefirstwords[unique_id][dir] = 1
+								
+				local sentences = {}
+				local finals = {}
+				local maxlen = 0
+				local variations = 1
+				local sent_ids = {}
+				local br_and_text_with_split_parsing = {}
 
 				local sents_that_might_be_removed = {}
 				local and_index = 0
 				local and_unitid_to_index = {}
-				
-				local sentences,finals,maxlen,variations,br_and_text_with_split_parsing = calculatesentences(unitid,x,y,dir)
-				
+
+				if (#existing == 0) then
+					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing = calculatesentences(unitid,x,y,dir)
+				else
+					sentences[1] = existing
+					maxlen = 3
+					finals[1] = {}
+					sent_ids = {existing_id}
+					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing
+				end				
+				-- <<<<<<< @REPLACEMENT PROPOSAL OF ABOVE
+
 				if (sentences == nil) then
 					return
 				end
 
 				local filler_text_found_in_parsing = {}
 				
-				--MF_alert(tostring(k) .. ", " .. tostring(variations))
+				--[[
+				-- BIG DEBUG MESS
+				if (variations > 0) then
+					for i=1,variations do
+						local dsent = ""
+						local currsent = sentences[i]
+						
+						for a,b in ipairs(currsent) do
+							dsent = dsent .. b[1] .. " "
+						end
+						
+						MF_alert(tostring(k) .. ": Variant " .. tostring(i) .. ": " .. dsent)
+					end
+				end
+				]]--
+				
 				if (maxlen > 2) then
 					for i=1,variations do
 						local current = finals[i]
@@ -587,12 +696,15 @@ function docode(firstwords)
 						local stop = false
 						
 						local sent = sentences[i]
+						local sent_id = sent_ids[i]
 						
 						local thissent = ""
 						
+						local j = 0
 						local do_branching_and_sentence_elimination = false
+						for wordid=existing_wordid,#sent do
+							j = j + 1
 						
-						for wordid=1,#sent do
 							local s = sent[wordid]
 							local nexts = sent[wordid + 1] or {-1, -1, {-1}, 1}
 							
@@ -606,8 +718,6 @@ function docode(firstwords)
 							local wordtile = false
 							
 							currtiletype = tiletype
-							
-							local dontadd = false
 							
 							thissent = thissent .. tilename .. "," .. tostring(wordid) .. "  "
 							
@@ -769,7 +879,7 @@ function docode(firstwords)
 							end
 							
 							if (tiletype == 4) then
-								if (#notids == 0) then
+								if (#notids == 0) or (prevtiletype == 0) then
 									notids = s[3]
 									notwidth = tilewidth
 									notslot = wordid
@@ -787,16 +897,26 @@ function docode(firstwords)
 								prevsafewordtype = prevtiletype
 							end
 							
-							--MF_alert(tilename .. ", " .. tostring(wordid) .. ", " .. tostring(stage) .. ", " .. tostring(#sent) .. ", " .. tostring(tiletype) .. ", " .. tostring(prevtiletype) .. ", " .. tostring(stop))
+							--MF_alert(tilename .. ", " .. tostring(wordid) .. ", " .. tostring(stage) .. ", " .. tostring(#sent) .. ", " .. tostring(tiletype) .. ", " .. tostring(prevtiletype) .. ", " .. tostring(stop) .. ", " .. name .. ", " .. tostring(i))
 							
 							--MF_alert(tostring(k) .. "_" .. tostring(i) .. "_" .. tostring(wordid) .. ": " .. tilename .. ", " .. tostring(tiletype) .. ", " .. tostring(stop) .. ", " .. tostring(stage) .. ", " .. tostring(letterword_firstid).. ", " .. tostring(prevtiletype))
 							
 							if (stop == false) then
 								-- @filler text
 								if tiletype ~= 11 then
-								if (dontadd == false) then
-									table.insert(current, {tilename, tiletype, tileids, tilewidth})
-									tileids = {}
+								local subsent_id = string.sub(sent_id, (wordid - existing_wordid)+1)
+								current.sent = sent
+								table.insert(current, {tilename, tiletype, tileids, tilewidth, wordid, subsent_id})
+								tileids = {}
+								
+								if (wordid == #sent) and (#current >= 3) and (j > 1) then
+									subsent_id = tostring(tileid_id) .. "_" .. string.sub(sent_id, 1, j) .. "_" .. tostring(dir)
+									-- MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
+									if (existingfinals[subsent_id] == nil) then
+										existingfinals[subsent_id] = 1
+									else
+										finals[i] = {}
+									end
 								end
 								end
 							else
@@ -811,34 +931,50 @@ function docode(firstwords)
 									notwidth = 0
 								end
 								
+								if (#current >= 3) and (j > 1) then
+									local subsent_id = tostring(tileid_id) .. "_" .. string.sub(sent_id, 1, j-1) .. "_" .. tostring(dir)
+									-- MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
+									if (existingfinals[subsent_id] == nil) then
+										existingfinals[subsent_id] = 1
+									else
+										finals[i] = {}
+									end
+								end
+								
 								if (wordid < #sent) then
-									if (wordid > 1) then
+									if (wordid > existing_wordid) then
 										if (#notids > 0) and firstrealword and (notslot > 1) and (tiletype ~= 7) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
-											--MF_alert("Notstatus added to firstwords" .. ", " .. tostring(wordid) .. ", " .. tostring(nexts[2]))
-											table.insert(firstwords, {notids, dir, notwidth, "not", 4})
+											--MF_alert("not -> A, " .. unique_id .. ", " .. sent_id)
+											local subsent_id = string.sub(sent_id, (notslot - existing_wordid)+1)
+											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing})
 											
 											if (nexts[2] ~= nil) and ((nexts[2] == 0) or (nexts[2] == 3) or (nexts[2] == 4)) and (tiletype ~= 3) then
-												--MF_alert("Also added " .. tostring(wordid) .. ", " .. tilename)
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype})
+												--MF_alert(tilename .. " -> B, " .. unique_id .. ", " .. sent_id)
+												subsent_id = string.sub(sent_id, j)
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
 											end
 										else
 											if (prevtiletype == 0) and ((tiletype == 1) or (tiletype == 7)) then
-												--MF_alert("Added previous word: " .. sent[wordid - 1][1] .. " to firstwords")
-												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype})
+												--MF_alert(sent[wordid - 1][1] .. " -> C, " .. unique_id .. ", " .. sent_id)
+												local subsent_id = string.sub(sent_id, wordid - existing_wordid)
+												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing})
 											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 4) and (tiletype ~= 1) and (tiletype ~= 2) then
-												--MF_alert("Added previous safe word: " .. sent[prevsafewordid][1] .. " to firstwords")
-												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype})
+												--MF_alert(sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
+												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
+												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing})
 											else
-												--MF_alert("Added the current word: " .. s[1] .. " to firstwords")
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype})
+												--MF_alert(tilename .. " -> E, " .. unique_id .. ", " .. sent_id)
+												local subsent_id = string.sub(sent_id, j)
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
 											end
 										end
 										
 										break
-									elseif (wordid == 1) then
+									elseif (wordid == existing_wordid) then
 										if (nexts[3][1] ~= -1) then
-											--MF_alert(nexts[1] .. " added to firstwords E" .. ", " .. tostring(wordid))
-											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2]})
+											--MF_alert(nexts[1] .. " -> F, " .. unique_id .. ", " .. sent_id)
+											local subsent_id = string.sub(sent_id, j+1)
+											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing})
 										end
 										
 										break
@@ -852,9 +988,9 @@ function docode(firstwords)
 							for _,v in ipairs(current) do
 								local tilename = v[1]
 								if tilename == "branching_and" then
-									table.insert(and_units, tileid)
-									if and_unitid_to_index[tileid] == nil then
-										and_unitid_to_index[tileid] = and_index
+									table.insert(and_units, tileid_id)
+									if and_unitid_to_index[tileid_id] == nil then
+										and_unitid_to_index[tileid_id] = and_index
 										and_index = and_index + 1
 									end
 								end
@@ -896,10 +1032,10 @@ function docode(firstwords)
 					if current[#current][2] == 6 then
 						local curr_count = and_combo_count[sent_entry.and_bitmask]
 						if curr_count - 1 > 0 then
-							print("eliminating sentence:")
-							for _,v in ipairs(current) do
-								print(v[1])
-							end
+							-- print("eliminating sentence:")
+							-- for _,v in ipairs(current) do
+							-- 	print(v[1])
+							-- end
 							local sentlen = #current
 							for i=1,sentlen do
 								table.remove(current, #current)
@@ -932,29 +1068,33 @@ function docode(firstwords)
 						
 						local valid = true
 						
-						if (#finals > 1) then
-							for a,b in ipairs(finals) do
-								if (#b == #sentence) and (a > i) then
-									local identical = true
-									
-									for c,d in ipairs(b) do
-										local currids = d[3]
-										local equivids = sentence[c][3] or {}
+						if (#sentence >= 3) then
+							if (#finals > 1) then
+								for a,b in ipairs(finals) do
+									if (#b == #sentence) and (a > i) then
+										local identical = true
 										
-										for e,f in ipairs(currids) do
-											--MF_alert(tostring(a) .. ": " .. tostring(f) .. ", " .. tostring(equivids[e]))
-											if (f ~= equivids[e]) then
-												identical = false
+										for c,d in ipairs(b) do
+											local currids = d[3]
+											local equivids = sentence[c][3] or {}
+											
+											for e,f in ipairs(currids) do
+												--MF_alert(tostring(a) .. ": " .. tostring(f) .. ", " .. tostring(equivids[e]))
+												if (f ~= equivids[e]) then
+													identical = false
+												end
 											end
 										end
-									end
-									
-									if identical then
-										--MF_alert(sentence[1][1] .. ", " .. sentence[2][1] .. ", " .. sentence[3][1] .. " (" .. tostring(i) .. ") is identical to " .. b[1][1] .. ", " .. b[2][1] .. ", " .. b[3][1] .. " (" .. tostring(a) .. ")")
-										valid = false
+										
+										if identical then
+											--MF_alert(sentence[1][1] .. ", " .. sentence[2][1] .. ", " .. sentence[3][1] .. " (" .. tostring(i) .. ") is identical to " .. b[1][1] .. ", " .. b[2][1] .. ", " .. b[3][1] .. " (" .. tostring(a) .. ")")
+											valid = false
+										end
 									end
 								end
 							end
+						else
+							valid = false
 						end
 						
 						if valid then
@@ -1006,7 +1146,10 @@ function docode(firstwords)
 									if allowed then
 										table.insert(group, {prefix .. wname, wtype, wid})
 									else
-										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype})
+										local sent = sentence.sent
+										local wordid = wdata[5]
+										local subsent_id = wdata[6]
+										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
 										break
 									end
 								elseif (wcategory == 1) then
@@ -1181,7 +1324,6 @@ function docode(firstwords)
 	end
 end
 
--- @mods this text
 function addoption(option,conds_,ids,visible,notrule,tags_)
 	---@This mod - Override reason: handle "not this is X. Also treat "this<string>" as part of featureindex["this"]
 	--MF_alert(option[1] .. ", " .. option[2] .. ", " .. option[3])
@@ -1372,7 +1514,6 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 	end
 end
 
--- @mods this text
 function code(alreadyrun_)
 	-- @This mod - Override reason: provide hook for do_subrule_this and also update_raycast units before doing any processing
 	local playrulesound = false
@@ -1461,7 +1602,7 @@ function code(alreadyrun_)
 							if (#hm == 0) and (#hm2 > 0) then
 								--MF_alert("Added " .. unit.strings[UNITNAME] .. " to firstwords, dir " .. tostring(i))
 								
-								table.insert(firstwords, {{unitid}, i, 1, unit.strings[UNITNAME], unit.values[TYPE]})
+								table.insert(firstwords, {{unitid}, i, 1, unit.strings[UNITNAME], unit.values[TYPE], {}})
 								
 								if (alreadyused[tileid] == nil) then
 									alreadyused[tileid] = {}
@@ -1500,7 +1641,7 @@ function code(alreadyrun_)
 							--MF_alert(word .. ", " .. tostring(hm) .. ", " .. tostring(hm2) .. ", " .. tostring(width))
 							
 							if (#hm == 0) and (#hm2 > 0) then
-								table.insert(firstwords, {unitids, i, width, word, wtype})
+								table.insert(firstwords, {unitids, i, width, word, wtype, {}})
 								
 								if (alreadyused[tileid] == nil) then
 									alreadyused[tileid] = {}
@@ -1555,7 +1696,6 @@ function code(alreadyrun_)
 	do_mod_hook("rule_update_after",{alreadyrun})
 end
 
--- @mods this text
 function findwordunits()
 	-- @This mod - Override reason: make "this is word" and "not this is word" work
 	local result = {}
@@ -1712,7 +1852,6 @@ function findwordunits()
 	return result,identifier,related
 end
 
--- @mods this text
 function postrules(alreadyrun_)
 	--@This mod - Override reason: add rule puff effects for "X is this"
 	local protects = {}
