@@ -93,7 +93,7 @@ function addunit(id,undoing_,levelstart_)
 		end
 	end
 	
-	if generaldata.flags[LOGGING] then
+	if generaldata.flags[LOGGING] and (generaldata.flags[RESTARTED] == false) then
 		if levelstart then
 			dolog("init_object","event",unit.strings[UNITNAME] .. ":" .. tostring(unit.values[XPOS]) .. ":" .. tostring(unit.values[YPOS]))
 		elseif (undoing == false) then

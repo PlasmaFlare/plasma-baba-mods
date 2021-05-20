@@ -656,6 +656,14 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 							returnolddir = true
 						end
 						
+						if (featureindex["reverse"] ~= nil) then
+							local revdir = reversecheck(data.unitid,dir,x,y)
+							if (revdir ~= dir) then
+								dir = revdir
+								returnolddir = true
+							end
+						end
+						
 						--MF_alert(data.reason)
 						
 						local newdir = dir

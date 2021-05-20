@@ -441,6 +441,11 @@ function moveblock(onlystartblock_)
 							local newunit = mmf.newObject(f)
 							local name = newunit.strings[UNITNAME]
 							
+							if (featureindex["reverse"] ~= nil) then
+								local turndir = unit.values[DIR]
+								turndir = reversecheck(newunit.fixed,unit.values[DIR],x,y)
+							end
+							
 							if (newunit.flags[DEAD] == false) then
 								addundo({"update",name,x,y,newunit.values[DIR],x,y,unit.values[DIR],newunit.values[ID]})
 								newunit.values[DIR] = unit.values[DIR]
@@ -2263,3 +2268,4 @@ function levelblock()
 		end
 	end
 end
+

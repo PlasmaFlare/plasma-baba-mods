@@ -35,6 +35,7 @@ function clearunits(restore_)
 	leveldata.currcolour = 0
 	
 	visiontargets = {}
+	revertlist = {}
 	
 	generaldata.values[CURRID] = 0
 	updateundo = true
