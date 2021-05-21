@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: Beta 407 on PC**
+**Current compatable Baba Is You version: Beta 413 on PC**
 
 This is a merged collection of all of my Baba mods I made so far. Download this if you want to use all of my mods at once rather than individually.
 
@@ -11,6 +11,7 @@ Total list of mods (Click on one to get a *stylized* description of each mod)
 - [Omni Connectors](docs/omni_connectors.md)
 - [Filler Text](docs/filler_text.md)
 - [THIS](docs/this.md)
+- [CUT and PACK](docs/textcraft.md)
 
 Mods with seperate repositories
 - [Arrow Properties Plus/Turning Text](https://github.com/PlasmaFlare/Baba-Is-You-Arrow-Properties-Plus)
@@ -36,6 +37,10 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.2.0** (5/21/21)
+  - Updated for Beta 413
+  - New mod! CUT and PACK
+  - Updated omni text to (hopefully) work with the new parsing changes
 - **1.1.3** (5/6/21)
   - Updated for Beta 410
 - **1.1.2** (4/27/21)
