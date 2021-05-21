@@ -107,7 +107,7 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
 
     -- check that all characters in the text are valid
     local name = textunit.strings[NAME]
-    if not get_cut_text(name) then 
+    if not get_cut_text(name, textunit.values[DIR]) then 
         return false 
     end
 
@@ -145,7 +145,7 @@ function handle_text_cutting(data, dir, overlap_case)
     local ox = dirvec[1]
     local oy = dirvec[2]
 
-    local outstr = get_cut_text(bname)
+    local outstr = get_cut_text(bname, bunit.values[DIR])
     if outstr then
         if dir == 1 or dir == 2 then
             outstr = outstr:reverse()

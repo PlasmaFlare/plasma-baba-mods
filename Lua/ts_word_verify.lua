@@ -8,6 +8,12 @@ global_special_cut_mappings = {
     lockedup =       "locked",
     lockeddown =     "locked",
 }
+global_dir_to_name = {
+    [0] = "right",
+    [1] = "up",
+    [2] = "left",
+    [3] = "down"
+}
 
 local valid_characters = {}
 
@@ -42,14 +48,20 @@ table.insert(mod_hook_functions["level_start"],
     end
 )
 
-function get_cut_text(name)
+function get_cut_text(name, dir)
     local t = ""
     t = special_cut_mappings[name]
     if t then return t end
     
     t = parse_turning_text(name)
-    if t then return t end
-    
+    if t then 
+        if t == "dir" then
+            return global_dir_to_name[dir] or ""
+        else
+            return t 
+        end
+    end
+
     if name_is_branching_text(name) or name_is_branching_and(name) then
         return parse_branching_text(name)
     end
