@@ -117,6 +117,8 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
         cut_text = textunitid,
         cutter_pushed_against = cutter_pushed_against,
         cutterunitid = cutterunitid,
+        cut_text_start_x = x,
+        cut_text_start_y = y,
     }
     return data
 end
@@ -134,7 +136,10 @@ function handle_text_cutting(data, dir, overlap_case)
     local y = bunit.values[YPOS]
 
     if data.cutter_pushed_against then
-        if data.cutterunitid ~= -1 then
+        if data.cutterunitid == 2 then
+            x = data.cut_text_start_x
+            y = data.cut_text_start_y
+        elseif data.cutterunitid ~= -1 then
             local cutterunit = mmf.newObject(data.cutterunitid)
             x = cutterunit.values[XPOS]
             y = cutterunit.values[YPOS]
@@ -225,7 +230,7 @@ function handle_level_cutting()
 end
 
 
-function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushed_against)
+function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushed_against, packer_x, packer_y)
     if textunitid == 2 then
         return false
     end
@@ -252,13 +257,18 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         y = textunit.values[YPOS]
         check_unitid = textunitid
     else
-        local packerunit = mmf.newObject(packerunitid)
-        if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
-            -- NOTE: disable any letterunits from packing for now. Actually making this work seems like a lot of wrangling with the movement system
-            return false
+        if packerunitid == 2 then
+            x = packer_x
+            y = packer_y
+        else
+            local packerunit = mmf.newObject(packerunitid)
+            if packerunit.strings[UNITTYPE] == "text" and packerunit.values[TYPE] == 5 then
+                -- NOTE: disable any letterunits from packing for now. Actually making this work seems like a lot of wrangling with the movement system
+                return false
+            end
+            x = packerunit.values[XPOS]
+            y = packerunit.values[YPOS]
         end
-        x = packerunit.values[XPOS]
-        y = packerunit.values[YPOS]
         check_unitid = packerunitid
     end
 

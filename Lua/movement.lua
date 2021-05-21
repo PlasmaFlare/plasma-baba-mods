@@ -1142,6 +1142,7 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 
 			local bx,by = 0,0
 			if (b ~= 2 and b ~= -1) then
+				print()
 				local bunit = mmf.newObject(b)
 				bx,by = bunit.values[XPOS],bunit.values[YPOS]
 				
@@ -1480,7 +1481,7 @@ function check(unitid,x,y,dir,pulling_,reason)
 				if reason ~= "pack" then
 					local data = nil
 					if pack ~= nil then
-						data = check_text_packing(unitid, id, dir, pulling)
+						data = check_text_packing(unitid, id, dir, pulling, false, x, y)
 						if data then
 							valid = false
 							table.insert(queued_pack_specials, {id, "pack", data})
@@ -1489,7 +1490,7 @@ function check(unitid,x,y,dir,pulling_,reason)
 					if not dopack then
 						local obspack = hasfeature(obsname,"is","pack",id,x+ox,y+oy)
 						if obspack ~= nil then
-							local data = check_text_packing(id, unitid, rotate(dir), pulling, true)
+							local data = check_text_packing(id, unitid, rotate(dir), pulling, true, x, y)
 							if data then
 								valid = false
 								table.insert(queued_pack_specials, {id, "pack", data})
@@ -1603,12 +1604,25 @@ function check(unitid,x,y,dir,pulling_,reason)
 		end
 
 		local cut = hasfeature("empty","is","cut",2,x+ox,y+oy)
-		if (cut ~= nil) and check_text_cutting(2, unitid, pulling, x+ox,y+oy) then
+		if (cut ~= nil) then 
+			local data = check_text_cutting(2, unitid, pulling, true, x+ox,y+oy)
 			-- @Note: if "text is cut" and you push a regular text onto a lettertext, the regular text doesn't do the cutting since the lettertext cannot be cut. 
 			-- But in blocks.lua, the lettertext will cut the regular text. Making valid true here and not interting into specials prevents this from happening.
 			-- Does it make sense intuitively to make valid = true in this specific cornercase?
-			valid = false
-			table.insert(specials, {2, "cut"})
+			if data then
+				valid = false
+				table.insert(specials, {2, "cut", data})
+			end
+		end
+		if reason ~= "pack" then
+			local pack = hasfeature("empty","is","pack",2,x+ox,y+oy)
+			if pack then
+				local data = check_text_packing(2, unitid, rotate(dir), pulling, true, x+ox, y+oy)
+				if data then
+					valid = false
+					table.insert(queued_pack_specials, {2, "pack", data})
+				end
+			end
 		end
 		
 		local added = false

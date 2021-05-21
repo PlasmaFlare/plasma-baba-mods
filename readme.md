@@ -37,6 +37,8 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.2.1** (5/21/21)
+  - Forgot to implement `empty is cut` and `empty is pack`
 - **1.2.0** (5/21/21)
   - Updated for Beta 413
   - New mod! CUT and PACK

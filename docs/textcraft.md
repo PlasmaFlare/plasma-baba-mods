@@ -24,4 +24,6 @@ Adding `cut` through the editor should auto add all alphabetical texts. But for 
   
 - Be careful when using `cut` to produce stacked texts. Due to how the parser works, the game can lag exponentially if you have a line of stacked texts, which is something that `cut` can do easily. This is especially true with `level is cut` and `baba is cut and fall` while baba is falling onto a line of text 
 
-- Cutting a directional fall, locked, nudge or one of my modded directional properties will spit out the base property without the direction  
+- Cutting a directional fall, locked, nudge or one of my modded directional properties will spit out the base property without the direction
+  
+- Cutting and packing text does not trigger `text has X`. This is something I debated for a while, but decided that it seems cheap for pack and cut to trigger has since you can keep on cutting and packing.
