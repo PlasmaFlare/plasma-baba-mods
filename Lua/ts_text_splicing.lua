@@ -208,7 +208,7 @@ function handle_text_cutting(data, dir, overlap_case)
             end
 
             if valid then
-                objectlist[c] = 1
+                -- objectlist[c] = 1 -- Commented out due to error when "X is all". But is there a need to add the lettertext to the objectlist
                 local newunitid = create("text_"..c, x + ox, y - oy, dir, x, y, nil, nil, leveldata)
 
                 splice_mod_globals.exclude_from_cut_blocking[newunitid] = true
@@ -366,7 +366,8 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             local realname = unitreference["text_"..packed_text_name]
             local dname = getactualdata_objlist(realname,"name")
             if dname == "text_"..packed_text_name then
-                objectlist["text_"..packed_text_name] = 1
+                -- Commented out due to error when "X is all". This isn't the direct cause, but might cause other cases. But is there a need to add this to the objectlist
+                -- objectlist["text_"..packed_text_name] = 1
                 break
             end
         end

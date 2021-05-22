@@ -76,7 +76,7 @@ function pack_word_verify_initialize()
         special_pack_mappings["turning"..turning_prop] = "turning_"..turning_prop
     end
     for branching_text, _ in pairs(branching_text_names) do
-        special_pack_mappings["branching"..branching_text] = "branching_"..branching_text
+        special_pack_mappings["omni"..branching_text] = "branching_"..branching_text
     end
 end
 
