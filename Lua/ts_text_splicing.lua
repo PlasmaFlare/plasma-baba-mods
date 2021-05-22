@@ -3,6 +3,8 @@ splice_mod_globals = {}
 function reset_splice_mod_globals()
     splice_mod_globals = {
         editor_objlist_letter_indexes = {},
+        editor_objlist_multi_pairing_indexes = {},
+
         exclude_from_cut_blocking = {}, -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
         cut_texts = {}, -- a record of all texts that were destroyed via cut when we call handle_cut_text
         queued_cut_texts = {}, -- record of all texts that will be destroyed. (This is populated in check_text_cutting) --@TODO: why do we need cut_texts and queued_cut_texts?
@@ -11,8 +13,6 @@ function reset_splice_mod_globals()
         -- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
         -- This prevents packing via pulling
         calling_push_check_on_pull = false, 
-
-        
         record_packed_text = false, -- Flag for indicating when to update splice_mod_globals.pack_texts
     }
 end
@@ -27,15 +27,29 @@ function reset_splice_mod_globals_per_take()
 end
 
 function splice_initialize()
+    local multi_pair_texts = {"text_cut", "text_turning_dir", "text_turning_fall", "text_turning_locked", "text_turning_nudge"}
+    for _, name in ipairs(multi_pair_texts) do
+        splice_mod_globals.editor_objlist_multi_pairing_indexes[name] = {}
+    end
+
     -- Store indexes of letterunits in editor_objectlist so that we can reference them faster
-    splice_mod_globals.editor_objlist_letter_indexes = {}
     for i, v in pairs(editor_objlist) do
-        if v.type == 5 and v.unittype == "text" then
-            if string.sub(v.name, 1, 5) == "text_" then
-                local character = string.sub(v.name, 6)
-                if character ~= "sharp" and character ~= "flat" and not tonumber(character) then
-                    table.insert(splice_mod_globals.editor_objlist_letter_indexes, i)
-                end
+        if v.unittype == "text" and string.sub(v.name, 1, 5) == "text_" then
+            local textname = string.sub(v.name, 6)
+            if v.type == 5 and textname ~= "sharp" and textname ~= "flat" and not tonumber(textname) then
+                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_cut"], i)
+            end
+            if textname == "right" or textname == "left" or textname == "up" or textname == "down" then
+                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_dir"], i)
+            end
+            if textname == "fallright" or textname == "fallleft" or textname == "fallup" or textname == "fall" then
+                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_fall"], i)
+            end
+            if textname == "lockedright" or textname == "lockedleft" or textname == "lockedup" or textname == "lockeddown" then
+                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_locked"], i)
+            end
+            if textname == "nudgeright" or textname == "nudgeleft" or textname == "nudgeup" or textname == "nudgedown" then
+                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_nudge"], i)
             end
         end
     end     
@@ -52,8 +66,8 @@ table.insert(mod_hook_functions["command_given"],
 )
 
 function add_letterobjects_if_added_cut(editor_currobjlist, data)
-    if data.name == "text_cut" then
-        for _, index in pairs(splice_mod_globals.editor_objlist_letter_indexes) do
+    if splice_mod_globals.editor_objlist_multi_pairing_indexes[data.name] then
+        for _, index in pairs(splice_mod_globals.editor_objlist_multi_pairing_indexes[data.name]) do
             if (#editor_currobjlist >= 150) then
                 return
             end
@@ -279,7 +293,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     local ox = 0
     local oy = 0
     local letterunits = {}
-    local packed_text_name = ""
+    local found_letters = ""
     local packed_text_pos = {textunit.values[XPOS],textunit.values[YPOS]}
 
     if not packer_pushed_against then
@@ -294,35 +308,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         if not letterunitid then
             break
         end
-        -- local collisions, obstacle_list, specials = check(check_unitid, x+ox, y-oy, dir, false, "pack")
-        -- local letterunitid = nil
-        -- local valid = true
-        -- for _, obs in ipairs(collisions) do
-        --     if obs == 1 or obs == -1 then
-        --         valid = false
-        --         break
-        --     end
-        --     if (obs ~= 2 and obs ~= 0) then
-        --         local obsunit = mmf.newObject(obs)
-        --         if obsunit.strings[UNITTYPE] == "text" and obsunit.values[TYPE] == 5 then
-        --             if not letterunitid then
-        --                 letterunitid = obs
-        --             else
-        --                 valid = false
-        --                 break
-        --             end
-        --         else
-        --             valid = false
-        --             break
-        --         end
-        --     end
-        -- end
-        -- if not valid or not letterunitid then
-        --     break
-        -- end
-        -- if splice_mod_globals.pack_texts[letterunitid] and not packer_pushed_against then
-        --     break
-        -- end
         if splice_mod_globals.queued_cut_texts[letterunitid] then
             break
         end
@@ -331,9 +316,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         end
 
         local letterunit = mmf.newObject(letterunitid)
-        -- if letterunit.values[TYPE] ~= 5 then
-        --     break
-        -- end
 
         if packerunitid == -1 and not processed_first_level_pack then
             processed_first_level_pack = true
@@ -350,17 +332,17 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             end
 
             local first_letterunit = mmf.newObject(first_letterunitid)
-            packed_text_name = packed_text_name..first_letterunit.strings[NAME]
+            found_letters = found_letters..first_letterunit.strings[NAME]
             table.insert(letterunits, first_letterunitid)
             table.insert(letterwidths, #first_letterunit.strings[NAME])
         end
 
         if reverse then
-            packed_text_name = letterunit.strings[NAME]..packed_text_name
+            found_letters = letterunit.strings[NAME]..found_letters
             table.insert(letterunits, 1, letterunitid)
             table.insert(letterwidths, 1, #letterunit.strings[NAME])
         else
-            packed_text_name = packed_text_name..letterunit.strings[NAME]
+            found_letters = found_letters..letterunit.strings[NAME]
             table.insert(letterunits, letterunitid)
             table.insert(letterwidths, #letterunit.strings[NAME])
         end
@@ -374,9 +356,11 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         return false
     end
 
-    local length = #packed_text_name 
+    local length = #found_letters
+    local packed_text_name = ""
     for i=1,length do
-        if #packed_text_name > 1 and unitreference["text_"..packed_text_name] ~= nil then
+        packed_text_name = get_pack_text(found_letters, dir)
+        if #found_letters > 1 and unitreference["text_"..packed_text_name] ~= nil then
             -- Due to weird legacy systems of object indexing, we have to check if the current
             -- packed text name's unit reference (i.e "object034") refers to the actual text object
             local realname = unitreference["text_"..packed_text_name]
@@ -390,7 +374,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         if reverse then
             if #letterwidths > 0 then
                 for c=1,letterwidths[1] do
-                    packed_text_name = packed_text_name:sub(2)
+                    found_letters = found_letters:sub(2)
                 end
             end
             table.remove(letterunits, 1)
@@ -398,7 +382,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         else
             if #letterwidths > 0 then
                 for c=1,letterwidths[#letterwidths] do
-                    packed_text_name = packed_text_name:sub(1,-2)
+                    found_letters = found_letters:sub(1,-2)
                 end
             end
             table.remove(letterunits, #letterunits)
@@ -406,7 +390,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         end
     end
 
-    if #letterunits <= 1 or #packed_text_name <= 1 then
+    if #letterunits <= 1 or #found_letters <= 1 or packed_text_name == "" then
         return false
     end
     
@@ -490,5 +474,4 @@ function handle_text_packing(unitid, dir, pack_entry)
         generaldata.values[SHAKE] = 3
         setsoundname("turn",9,sound)
     end 
-
 end

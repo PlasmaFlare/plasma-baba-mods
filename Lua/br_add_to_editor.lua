@@ -27,7 +27,8 @@ editor_objlist["text_branching_is"] =
 	type = 1,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_is",
 }
 
 editor_objlist["text_branching_and"] = 
@@ -40,7 +41,8 @@ editor_objlist["text_branching_and"] =
 	type = 6,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_and",
 }
 
 editor_objlist["text_branching_has"] = 
@@ -53,7 +55,8 @@ editor_objlist["text_branching_has"] =
 	type = 1,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_has",
 }
 
 editor_objlist["text_branching_fear"] = 
@@ -66,7 +69,8 @@ editor_objlist["text_branching_fear"] =
 	type = 1,
 	layer = 20,
 	colour = {4, 1},
-    colour_active = {4, 2},
+	colour_active = {4, 2},
+	pairedwith = "text_fear",
 }
 
 editor_objlist["text_branching_make"] = 
@@ -79,7 +83,8 @@ editor_objlist["text_branching_make"] =
 	type = 1,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_make",
 }
 
 editor_objlist["text_branching_follow"] = 
@@ -92,7 +97,8 @@ editor_objlist["text_branching_follow"] =
 	type = 1,
 	layer = 20,
 	colour = {5, 2},
-    colour_active = {5, 4},
+	colour_active = {5, 4},
+	pairedwith = "text_follow",
 }
 
 editor_objlist["text_branching_mimic"] = 
@@ -105,7 +111,8 @@ editor_objlist["text_branching_mimic"] =
 	type = 1,
 	layer = 20,
 	colour = {4, 1},
-    colour_active = {4, 2},
+	colour_active = {4, 2},
+	pairedwith = "text_mimic",
 }
 
 editor_objlist["text_branching_play"] = 
@@ -118,7 +125,8 @@ editor_objlist["text_branching_play"] =
 	type = 1,
 	layer = 20,
 	colour = {5, 2},
-    colour_active = {5, 4},
+	colour_active = {5, 4},
+	pairedwith = "text_play",
 }
 
 editor_objlist["text_branching_eat"] = 
@@ -131,7 +139,8 @@ editor_objlist["text_branching_eat"] =
 	type = 1,
 	layer = 20,
 	colour = {4, 1},
-    colour_active = {4, 2},
+	colour_active = {4, 2},
+	pairedwith = "text_eat",
 }
 
 editor_objlist["text_branching_near"] = 
@@ -144,7 +153,8 @@ editor_objlist["text_branching_near"] =
 	type = 7,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_near",
 }
 
 editor_objlist["text_branching_on"] = 
@@ -157,7 +167,8 @@ editor_objlist["text_branching_on"] =
 	type = 7,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_on",
 }
 editor_objlist["text_branching_without"] = 
 {
@@ -169,7 +180,8 @@ editor_objlist["text_branching_without"] =
 	type = 7,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_without",
 }
 editor_objlist["text_branching_facing"] = 
 {
@@ -181,7 +193,8 @@ editor_objlist["text_branching_facing"] =
 	type = 7,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_facing",
 }
 editor_objlist["text_branching_above"] = 
 {
@@ -193,7 +206,8 @@ editor_objlist["text_branching_above"] =
 	type = 7,
 	layer = 20,
 	colour = {3, 2},
-    colour_active = {4, 4},
+	colour_active = {4, 4},
+	pairedwith = "text_above",
 }
 editor_objlist["text_branching_below"] = 
 {
@@ -205,7 +219,8 @@ editor_objlist["text_branching_below"] =
 	type = 7,
 	layer = 20,
 	colour = {3, 2},
-    colour_active = {4, 4},
+	colour_active = {4, 4},
+	pairedwith = "text_below",
 }
 editor_objlist["text_branching_feeling"] = 
 {
@@ -217,7 +232,8 @@ editor_objlist["text_branching_feeling"] =
 	type = 7,
 	layer = 20,
 	colour = {2, 2},
-    colour_active = {2, 4},
+	colour_active = {2, 4},
+	pairedwith = "text_feeling",
 }
 
 formatobjlist()

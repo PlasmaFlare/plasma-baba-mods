@@ -7,6 +7,24 @@ global_special_cut_mappings = {
     lockedleft =     "locked",
     lockedup =       "locked",
     lockeddown =     "locked",
+    nudgeleft =      "nudge",
+    nudgeup =        "nudge",
+    nudgeright =     "nudge",
+    nudgedown =      "nudge",
+}
+global_special_pack_mappings = {
+    fallright =      "fall",
+    fallleft =       "fall",
+    fallup =         "fall",
+    falldown =       "fall",
+    lockedright =    "locked",
+    lockedleft =     "locked",
+    lockedup =       "locked",
+    lockeddown =     "locked",
+    nudgeleft =      "nudge",
+    nudgeup =        "nudge",
+    nudgeright =     "nudge",
+    nudgedown =      "nudge",
 }
 global_dir_to_name = {
     [0] = "right",
@@ -18,8 +36,9 @@ global_dir_to_name = {
 local valid_characters = {}
 
 local special_cut_mappings = {}
+local special_pack_mappings = {}
 
-function cut_work_verify_initialize()
+function cut_word_verify_initialize()
     for i, v in pairs(editor_objlist) do
         if v.type == 5 and v.unittype == "text" then
             if string.sub(v.name, 1, 5) == "text_" then
@@ -34,38 +53,47 @@ function cut_work_verify_initialize()
         special_cut_mappings[k] = v
     end
 
+    -- Arrow properties
     for arrow_prop,_ in pairs(arrow_properties) do
         special_cut_mappings[arrow_prop.."right"] = arrow_prop
         special_cut_mappings[arrow_prop.."left"] = arrow_prop
         special_cut_mappings[arrow_prop.."up"] = arrow_prop
         special_cut_mappings[arrow_prop.."down"] = arrow_prop
     end
+    -- Turning text
+    for turning_prop, _ in pairs(turning_word_names) do
+        special_cut_mappings["turning_"..turning_prop] = turning_prop
+    end 
+    -- Omni text
+    for branching_text, _ in pairs(branching_text_names) do
+        special_cut_mappings["branching_"..branching_text] = branching_text
+    end
+    special_cut_mappings["branching_and"] = "and"
+end
+
+function pack_word_verify_initialize()
+    for turning_prop, _ in pairs(turning_word_names) do
+        special_pack_mappings["turning"..turning_prop] = "turning_"..turning_prop
+    end
+    for branching_text, _ in pairs(branching_text_names) do
+        special_pack_mappings["branching"..branching_text] = "branching_"..branching_text
+    end
 end
 
 table.insert(mod_hook_functions["level_start"], 
     function()
-        cut_work_verify_initialize()
+        cut_word_verify_initialize()
+        pack_word_verify_initialize()
     end
 )
 
 function get_cut_text(name, dir)
-    local t = ""
-    t = special_cut_mappings[name]
+    -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction
+
+    local t = special_cut_mappings[name]
     if t then return t end
     
-    t = parse_turning_text(name)
-    if t then 
-        if t == "dir" then
-            return global_dir_to_name[dir] or ""
-        else
-            return t 
-        end
-    end
-
-    if name_is_branching_text(name) or name_is_branching_and(name) then
-        return parse_branching_text(name)
-    end
-    
+    -- THIS
     if is_name_text_this(name, false) then
         return "this"
     end
@@ -75,6 +103,14 @@ function get_cut_text(name, dir)
             return nil
         end
     end
+
+    return name
+end
+
+function get_pack_text(name, dir)
+    -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction
+    local t = special_pack_mappings[name]
+    if t then return t end
 
     return name
 end
