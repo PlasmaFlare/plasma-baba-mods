@@ -677,7 +677,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						local ox,oy = ndrs[1],ndrs[2]
 						local pushobslist = {}
 						
+						splice_mod_globals.record_packed_text = true
 						local obslist,allobs,specials = check(data.unitid,x,y,dir,false,data.reason)
+						splice_mod_globals.record_packed_text = false
 						local pullobs,pullallobs,pullspecials = check(data.unitid,x,y,dir,true,data.reason)
 						
 						if returnolddir then
@@ -1142,7 +1144,6 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 
 			local bx,by = 0,0
 			if (b ~= 2 and b ~= -1) then
-				print()
 				local bunit = mmf.newObject(b)
 				bx,by = bunit.values[XPOS],bunit.values[YPOS]
 				
@@ -1820,7 +1821,9 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 		if pulling then
 			splice_mod_globals.calling_push_check_on_pull = true
 		end
+		splice_mod_globals.record_packed_text = true
 		local hmlist,hms,specials = check(unitid,x,y,dir,false,reason)
+		splice_mod_globals.record_packed_text = false
 		
 		if pulling then
 			splice_mod_globals.calling_push_check_on_pull = false

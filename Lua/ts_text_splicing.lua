@@ -3,12 +3,17 @@ splice_mod_globals = {}
 function reset_splice_mod_globals()
     splice_mod_globals = {
         editor_objlist_letter_indexes = {},
-        exclude_from_cut_blocking = {},
-        cut_texts = {},
-        queued_cut_texts = {},
-        calculated_text_packs = {},
-        pack_texts = {},
-        calling_push_check_on_pull = false,
+        exclude_from_cut_blocking = {}, -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
+        cut_texts = {}, -- a record of all texts that were destroyed via cut when we call handle_cut_text
+        queued_cut_texts = {}, -- record of all texts that will be destroyed. (This is populated in check_text_cutting) --@TODO: why do we need cut_texts and queued_cut_texts?
+        pack_texts = {}, -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
+
+        -- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
+        -- This prevents packing via pulling
+        calling_push_check_on_pull = false, 
+
+        
+        record_packed_text = false, -- Flag for indicating when to update splice_mod_globals.pack_texts
     }
 end
 
@@ -16,9 +21,9 @@ function reset_splice_mod_globals_per_take()
     splice_mod_globals.exclude_from_cut_blocking = {}
     splice_mod_globals.cut_texts = {}
     splice_mod_globals.queued_cut_texts = {}
-    splice_mod_globals.calculated_text_packs = {}
     splice_mod_globals.pack_texts = {}
     splice_mod_globals.calling_push_check_on_pull = false
+    splice_mod_globals.record_packed_text = false
 end
 
 function splice_initialize()
@@ -41,7 +46,6 @@ splice_initialize()
 table.insert(mod_hook_functions["command_given"], 
     function()
         splice_mod_globals.exclude_from_cut_blocking = {}
-        splice_mod_globals.calculated_text_packs = {}
         splice_mod_globals.cut_texts = {}
         splice_mod_globals.pack_texts = {}
     end
@@ -361,9 +365,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             table.insert(letterwidths, #letterunit.strings[NAME])
         end
 
-        -- packed_text_pos[1] = x+ox
-        -- packed_text_pos[2] = y-oy
-
         check_unitid = letterunitid
         ox = ox + dirvec[1]
         oy = oy + dirvec[2]
@@ -403,18 +404,17 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             table.remove(letterunits, #letterunits)
             table.remove(letterwidths, #letterwidths)
         end
-        -- packed_text_pos[1] = packed_text_pos[1] - dirvec[1]
-        -- packed_text_pos[2] = packed_text_pos[2] + dirvec[2]
     end
 
     if #letterunits <= 1 or #packed_text_name <= 1 then
         return false
     end
     
-    for _, letter in ipairs(letterunits) do
-        splice_mod_globals.pack_texts[letter] = true
+    if splice_mod_globals.record_packed_text then
+        for _, letter in ipairs(letterunits) do
+            splice_mod_globals.pack_texts[letter] = true
+        end
     end
-    splice_mod_globals.calculated_text_packs[textunitid] = true
     data = {
         letterunits = letterunits,
         packed_text_name = packed_text_name,
@@ -453,7 +453,7 @@ function text_packing_get_letter(unitid, x, y, dir, packer_pushed_against)
     if not valid or not letterunitid then
         return false
     end
-    if splice_mod_globals.pack_texts[letterunitid] and not packer_pushed_against then
+    if splice_mod_globals.pack_texts[letterunitid] then
         return false
     end
 
