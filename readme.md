@@ -37,6 +37,12 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.2.2** (5/22/21)
+  - Fixed pushing a packer not packing text
+  - Adding variants of turning text and omni text auto adds normal variation of texts to editor
+  - Cutting a special variant gives you only the text that's displayed on the text itself. (So locked (right) only gives you `L O C K E D`)
+     - Exception: Deturn gives you `D E T U R N`
+  - You can pack omni text and turning text. Omni "has" requires `O M N I H A S`, turning "more" requires `T U R N I N G M O R E`
 - **1.2.1** (5/21/21)
   - Forgot to implement `empty is cut` and `empty is pack`
 - **1.2.0** (5/21/21)
