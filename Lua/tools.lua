@@ -151,7 +151,7 @@ function delunit(unitid)
 end
 
 function writerules(parent,name,x_,y_)
-	--@This mod - Override reason: remove unitid display when forming "this(X) is float" and "Y mimic X"
+	--@This mod - Override reason: Custom "this" rule display. Also remove unitid display when forming "this(X) is float" and "Y mimic X"
 	local basex = x_
 	local basey = y_
 	local linelimit = 12

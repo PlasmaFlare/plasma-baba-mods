@@ -593,32 +593,6 @@ function docode(firstwords)
 					donefirstwords[unique_id] = {}
 				end
 				
--- <<<<<<< temp-baba-merge\mod
--- 				donefirstwords[tileid][dir] = 1
-
--- 				local sents_that_might_be_removed = {}
--- 				local and_index = 0
--- 				local and_unitid_to_index = {}
-				
--- 				local sentences,finals,maxlen,variations,br_and_text_with_split_parsing = calculatesentences(unitid,x,y,dir)
--- =======
--- 				donefirstwords[unique_id][dir] = 1
-				
--- 				local sentences = {}
--- 				local finals = {}
--- 				local maxlen = 0
--- 				local variations = 1
--- 				local sent_ids = {}
-				
--- 				if (#existing == 0) then
--- 					sentences,finals,maxlen,variations,sent_ids = calculatesentences(unitid,x,y,dir)
--- 				else
--- 					sentences[1] = existing
--- 					maxlen = 3
--- 					finals[1] = {}
--- 					sent_ids = {existing_id}
--- 				end
--- >>>>>>> temp-baba-merge\curr
 				donefirstwords[unique_id][dir] = 1
 								
 				local sentences = {}
@@ -641,7 +615,6 @@ function docode(firstwords)
 					sent_ids = {existing_id}
 					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing
 				end				
-				-- <<<<<<< @REPLACEMENT PROPOSAL OF ABOVE
 
 				if (sentences == nil) then
 					return

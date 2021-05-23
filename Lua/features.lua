@@ -1,4 +1,7 @@
 function findfeature(rule1,rule2,rule3)
+	-- @Mods
+	-- Turning text - Override reason: when looking for "X is stop", if the global "group_arrow_properties" is true, then include stopright, stopleft, etc as part of the result.
+	--								   The global "group_arrow_properties" is set to false whenever we want to search specifically for a non arrow property
 	local options = {}
 	local result = {}
 	local rule = ""
@@ -118,6 +121,9 @@ function findfeature(rule1,rule2,rule3)
 end
 
 function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
+	-- @Mods
+	-- Turning text - Override reason: when looking for "X is stop", if the global "group_arrow_properties" is true, then include stopright, stopleft, etc as part of the result.
+	--								   The global "group_arrow_properties" is set to false whenever we want to search specifically for a non arrow property
 	if (featureindex[rule1] ~= nil) and (rule2 ~= nil) and (rule3 ~= nil) then
 		for i,rules in ipairs(featureindex[rule1]) do
 			local rule = rules[1]
@@ -199,6 +205,9 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
 end
 
 function getunitswitheffect(rule3,nolevels_,ignorethese_)
+	-- @Mods
+	-- Turning text - Override reason: when looking for "X is stop", if the global "group_arrow_properties" is true, then include stopright, stopleft, etc as part of the result.
+	--								   The global "group_arrow_properties" is set to false whenever we want to search specifically for a non arrow property
 	local group = {}
 	local result = {}
 	local ignorethese = ignorethese_ or {}
