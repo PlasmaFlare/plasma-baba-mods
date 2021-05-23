@@ -104,7 +104,7 @@ end
 
 function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
     --@This - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it doesn't have an actual object associated
-    -- with it. Therefore, exclude "this" from "all" 
+	-- with it. Therefore, exclude "this" from "all" 
 	local all = {}
 	local empty = false
 	local dolevels = dolevels_ or false
@@ -112,7 +112,7 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 	local leveldata = leveldata_ or {}
 	
 	if (x_ == nil) and (y_ == nil) and (id_ == nil) then
-		if (matdata[1] ~= "empty") and (matdata[1] ~= "group") then
+		if (matdata[1] ~= "empty") and (findnoun(matdata[1],nlist.brief) == false) then
 			all = findall(matdata)
 		elseif (matdata[1] == "empty") then
 			all = findempty(matdata[2])
@@ -145,22 +145,24 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 		for i,v in ipairs(test) do
 			if (empty == false) then
 				local vunit = mmf.newObject(v)
-				local x,y,dir = vunit.values[XPOS],vunit.values[YPOS],vunit.values[DIR],vunit.values[MOVED]
+				local x,y,dir = vunit.values[XPOS],vunit.values[YPOS],vunit.values[DIR]
 				
-				for b,unit in pairs(objectlist) do
-					if (b ~= "empty") and (b ~= "all") and (b ~= "level") and (b ~= "group") and (b ~= matdata[1]) and (b ~= "text") and (not is_name_text_this(b)) then
-						local protect = hasfeature(matdata[1],"is","not " .. b,v,x,y)
-						
-						if (protect == nil) then
-							local mat = findtype({b},x,y,v)
-							--local tmat = findtext(x,y)
+				if (vunit.flags[CONVERTED] == false) then
+					for b,unit in pairs(objectlist) do
+						if (findnoun(b) == false) and (b ~= matdata[1]) and (not is_name_text_this(b)) then
+							local protect = hasfeature(matdata[1],"is","not " .. b,v,x,y)
 							
-							if (#mat == 0) then
-								create(b,x,y,dir,nil,nil,nil,nil,leveldata)
+							if (protect == nil) then
+								local mat = findtype({b},x,y,v)
+								--local tmat = findtext(x,y)
 								
-								
-								if (matdata[1] == "text") or (matdata[1] == "level") then
-									table.insert(delthese, v)
+								if (#mat == 0) then
+									create(b,x,y,dir,nil,nil,nil,nil,leveldata)
+									
+									
+									if (matdata[1] == "text") or (matdata[1] == "level") then
+										table.insert(delthese, v)
+									end
 								end
 							end
 						end
@@ -173,24 +175,33 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 				
 				local blocked = {}
 				
-				if (featureindex["empty"] ~= nil) then
-					for i,rules in ipairs(featureindex["empty"]) do
-						local rule = rules[1]
-						local conds = rules[2]
-						
-						if (rule[1] == "empty") and (rule[2] == "is") and (string.sub(rule[3], 1, 4) == "not ") then
-							if testcond(conds,1,x,y) then
-								local target = string.sub(rule[3], 5)
-								blocked[target] = 1
-							end
-						end
+				local valid = true
+				if (emptydata[v] ~= nil) then
+					if (emptydata[v]["conv"] ~= nil) and emptydata[v]["conv"] then
+						valid = false
 					end
 				end
 				
-				if (blocked["all"] == nil) then
-					for b,mat in pairs(objectlist) do
-						if (b ~= "empty") and (b ~= "all") and (b ~= "level") and (b ~= "group") and (b ~= "text") and (blocked[target] == nil) and (not is_name_text_this(b)) then
-							create(b,x,y,dir,nil,nil,nil,nil,leveldata)
+				if valid then
+					if (featureindex["empty"] ~= nil) then
+						for i,rules in ipairs(featureindex["empty"]) do
+							local rule = rules[1]
+							local conds = rules[2]
+							
+							if (rule[1] == "empty") and (rule[2] == "is") and (string.sub(rule[3], 1, 4) == "not ") then
+								if testcond(conds,1,x,y) then
+									local target = string.sub(rule[3], 5)
+									blocked[target] = 1
+								end
+							end
+						end
+					end
+					
+					if (blocked["all"] == nil) then
+						for b,mat in pairs(objectlist) do
+							if (findnoun(b) == false) and (blocked[target] == nil) and (not is_name_text_this(b)) then
+								create(b,x,y,dir,nil,nil,nil,nil,leveldata)
+							end
 						end
 					end
 				end
@@ -221,7 +232,7 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 		
 		if (blocked["all"] == nil) and ((matdata[2] == nil) or testcond(matdata[2],1)) then
 			for b,unit in pairs(objectlist) do
-				if (b ~= "empty") and (b ~= "all") and (b ~= "level") and (b ~= "group") and (blocked[target] == nil) and (not is_name_text_this(b)) then
+				if (findnoun(b,nlist.brief) == false) and (b ~= "empty") and (b ~= "level") and (blocked[target] == nil) and (not is_name_text_this(b)) then
 					table.insert(levelconversions, {b, {}})
 				end
 			end

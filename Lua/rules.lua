@@ -55,7 +55,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 			local dir = v[5]
 			
 			if (string.len(word) > 5) and (string.sub(word, 1, 5) == "text_") then
-                word = string.sub(v[1], 6)
+            	word = string.sub(v[1], 6)
 			end
 			
 			local valid = true
@@ -1534,12 +1534,12 @@ function code(alreadyrun_)
 			groupfeatures = {}
 			local firstwords = {}
 			local alreadyused = {}
+
+			do_mod_hook("rule_baserules")
 			
 			for i,v in ipairs(baserulelist) do
 				addbaserule(v[1],v[2],v[3],v[4])
 			end
-			
-			do_mod_hook("rule_baserules")
 			
 			formlettermap()
 			
@@ -1652,7 +1652,13 @@ function code(alreadyrun_)
 		
 		if (alreadyrun == false) then
 			effects_decors()
+
+			if (featureindex["broken"] ~= nil) then
+				brokenblock(checkthese)
+			end
 		end
+
+		do_mod_hook("rule_update_after",{alreadyrun})
 	end
 	
 	if (alreadyrun == false) then
@@ -1665,8 +1671,6 @@ function code(alreadyrun_)
 			MF_playsound(rulename)
 		end
 	end
-	
-	do_mod_hook("rule_update_after",{alreadyrun})
 end
 
 function findwordunits()
