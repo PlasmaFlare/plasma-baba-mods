@@ -510,6 +510,8 @@ function block(small_)
 		end
 		
 		local ismore = getunitswitheffect("more",false,delthese)
+		--@Turning Text(more)
+		do_directional_more(ismore, delthese)
 
 		for id,unit in ipairs(ismore) do
 			local x,y = unit.values[XPOS],unit.values[YPOS]

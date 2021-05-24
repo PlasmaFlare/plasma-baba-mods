@@ -109,20 +109,59 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				group_arrow_properties = false
 				if (playerid == 1) then
 					players,empty = findallfeature(nil,"is","you")
+
+					local players_tt,empty_tt = do_directional_you(dir_)
+					for i,v in ipairs(players_tt) do
+						table.insert(players, v)
+					end
+					for i,v in ipairs(empty_tt) do
+						table.insert(empty, v)
+					end
+
 				elseif (playerid == 2) then
 					players,empty = findallfeature(nil,"is","you2")
-					-- @Turning Text(YOU2)
-					group_arrow_properties = true
 					a,b = findallfeature(nil,"is","you2")
-					group_arrow_properties = false
-					--------------------------------------
+
+					local players_tt,empty_tt = do_directional_you2(dir_)
+					for i,v in ipairs(players_tt) do
+						table.insert(players, v)
+					end
+					for i,v in ipairs(empty_tt) do
+						table.insert(empty, v)
+					end
 					
 					if (#players == 0) then
 						players,empty = findallfeature(nil,"is","you")
+
+						players_tt,empty_tt = do_directional_you(dir_)
+						for i,v in ipairs(players_tt) do
+							table.insert(players, v)
+						end
+						for i,v in ipairs(empty_tt) do
+							table.insert(empty, v)
+						end
 					end
 				elseif (playerid == 3) then
 					players,empty = findallfeature(nil,"is","you")
 					players2,empty2 = findallfeature(nil,"is","you2")
+					
+					local playersdir = {}
+					local emptydir = {}
+					local players2dir = {}
+					local empty2dir = {}
+					playersdir, emptydir, players2dir, empty2dir = do_directional_you_auto(dir_, dir_2)
+					for i,v in ipairs(playersdir) do
+						table.insert(players, v)
+					end
+					for i,v in ipairs(emptydir) do
+						table.insert(empty, v)
+					end
+					for i,v in ipairs(players2dir) do
+						table.insert(players2, v)
+					end
+					for i,v in ipairs(empty2dir) do
+						table.insert(empty2, v)
+					end
 					
 					for i,v in ipairs(players2) do
 						table.insert(players, v)
@@ -133,32 +172,6 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 					end
 				end
 				group_arrow_properties = true
-
-				-- @Turning Text(YOU)
-				local playersdir = {}
-				local emptydir = {} 
-				local players2dir = {}
-				local empty2dir = {}
-				playersdir, emptydir, players2dir, empty2dir = do_directional_you(dir_, dir_2, playerid)
-				for i,v in ipairs(playersdir) do
-					table.insert(players, v)
-				end
-				
-				for i,v in ipairs(emptydir) do
-					table.insert(empty, v)
-				end
-
-				for i,v in ipairs(players2dir) do
-					table.insert(players2, v)
-					table.insert(players, v)
-				end
-				
-				for i,v in ipairs(empty2dir) do
-					table.insert(empty2, v)
-					table.insert(empty, v)
-				end
-				--------------------------------------
-				
 				
 				
 				if (featureindex["3d"] ~= nil) then
