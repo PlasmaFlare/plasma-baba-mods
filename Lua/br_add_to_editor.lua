@@ -195,6 +195,7 @@ editor_objlist["text_branching_facing"] =
 	colour = {2, 2},
 	colour_active = {2, 4},
 	pairedwith = "text_facing",
+	argextra = {"right","up","left","down"},
 }
 editor_objlist["text_branching_above"] = 
 {
@@ -234,6 +235,7 @@ editor_objlist["text_branching_feeling"] =
 	colour = {2, 2},
 	colour_active = {2, 4},
 	pairedwith = "text_feeling",
+	argtype = {2},
 }
 
 formatobjlist()
