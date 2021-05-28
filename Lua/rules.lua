@@ -869,7 +869,7 @@ function docode(firstwords)
 								end
 							end
 							
-							if (prevtiletype ~= 4) then
+							if (prevtiletype ~= 4) and (wordid > existing_wordid) then
 								prevsafewordid = wordid - 1
 								prevsafewordtype = prevtiletype
 							end
@@ -888,7 +888,7 @@ function docode(firstwords)
 								
 								if (wordid == #sent) and (#current >= 3) and (j > 1) then
 									subsent_id = tostring(tileid_id) .. "_" .. string.sub(sent_id, 1, j) .. "_" .. tostring(dir)
-									-- MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
+									--MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
 									if (existingfinals[subsent_id] == nil) then
 										existingfinals[subsent_id] = 1
 									else
@@ -910,7 +910,7 @@ function docode(firstwords)
 								
 								if (#current >= 3) and (j > 1) then
 									local subsent_id = tostring(tileid_id) .. "_" .. string.sub(sent_id, 1, j-1) .. "_" .. tostring(dir)
-									-- MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
+									--MF_alert("Checking finals: " .. subsent_id .. ", " .. tostring(existingfinals[subsent_id]))
 									if (existingfinals[subsent_id] == nil) then
 										existingfinals[subsent_id] = 1
 									else
@@ -921,26 +921,26 @@ function docode(firstwords)
 								if (wordid < #sent) then
 									if (wordid > existing_wordid) then
 										if (#notids > 0) and firstrealword and (notslot > 1) and (tiletype ~= 7) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
-											--MF_alert("not -> A, " .. unique_id .. ", " .. sent_id)
+											--MF_alert(tostring(notslot) .. ", not -> A, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, (notslot - existing_wordid)+1)
 											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing})
 											
 											if (nexts[2] ~= nil) and ((nexts[2] == 0) or (nexts[2] == 3) or (nexts[2] == 4)) and (tiletype ~= 3) then
-												--MF_alert(tilename .. " -> B, " .. unique_id .. ", " .. sent_id)
+												--MF_alert(tostring(wordid) .. ", " .. tilename .. " -> B, " .. unique_id .. ", " .. sent_id)
 												subsent_id = string.sub(sent_id, j)
 												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
 											end
 										else
 											if (prevtiletype == 0) and ((tiletype == 1) or (tiletype == 7)) then
-												--MF_alert(sent[wordid - 1][1] .. " -> C, " .. unique_id .. ", " .. sent_id)
+												--MF_alert(tostring(wordid-1) .. ", " .. sent[wordid - 1][1] .. " -> C, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, wordid - existing_wordid)
 												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing})
 											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 4) and (tiletype ~= 1) and (tiletype ~= 2) then
-												--MF_alert(sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
+												--MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
 												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing})
 											else
-												--MF_alert(tilename .. " -> E, " .. unique_id .. ", " .. sent_id)
+												--MF_alert(tostring(wordid) .. ", " .. tilename .. " -> E, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, j)
 												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
 											end
@@ -949,7 +949,7 @@ function docode(firstwords)
 										break
 									elseif (wordid == existing_wordid) then
 										if (nexts[3][1] ~= -1) then
-											--MF_alert(nexts[1] .. " -> F, " .. unique_id .. ", " .. sent_id)
+											--MF_alert(tostring(wordid+1) .. ", " .. nexts[1] .. " -> F, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, j+1)
 											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing})
 										end

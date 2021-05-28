@@ -1809,6 +1809,8 @@ function levelblock()
 								table.insert(doned, unit)
 							end
 							
+							updateundo = true
+							
 							for a,unit in ipairs(doned) do
 								addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
 								
@@ -2116,6 +2118,8 @@ function levelblock()
 							local newmapdir = (mapdir - 1 + 4) % 4
 							local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
 							
+							updateundo = true
+							
 							addundo({"maprotation",maprotation,newmaprotation,newmapdir})
 							addundo({"mapdir",mapdir,newmapdir})
 							maprotation = newmaprotation
@@ -2124,6 +2128,8 @@ function levelblock()
 						elseif (rule[3] == "deturn") then
 							local newmapdir = (mapdir + 1 + 4) % 4
 							local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
+							
+							updateundo = true
 							
 							addundo({"maprotation",maprotation,newmaprotation,newmapdir})
 							addundo({"mapdir",mapdir,newmapdir})
@@ -2166,14 +2172,14 @@ function levelblock()
 						if (generaldata.strings[WORLD] == generaldata.strings[BASEWORLD]) and (editor.values[INEDITOR] == 0) then
 							MF_playsound("doneall_c")
 							MF_allisdone()
-						elseif (editor.values[INEDITOR] ~= 0) then
+						elseif (editor.values[INEDITOR] ~= 0) and (#targets >= #units - #codeunits) then
 							local pmult = checkeffecthistory("win")
 							
 							MF_playsound("doneall_c")
 							MF_done_single()
 							MF_win()
 							break
-						else
+						elseif (#targets >= #units - #codeunits) then
 							local pmult = checkeffecthistory("win")
 							
 							local mods_run = do_mod_hook("levelpack_done", {})
