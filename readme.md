@@ -37,6 +37,12 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 - Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.2.3** (5/27/21)
+  - fixed double more trigger from more + directional more
+  - fixed a neutral net shift causing the shifted unit to face a direction
+  - fixed you2(down) and you moving at the same time if down is pressed (doesn't work when level is auto is on)
+  - fixed omni facing and feeling not working with properties
+  - fixed weak collisions not triggering has
 - **1.2.2** (5/22/21)
   - Fixed pushing a packer not packing text
   - Adding variants of turning text and omni text auto adds normal variation of texts to editor
