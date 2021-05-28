@@ -38,15 +38,12 @@ table.insert(mod_hook_functions["rule_baserules"],
 
 table.insert(mod_hook_functions["effect_always"],
     function()
-        -- for _, cursorunitid in pairs(this_mod_globals.text_to_cursor) do
-        --     local cursorunit = mmf.newObject()
         update_all_cursors()
     end
 )
 
 table.insert(mod_hook_functions["level_start"], 
     function()
-        -- reset_this_mod()
         for i,unitid in ipairs(codeunits) do
             local unit = mmf.newObject(unitid)
             if is_name_text_this(unit.strings[NAME]) then

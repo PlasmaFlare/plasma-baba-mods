@@ -1,5 +1,5 @@
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
-	-- @mods turning text
+	-- @mods turning text - Override reason: provide a hook to reinterpret turning text names based on their direction
 	local unit = mmf.newObject(unitid)
 	local ux,uy = unit.values[XPOS],unit.values[YPOS]
 	local x = unit.values[XPOS] + ox
@@ -82,7 +82,8 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 end
 
 function calculatesentences(unitid,x,y,dir)
-	-- @mods omni connectors, filler text
+	-- @mods omni connectors - Override reason: extract the branching sentences and 
+	-- build the full sentences with lhs + branching sentence texts 
 	local drs = dirs[dir]
 	local ox,oy = drs[1],drs[2]
 	
@@ -531,7 +532,10 @@ function calculatesentences(unitid,x,y,dir)
 end
 
 function docode(firstwords)
-	-- @mods omni connectors
+	-- @mods omni connectors - Override reason: main implementation of omni text + calculate sentences. Mainly prevents sentence
+	--						   					duplication from branching ands, along with other things
+	--       filler text - Override reason: main implementation of filler text. Literally skip over parsing when detected
+	--										text type of 11
 	local donefirstwords = {}
 	local existingfinals = {}
 	local limiter = 0
