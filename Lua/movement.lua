@@ -171,7 +171,6 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						table.insert(empty, v)
 					end
 				end
-				print("playerid:"..playerid.." dir_2:"..dir_2.. " Num players:"..#players)
 				group_arrow_properties = true
 				
 				
