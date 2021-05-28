@@ -1,8 +1,6 @@
 function movecommand(ox,oy,dir_,playerid_,dir_2)
 	---@mods - Turning Text - Override reason - handle multiple directional text cases and added additional calls to code() to handle turning text resolution
 	--- 	 - Text splicing - Override reason - update mod global to allow text stacking per movement phase ("you" phase, "move" phase, etc)
-	eval_turning_text_global = false
-	---------------------------
 
 	statusblock(nil,nil,true)
 	movelist = {}
@@ -1088,9 +1086,6 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 		return
 	end
 	
-	-- @ Turning text
-	eval_turning_text_global = false
-	-- @ Turning text
 	doupdate()
 	code()
 	conversion()
@@ -1100,13 +1095,12 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	
 	-- @ Turning text
 	code()
-	tt_executing_code = true
+	turning_text_mod_globals.tt_executing_code = true
 	final_turning_unit_dir = {}
 	finalize_turning_text_dir()
-	eval_turning_text_global = true
 	code()
 	final_turning_unit_dir = {}
-	tt_executing_code = false
+	turning_text_mod_globals.tt_executing_code = false
 	-- @ Turning text
 	
 	if (dir_ ~= nil) then

@@ -1495,7 +1495,7 @@ function code(alreadyrun_)
 	for _,_ in pairs(this_mod_globals.text_to_cursor) do
 		if this_mod_globals.undoed_after_called then
 			update_raycast_units(true, true, true)
-		elseif updatecode == 0 and not tt_executing_code then
+		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
 			update_raycast_units(true, true, true)
 			if updatecode == 0 then
 				check_cond_rules_with_this_noun()
