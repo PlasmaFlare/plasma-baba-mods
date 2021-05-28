@@ -347,7 +347,7 @@ function inside(name,x,y,dir_,unitid,leveldata_)
 			local verb = baserule[2]
 			local object = baserule[3]
 			
-			if (target == name) and (verb == "has") and (findnoun(object,nlist.short) or (unitreference[object] ~= nil)) and not splice_mod_globals.exclude_from_cut_blocking[unitid] and not splice_mod_globals.pack_texts[unitid] then
+			if (target == name) and (verb == "has") and (findnoun(object,nlist.short) or (unitreference[object] ~= nil)) and not splice_mod_globals.queued_cut_texts[unitid] and not splice_mod_globals.pack_texts[unitid] then
 				table.insert(ins, {object,conds})
 			end
 		end
