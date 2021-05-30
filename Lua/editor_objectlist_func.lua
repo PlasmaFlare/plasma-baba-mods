@@ -1,5 +1,5 @@
 function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwith_)
-	-- @mods text splicing - Override reason - when adding "cut" to the palette, auto-add all letterunits to the palette
+	-- @mods(text splicing) - Override reason - when adding "cut" to the palette, auto-add all letterunits to the palette
 	local valid = true
 	local objid = tonumber(objid_) or objid_
 	local build = true

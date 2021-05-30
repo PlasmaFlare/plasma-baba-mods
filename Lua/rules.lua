@@ -1,5 +1,7 @@
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
-	-- @mods turning text - Override reason: provide a hook to reinterpret turning text names based on their direction
+	--[[ 
+		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
+	 ]]
 	local unit = mmf.newObject(unitid)
 	local ux,uy = unit.values[XPOS],unit.values[YPOS]
 	local x = unit.values[XPOS] + ox
@@ -82,8 +84,10 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 end
 
 function calculatesentences(unitid,x,y,dir)
-	-- @mods omni connectors - Override reason: extract the branching sentences and 
-	-- build the full sentences with lhs + branching sentence texts 
+	--[[ 
+		@mods(omni text) - Override reason: extract the branching sentences and build the full 
+			sentences with lhs + branching sentence texts.
+	 ]]
 	local drs = dirs[dir]
 	local ox,oy = drs[1],drs[2]
 	
@@ -532,10 +536,12 @@ function calculatesentences(unitid,x,y,dir)
 end
 
 function docode(firstwords)
-	-- @mods omni connectors - Override reason: main implementation of omni text + calculate sentences. Mainly prevents sentence
-	--						   					duplication from branching ands, along with other things
-	--       filler text - Override reason: main implementation of filler text. Literally skip over parsing when detected
-	--										text type of 11
+	--[[ 
+		@mods(omni text) - Override reason: main implementation of omni text + calculate
+			sentences. Mainly prevents sentence duplication from branching ands, along with other things
+		@mods(filler text) - Override reason: main implementation of filler text. Literally skip over 
+			parsing when detected text type of 11
+	 ]]
 	local donefirstwords = {}
 	local existingfinals = {}
 	local limiter = 0
@@ -1302,8 +1308,11 @@ function docode(firstwords)
 end
 
 function addoption(option,conds_,ids,visible,notrule,tags_)
-	---@This mod - Override reason: handle "not this is X. Also treat "this<string>" as part of featureindex["this"]
-	--MF_alert(option[1] .. ", " .. option[2] .. ", " .. option[3])
+	--[[ 
+		@mods(this) - Override reason: handle "not this is X. Also treat "this<string>" as part of 
+			featureindex["this"]
+	 ]]
+	 --MF_alert(option[1] .. ", " .. option[2] .. ", " .. option[3])
 
 	local visual = true
 	
@@ -1492,7 +1501,10 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 end
 
 function code(alreadyrun_)
-	-- @This mod - Override reason: provide hook for do_subrule_this and also update_raycast units before doing any processing
+	--[[ 
+		@mods(this) - Override reason: provide hook for do_subrule_this and also update_raycast units 
+			before doing any processing
+	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
@@ -1678,7 +1690,9 @@ function code(alreadyrun_)
 end
 
 function findwordunits()
-	-- @This mod - Override reason: make "this is word" and "not this is word" work
+	--[[ 
+		@mods(this) - Override reason: make "this is word" and "not this is word" work
+	 ]]
 	local result = {}
 	local alreadydone = {}
 	local checkrecursion = {}
@@ -1834,7 +1848,9 @@ function findwordunits()
 end
 
 function postrules(alreadyrun_)
-	--@This mod - Override reason: add rule puff effects for "X is this"
+	--[[ 
+		@mods(this) - Override reason: add rule puff effects for "X is this"
+	 ]]
 	local protects = {}
 	local newruleids = {}
 	local ruleeffectlimiter = {}

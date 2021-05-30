@@ -1,5 +1,5 @@
 function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken_,subgroup_)
-	-- @This mod - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
+	-- @mods(this) - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
 	local result = true
 	
 	local orhandling = false

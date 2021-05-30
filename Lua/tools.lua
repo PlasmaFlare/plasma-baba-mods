@@ -1,5 +1,7 @@
 function delunit(unitid)
-	--@This mod - Override reason: handle deleting "this" indicators when a "this" unit gets deleted
+	--[[ 
+		@mods(this) - Override reason: handle deleting "this" indicators when a "this" unit gets deleted
+	 ]]
 	local unit = mmf.newObject(unitid)
 	
 	if (unit ~= nil) then
@@ -151,7 +153,10 @@ function delunit(unitid)
 end
 
 function writerules(parent,name,x_,y_)
-	--@This mod - Override reason: Custom "this" rule display. Also remove unitid display when forming "this(X) is float" and "Y mimic X"
+	--[[ 
+		@mods(this) - Override reason: Custom "this" rule display. Also remove unitid display when 
+			forming "this(X) is float" and "Y mimic X"
+	 ]]
 	local basex = x_
 	local basey = y_
 	local linelimit = 12
@@ -326,7 +331,9 @@ function writerules(parent,name,x_,y_)
 end
 
 function inside(name,x,y,dir_,unitid,leveldata_)
-    -- @mods text splicing - Override reason - cut texts should not trigger "has"
+	--[[ 
+		@mods(text splicing) - Override reason - cut texts should not trigger "has"
+	 ]]
 	local ins = {}
 	local tileid = x + y * roomsizex
 	local maptile = unitmap[tileid] or {}

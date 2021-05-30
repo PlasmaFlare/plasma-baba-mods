@@ -1,5 +1,5 @@
 function moveblock(onlystartblock_)
-	-- @Mods - Turning Text - Override reason: directional shift updates the shifted objects direction here
+	-- @Mods(Turning Text) - Override reason: directional shift updates the shifted objects direction here
 	local onlystartblock = onlystartblock_ or false
 	
 	local isshift,istele = {},{}
@@ -468,8 +468,8 @@ function moveblock(onlystartblock_)
 end
 
 function block(small_)
-	-- @mods turning text - Override reason - handle collision-based directional properties
-	-- @mods text splicing - Override reason - handle overlap-based cutting
+	-- @mods(turning text) - Override reason - handle collision-based directional properties
+	-- @mods(text splicing) - Override reason - handle overlap-based cutting
 	local delthese = {}
 	local doned = {}
 	local unitsnow = #units
@@ -1103,8 +1103,7 @@ function block(small_)
 end
 
 function levelblock()
-	-- @mods
-	-- text splicing - Override reason: provide hook for handling level cutting. Levelblock is mainly for handling "X on level" interactions.
+	-- @mods(text splicing) - Override reason: provide hook for handling level cutting. Levelblock is mainly for handling "X on level" interactions.
 	local unlocked = false
 	local things = {}
 	local donethings = {}

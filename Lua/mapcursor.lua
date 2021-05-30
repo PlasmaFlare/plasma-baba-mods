@@ -1,6 +1,7 @@
 function mapcursor_move(ox,oy,mdir)
-	-- @Mods
-	-- Turning text - Override reason: mod hook for directional select
+	--[[ 
+		@mods(turning text) - Override reason: mod hook for directional select
+	 ]]
 	local dir = mdir or 4
     
     group_arrow_properties = false

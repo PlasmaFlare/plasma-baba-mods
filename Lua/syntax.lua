@@ -1,6 +1,8 @@
 function addunit(id,undoing_,levelstart_)
-	--@This - Override reason: provide hook for detecting when a "this" text is added, so that
-	-- we keep track of all "this" texts
+	--[[ 
+		@mods(this) - Override reason: provide hook for detecting when a "this" text is added, so that
+			we keep track of all "this" texts
+	 ]]
 	local unitid = #units + 1
 	
 	units[unitid] = {}
@@ -103,8 +105,10 @@ function addunit(id,undoing_,levelstart_)
 end
 
 function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
-    --@This - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it doesn't have an actual object associated
-	-- with it. Therefore, exclude "this" from "all" 
+	--[[ 
+		@mods(this) - Override reason: prevent MF_emptycreate error. Since "this" is a special noun, it 
+			doesn't have an actual object associated with it. Therefore, exclude "this" from "all".
+	 ]]
 	local all = {}
 	local empty = false
 	local dolevels = dolevels_ or false

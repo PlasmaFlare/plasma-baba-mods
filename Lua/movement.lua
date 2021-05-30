@@ -1,6 +1,9 @@
 function movecommand(ox,oy,dir_,playerid_,dir_2)
-	---@mods - Turning Text - Override reason - handle multiple directional text cases and added additional calls to code() to handle turning text resolution
-	--- 	 - Text splicing - Override reason - update mod global to allow text stacking per movement phase ("you" phase, "move" phase, etc)
+	--[[ 
+		@mods(turning text) - Override reason - handle multiple directional text cases and added additional calls to code() to handle turning text resolution
+		
+		@mods(text splicing) - Override reason - update mod global to allow text stacking per movement phase ("you" phase, "move" phase, etc)
+	 ]]
 
 	statusblock(nil,nil,true)
 	movelist = {}
@@ -1121,7 +1124,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 end
 
 function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
-	-- @mods text splicing - Override reason - handle actually cutting text into letterunits
+	--[[ 
+		@mods(text splicing) - Override reason - handle actually cutting text into letterunits
+	 ]]
 	local instant = instant_ or false
 	local simulate = simulate_ or false
 	
@@ -1335,8 +1340,10 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 end
 
 function check(unitid,x,y,dir,pulling_,reason)
-	-- @mods turning text - Override reason: directional push/pull/swap/stop
-	-- @mods text splicing - Override reason - add collision check for "cut"
+	--[[ 
+		@mods(turning text) - Override reason: directional push/pull/swap/stop
+		@mods(text splicing) - Override reason - add collision check for "cut"
+	 ]]
 	local pulling = false
 	if (pulling_ ~= nil) then
 		pulling = pulling_
@@ -1719,6 +1726,15 @@ function check(unitid,x,y,dir,pulling_,reason)
 end
 
 function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
+	--[[ 
+		@mods(turning text) - Override Reason - handle directional swap
+		@mods(text splicing) - Override Reason - use of globals to give more context for check_text_packing() and therefore check() (see global definitions in ts_text_splicing.lua)
+				- calling_push_check_on_pull
+				- record_packed_text
+			- Note: is there a way to not rely on these globals? These can be passed as parameters
+					to check() but we risk Hempuli deciding to change the function definition and
+					us having to refactor. 
+	 ]]
 	local pid2 = tostring(ox + oy * roomsizex) .. tostring(unitid)
 	pushedunits[pid2] = 1
 	

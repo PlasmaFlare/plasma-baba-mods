@@ -1,5 +1,5 @@
 function clearunits(restore_)
-	-- @This mod - Override reason: clear globals when we exit the editor
+	-- @Mods(this) - Override reason: clear globals when we exit the editor
 	units = {}
 	tiledunits = {}
 	codeunits = {}
