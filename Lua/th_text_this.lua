@@ -194,6 +194,7 @@ function update_this_cursor(wordunit, cursorunit)
 
         local c1 = 0
         local c2 = 0
+        cursorunit.layer = 1
         if this_mod_globals.blocked_tiles[tileid] then
             -- display different sprite if the tile is blocked
             cursorunit.values[ZLAYER] = 44
@@ -206,7 +207,11 @@ function update_this_cursor(wordunit, cursorunit)
             MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
             c1,c2 = 4, 4
         else
-            cursorunit.values[ZLAYER] = 40
+            if ruleids[wordunit.fixed] then
+                cursorunit.values[ZLAYER] = 41 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
+            else
+                cursorunit.values[ZLAYER] = 30
+            end
             cursorunit.direction = 28
             MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
             c1,c2 = wordunit.colour[1],wordunit.colour[2]
