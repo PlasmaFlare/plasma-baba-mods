@@ -1250,9 +1250,9 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 					end
 				elseif reason == "cut" then
 					if b == 2 then
-						handle_text_cutting(v[3], dir, false)
+						handle_text_cutting(v[3], dir)
 					else
-						handle_text_cutting(v[3], dir, false)
+						handle_text_cutting(v[3], dir)
 					end
 				elseif reason == "pack" then
 					handle_text_packing(b, dir, v[3])

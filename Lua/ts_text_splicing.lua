@@ -19,9 +19,9 @@ end
 
 function reset_splice_mod_globals_per_take()
     splice_mod_globals.exclude_from_cut_blocking = {}
-    splice_mod_globals.cut_texts = {}
-    splice_mod_globals.queued_cut_texts = {}
-    splice_mod_globals.pack_texts = {}
+    splice_mod_globals.cut_texts = {} --@Cleanup - local file scope
+    splice_mod_globals.queued_cut_texts = {} --@Cleanup - local file scope
+    splice_mod_globals.pack_texts = {} --@Cleanup - local file scope
     splice_mod_globals.calling_push_check_on_pull = false
     splice_mod_globals.record_packed_text = false
 end
@@ -94,6 +94,16 @@ function add_moving_units_to_exclude_from_cut_blocking(moving_units)
     end
 end
 
+function delete_without_triggering_has(unitid)
+    if unitid ~= 2 then
+        local unit = mmf.newObject(unitid)
+        -- All of this to delete the cut text without triggering HAS
+        addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init},unitid)
+        delunit(unit.fixed)
+        MF_remove(unit.fixed)
+    end
+end
+
 function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_against, x, y, levelcut)
     if textunitid == 2 then
         return false
@@ -141,17 +151,19 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
     return data
 end
 
-function handle_text_cutting(data, dir, overlap_case)
+function handle_text_cutting(data, dir)
+    assert(data.cut_text > 2)
+
     -- This is to prevent stacked cut objects cutting the same text
     if splice_mod_globals.cut_texts[data.cut_text] then
         return
     end
 
-    local bunit = mmf.newObject(data.cut_text)
-    local bname = bunit.strings[NAME]
-    local leveldata = {bunit.strings[U_LEVELFILE],bunit.strings[U_LEVELNAME],bunit.flags[MAPLEVEL],bunit.values[VISUALLEVEL],bunit.values[VISUALSTYLE],bunit.values[COMPLETED],bunit.strings[COLOUR],bunit.strings[CLEARCOLOUR]}
-    local x = bunit.values[XPOS]
-    local y = bunit.values[YPOS]
+    local cut_text_unit = mmf.newObject(data.cut_text)
+    local bname = cut_text_unit.strings[NAME]
+    local leveldata = {cut_text_unit.strings[U_LEVELFILE],cut_text_unit.strings[U_LEVELNAME],cut_text_unit.flags[MAPLEVEL],cut_text_unit.values[VISUALLEVEL],cut_text_unit.values[VISUALSTYLE],cut_text_unit.values[COMPLETED],cut_text_unit.strings[COLOUR],cut_text_unit.strings[CLEARCOLOUR]}
+    local x = cut_text_unit.values[XPOS]
+    local y = cut_text_unit.values[YPOS]
 
     if data.cutter_pushed_against then
         if data.cutterunitid == 2 then
@@ -168,7 +180,7 @@ function handle_text_cutting(data, dir, overlap_case)
     local ox = dirvec[1]
     local oy = dirvec[2]
 
-    local outstr = get_cut_text(bname, bunit.values[DIR])
+    local outstr = get_cut_text(bname, cut_text_unit.values[DIR])
     if outstr then
         if dir == 1 or dir == 2 then
             outstr = outstr:reverse()
@@ -220,12 +232,11 @@ function handle_text_cutting(data, dir, overlap_case)
         end
         
         local pmult,sound = checkeffecthistory("cut")
-        MF_particles("destroy",x,y,5 * pmult,0,3,1,1)
+        MF_particles("destroy",x,y,8 * pmult,0,3,1,1)
         generaldata.values[SHAKE] = 3
 
-        if not overlap_case then
-            delete(data.cut_text,x,y)
-        end
+        delete_without_triggering_has(data.cut_text)
+
         splice_mod_globals.cut_texts[data.cut_text] = true
         setsoundname("removal",1,sound)
     end
@@ -242,7 +253,7 @@ function handle_level_cutting()
     end
     for _, cut_entry in ipairs(cut_textunits) do
         local textunit = mmf.newObject(cut_entry.cut_text)
-        handle_text_cutting(cut_entry, textunit.values[DIR], false)
+        handle_text_cutting(cut_entry, textunit.values[DIR])
     end
     splice_mod_globals.exclude_from_cut_blocking = {}
 end
@@ -463,7 +474,8 @@ function handle_text_packing(unitid, dir, pack_entry)
 
             local pmult,sound = checkeffecthistory("smoke")
             MF_particles("eat",u.values[XPOS],u.values[YPOS],5 * pmult,0,3,1,1)
-            delete(letterunit,u.values[XPOS],u.values[YPOS])
+
+            delete_without_triggering_has(letterunit)
         end
         local newunitid = create("text_"..pack_entry.packed_text_name, pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2], dir, old_x, old_y, nil, nil, nil)
         local newunit = mmf.newObject(newunitid)
