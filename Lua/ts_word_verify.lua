@@ -1,3 +1,5 @@
+-- Global variables
+
 global_special_cut_mappings = {
     fallright =      "fall",
     fallleft =       "fall",
@@ -33,10 +35,18 @@ global_dir_to_name = {
     [3] = "down"
 }
 
+-- Local variables
 local valid_characters = {}
-
 local special_cut_mappings = {}
 local special_pack_mappings = {}
+
+-- Mod hook inserts
+table.insert(mod_hook_functions["level_start"], 
+    function()
+        cut_word_verify_initialize()
+        pack_word_verify_initialize()
+    end
+)
 
 function cut_word_verify_initialize()
     for i, v in pairs(editor_objlist) do
@@ -79,13 +89,6 @@ function pack_word_verify_initialize()
         special_pack_mappings["omni"..branching_text] = "branching_"..branching_text
     end
 end
-
-table.insert(mod_hook_functions["level_start"], 
-    function()
-        cut_word_verify_initialize()
-        pack_word_verify_initialize()
-    end
-)
 
 function get_cut_text(name, dir)
     -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction

@@ -53,12 +53,13 @@ for name,display in pairs(arrow_property_display) do
 	word_names[name] = display
 end
 
--- The reason behind this global is mainly to toggle between handling interactions that do not depend on direction ("i.e on conditions") and interactions that do depend on direction
--- Prime example: directional you depends on direction when the player input is pressed, but doesn't depend on direction when handling a you object on a defeat object
-group_arrow_properties = true
-
-function reset_arrow()
-	group_arrow_properties = true
+arrow_prop_mod_globals = {}
+local function reset_arrow()
+	arrow_prop_mod_globals = {
+		-- The reason behind this global is mainly to toggle between handling interactions that do not depend on direction ("i.e on conditions") and interactions that do depend on direction
+		-- Prime example: directional you depends on direction when the player input is pressed, but doesn't depend on direction when handling a you object on a defeat object
+		group_arrow_properties = true
+	}
 end
 
 table.insert(mod_hook_functions["level_start"], 
@@ -226,45 +227,6 @@ function do_directional_swap_findfeatureat(dir, full_swap_units, x, y, ox, oy)
 	return result
 end
 
--- function do_directional_you(dir_, dir_2, playerid)
--- 	local playersdir = {}
--- 	local emptydir = {}
--- 	local playersdir2 = {}
--- 	local emptydir2 = {}
--- 	local dirfeature = nil
--- 	local dirfeature2 = nil
--- 	if dir_ ~= nil and dir_ >= 0 and dir_ <= 3 then
--- 		dirfeature = dirfeaturemap[dir_ + 1]
--- 	end
--- 	if dir_2 ~= nil and dir_2 >= 0 and dir_2 <= 3 then
--- 		dirfeature2 = dirfeaturemap[dir_2 + 1]
--- 	end
-
--- 	if (playerid == 1) then
--- 		if dirfeature ~= nil then
--- 			playersdir,emptydir = findallfeature(nil,"is","you"..dirfeature)
--- 		end
--- 	elseif (playerid == 2) then
--- 		if (dirfeature ~= nil) then
--- 			playersdir,emptydir = findallfeature(nil,"is","you2"..dirfeature)
-			
--- 			if (#playersdir == 0) then
--- 				local you2units, you2emptyunits = findallfeature(nil, "is", "you2")
--- 				if #you2units == 0 then
--- 					playersdir,emptydir = findallfeature(nil,"is","you"..dirfeature)
--- 				end
--- 			end
--- 		end
--- 	elseif (playerid == 3) then
--- 		if dirfeature ~= nil then
--- 			playersdir,emptydir = findallfeature(nil,"is","you"..dirfeature)
--- 		end
--- 		if dirfeature2 ~= nil then
--- 			playersdir2,emptydir2 = findallfeature(nil,"is","you2"..dirfeature2)
--- 		end
--- 	end
--- 	return playersdir, emptydir, playersdir2, emptydir2
--- end
 function do_directional_you(dir_)
 	local playersdir = {}
 	local emptydir = {}
@@ -390,7 +352,7 @@ end
 
 function do_directional_shift_parsing(moving_units, been_seen, roomsizex)
 	local shifts_to_apply = {}
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	local shifts = findallfeature(nil,"is","shift",true)
 
 	for i,v in ipairs(shifts) do
@@ -441,7 +403,7 @@ function do_directional_shift_parsing(moving_units, been_seen, roomsizex)
 		end
 	end
 
-	group_arrow_properties = true
+	arrow_prop_mod_globals.group_arrow_properties = true
 
 	for i, shiftapply in ipairs(shifts_to_apply) do
 		b = shiftapply[1]
@@ -477,7 +439,7 @@ end
 
 function do_directional_shift_level_parsing(moving_units, been_seen, mapdir)
 	local shifts_to_apply = {}
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	local levelshift = findfeature("level","is","shift")
 	local leveldir = mapdir
 	
@@ -516,7 +478,7 @@ function do_directional_shift_level_parsing(moving_units, been_seen, mapdir)
 		end
 	end
 
-	group_arrow_properties = true
+	arrow_prop_mod_globals.group_arrow_properties = true
 
 	for i, shiftapply in ipairs(shifts_to_apply) do
 		b = shiftapply[1]

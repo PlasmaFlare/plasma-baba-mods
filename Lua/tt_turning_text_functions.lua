@@ -1,5 +1,4 @@
 turning_text_mod_globals = {}
-
 function reset_turning_text_mod_globals()
     turning_text_mod_globals = {
         -- collects all turning text unit at the start of every turn. Also keeps track of their starting direction + if they have any directional rules applied to them
@@ -30,56 +29,36 @@ turning_word_names = {
     more=true,
     select=true,
 }
-
 for name,_ in pairs(turning_word_names) do
     register_directional_text("turning_"..name)
 end
 
-function is_turning_text(name)
-    return string.len(name) > 8 and string.sub(name, 1,8) == "turning_" and turning_word_names[string.sub(name, 9)]
-end
-
-function parse_turning_text(name)
-    local is_turning_text = false
-    local word = nil
-    if string.len(name) > 8 and string.sub(name, 1,8) == "turning_" then
-        local word = string.sub(name, 9)
-        if turning_word_names[word] then
-            return word
-        end
-    end
-    return nil
-end
-
-function reset_tt()
-    reset_turning_text_mod_globals()
-end
 
 table.insert( mod_hook_functions["level_start"],
     function()
-        reset_tt()
+        reset_turning_text_mod_globals()
     end
 )
 table.insert( mod_hook_functions["level_restart"],
     function()
-        reset_tt()
+        reset_turning_text_mod_globals()
     end
 )
 
 table.insert( mod_hook_functions["level_end"],
     function()
-        reset_tt()
+        reset_turning_text_mod_globals()
     end
 )
 
 table.insert(mod_hook_functions["levelpack_end"], 
     function()
-        reset_tt()
+        reset_turning_text_mod_globals()
     end
 )
 table.insert(mod_hook_functions["levelpack_done"], 
     function()
-        reset_tt()
+        reset_turning_text_mod_globals()
     end
 )
 
@@ -139,6 +118,22 @@ table.insert( mod_hook_functions["command_given"],
         end
     end
 )
+
+function is_turning_text(name)
+    return string.len(name) > 8 and string.sub(name, 1,8) == "turning_" and turning_word_names[string.sub(name, 9)]
+end
+
+function parse_turning_text(name)
+    local is_turning_text = false
+    local word = nil
+    if string.len(name) > 8 and string.sub(name, 1,8) == "turning_" then
+        local word = string.sub(name, 9)
+        if turning_word_names[word] then
+            return word
+        end
+    end
+    return nil
+end
 
 -- mainly copied from statusblock(). Given a set of right/up/left/down rules applied, figure out the resulting dir
 function eval_dir_rule(currdir, ur,uu,ul,ud)

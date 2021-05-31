@@ -481,7 +481,7 @@ function block(small_)
 	local doremovalsound = false
 
 	--@Turning Text ----------------
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	----------------------
 	
 	if (small == false) then
@@ -567,7 +567,7 @@ function block(small_)
 
 		--@Turning Text(more)
 		do_directional_more(ismore, delthese)
-		group_arrow_properties = true
+		arrow_prop_mod_globals.group_arrow_properties = true
 	end
 
 	

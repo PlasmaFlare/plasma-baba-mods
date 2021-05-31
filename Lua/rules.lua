@@ -1508,7 +1508,7 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	for _,_ in pairs(this_mod_globals.text_to_cursor) do
+	if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
 			update_raycast_units(true, true, true)
 		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
@@ -1517,7 +1517,6 @@ function code(alreadyrun_)
 				check_cond_rules_with_this_noun()
 			end
 		end
-		break
 	end
 	
 	if (updatecode == 1) then

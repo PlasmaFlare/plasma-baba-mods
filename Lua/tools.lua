@@ -134,9 +134,7 @@ function delunit(unitid)
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))
 	end
 
-	if this_mod_globals.text_to_cursor[unitid] then
-		on_delele_this_text(unitid)
-	end
+	on_delele_this_text(unitid)
 		
 	for i,v in ipairs(units) do
 		if (v.fixed == unitid) then

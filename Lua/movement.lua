@@ -21,7 +21,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	local levelmove = {}
 	local levelmove2 = {}
 	
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	if (playerid == 1) then
 		levelmove = findfeature("level","is","you")
 	elseif (playerid == 2) then
@@ -52,7 +52,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 			levelmove = nil
 		end
 	end
-	group_arrow_properties = true
+	arrow_prop_mod_globals.group_arrow_properties = true
 
 	-- @Turning Text(YOU) ----------------------------------------
 	if levelmove == nil then
@@ -96,7 +96,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 		local been_seen = {}
 		local skiptake = false
 		
-		reset_splice_mod_globals_per_take()
+		reset_splice_mod_vars_per_take()
 		
 		if (finaltake == false) then
 			if (take == 1) then
@@ -107,7 +107,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				local empty2 = {}
 				local empty3 = {}
 				
-				group_arrow_properties = false
+				arrow_prop_mod_globals.group_arrow_properties = false
 				if (playerid == 1) then
 					players,empty = findallfeature(nil,"is","you")
 
@@ -172,7 +172,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						table.insert(empty, v)
 					end
 				end
-				group_arrow_properties = true
+				arrow_prop_mod_globals.group_arrow_properties = true
 				
 				
 				if (featureindex["3d"] ~= nil) then
@@ -700,10 +700,10 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 							dir = olddir
 						end
 						
-						group_arrow_properties = false
+						arrow_prop_mod_globals.group_arrow_properties = false
 						local swap = hasfeature(name,"is","swap",data.unitid,x,y)
 						local still = cantmove(name,data.unitid,newdir,x,y)
-						group_arrow_properties = true
+						arrow_prop_mod_globals.group_arrow_properties = true
 
 						--@Turning Text(SWAP)
 						if not swap then
@@ -728,9 +728,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 								elseif (obs == -1) then
 									result = math.max(result, 2)
 									
-									group_arrow_properties = false
+									arrow_prop_mod_globals.group_arrow_properties = false
 									local levelpush_ = findfeature("level","is","push")
-									group_arrow_properties = true
+									arrow_prop_mod_globals.group_arrow_properties = true
 									
 									if (levelpush_ ~= nil) then
 										for e,f in ipairs(levelpush_) do
@@ -821,9 +821,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 										end
 									end
 									
-									group_arrow_properties = false
+									arrow_prop_mod_globals.group_arrow_properties = false
 									local swaps = findfeatureat(nil,"is","swap",x+ox,y+oy,{"still"})
-									group_arrow_properties = true
+									arrow_prop_mod_globals.group_arrow_properties = true
 									
 									-- @Turning Text(SWAP) ---------------------------------
 									local arrow_swap_units = do_directional_swap_findfeatureat(dir, swaps, x, y, ox, oy)
@@ -863,9 +863,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 												table.insert(finalpullobs, paobs)
 											end
 										elseif (pobs == -1) then
-											group_arrow_properties = false
+											arrow_prop_mod_globals.group_arrow_properties = false
 											local levelpull_ = findfeature("level","is","pull")
-											group_arrow_properties = true
+											arrow_prop_mod_globals.group_arrow_properties = true
 										
 											if (levelpull_ ~= nil) then
 												for e,f in ipairs(levelpull_) do
@@ -1286,6 +1286,8 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 				else
 					c1,c2 = getcolour(unitid,"active")
 				end
+				-- c1 = 0
+				-- c2 = 3
 				MF_setcolour(effectid,c1,c2)
 				
 				local xvel,yvel = 0,0
@@ -1362,13 +1364,13 @@ function check(unitid,x,y,dir,pulling_,reason)
 	local results = {}
 	local specials = {}
 	
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	local emptystop = hasfeature("empty","is","stop",2,x+ox,y+oy)
 	local emptypush = hasfeature("empty","is","push",2,x+ox,y+oy)
 	local emptypull = hasfeature("empty","is","pull",2,x+ox,y+oy)
 	local emptyswap = hasfeature("empty","is","swap",2,x+ox,y+oy)
 	local emptystill = cantmove("empty",2,dir_,x+ox,y+oy)
-	group_arrow_properties = true
+	arrow_prop_mod_globals.group_arrow_properties = true
 	
 	-- @Turning Text(Push/pull/stop/swap)
 	emptystop, emptypush, emptypull = do_directional_collision(dirfeaturevalue, "empty", 2, emptystop, emptypush, emptypull, x,y,ox,oy, pulling, reason)
@@ -1518,13 +1520,13 @@ function check(unitid,x,y,dir,pulling_,reason)
 				
 				if valid then
 					--MF_alert("checking for solidity for " .. obsname .. " by " .. name .. " at " .. tostring(x) .. ", " .. tostring(y))
-					group_arrow_properties = false
+					arrow_prop_mod_globals.group_arrow_properties = false
 					local isstop = hasfeature(obsname,"is","stop",id,x+ox,y+oy)
 					local ispush = hasfeature(obsname,"is","push",id,x+ox,y+oy)
 					local ispull = hasfeature(obsname,"is","pull",id,x+ox,y+oy)
 					local isswap = hasfeature(obsname,"is","swap",id,x+ox,y+oy)
 					local isstill = cantmove(obsname,id,dir,x+ox,y+oy)
-					group_arrow_properties = true
+					arrow_prop_mod_globals.group_arrow_properties = true
 					
 					-- @Turning Text(Push/pull/stop/swap)
 					isstop, ispush, ispull = do_directional_collision(dirfeaturevalue, obsname, id, isstop, ispush, ispull, x,y,ox,oy, pulling, reason)
@@ -1758,9 +1760,9 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 		pulling = pulling_
 	end
 	
-	group_arrow_properties = false
+	arrow_prop_mod_globals.group_arrow_properties = false
 	local swaps = findfeatureat(nil,"is","swap",x+ox,y+oy)
-	group_arrow_properties = true
+	arrow_prop_mod_globals.group_arrow_properties = true
 	
 	--@Turning Text(SWAP) ------------------------
 	local arrow_swap_units = do_directional_swap_findfeatureat(dir, swaps, x, y, ox, oy)
@@ -1793,9 +1795,9 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 	end
 	
 	if pulling then
-		group_arrow_properties = false
+		arrow_prop_mod_globals.group_arrow_properties = false
 		local swap = hasfeature(name,"is","swap",unitid,x,y)
-		group_arrow_properties = true
+		arrow_prop_mod_globals.group_arrow_properties = true
 		
 		--@Turning Text(SWAP) ------------------------
 		if not swap then

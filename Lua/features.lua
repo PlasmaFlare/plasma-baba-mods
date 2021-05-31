@@ -1,8 +1,8 @@
 function findfeature(rule1,rule2,rule3)
 	--[[
 		@Mods(turning text) - Override reason: when looking for "X is stop", if the global   
-								"group_arrow_properties" is true, then include stopright, stopleft, etc 
-								as part of the result. The global "group_arrow_properties" is set to 
+								"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc 
+								as part of the result. The global "arrow_prop_mod_globals.group_arrow_properties" is set to 
 								false whenever we want to search specifically for a non arrow property
 	]] 
 	--								   
@@ -50,7 +50,7 @@ function findfeature(rule1,rule2,rule3)
         end
 	end
     --@Turning Text --------------------
-    if group_arrow_properties and arrow_properties[rule3] then
+    if arrow_prop_mod_globals.group_arrow_properties and arrow_properties[rule3] then
         for i,dirfeature in ipairs(dirfeaturemap) do
             if featureindex[rule3..dirfeature] ~= nil then
                 for i,rules in ipairs(featureindex[rule3..dirfeature]) do
@@ -127,8 +127,8 @@ end
 function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
 	--[[ 
 		@Mods(turning text) - Override reason: when looking for "X is stop", if 
-			"group_arrow_properties" is true, then include stopright, stopleft, etc as part of the
-			result. The global "group_arrow_properties" is set to false whenever we want to 
+			"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc as part of the
+			result. The global "arrow_prop_mod_globals.group_arrow_properties" is set to false whenever we want to 
 			search specifically for a non arrow property.
 	 ]]
 	if (featureindex[rule1] ~= nil) and (rule2 ~= nil) and (rule3 ~= nil) then
@@ -162,7 +162,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
     end
     
     -- @Turning Text -----------------------------
-    if group_arrow_properties and arrow_properties[rule3] then
+    if arrow_prop_mod_globals.group_arrow_properties and arrow_properties[rule3] then
         for i,dirfeature in ipairs(dirfeaturemap) do
             if (featureindex[rule3..dirfeature] ~= nil) and (rule2 ~= nil) and (rule1 ~= nil) then
                 for i,rules in ipairs(featureindex[rule3..dirfeature]) do
@@ -214,8 +214,8 @@ end
 function getunitswitheffect(rule3,nolevels_,ignorethese_)
 	--[[ 
 		@Mods(turning text) - Override reason: when looking for "X is stop", if the global 
-			"group_arrow_properties" is true, then include stopright, stopleft, etc as part of the 
-			result. The global "group_arrow_properties" is set to false whenever we want to search specifically for a non arrow property.
+			"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc as part of the 
+			result. The global "arrow_prop_mod_globals.group_arrow_properties" is set to false whenever we want to search specifically for a non arrow property.
 	 ]]
 	local group = {}
 	local result = {}
@@ -273,7 +273,7 @@ function getunitswitheffect(rule3,nolevels_,ignorethese_)
     end
     
     -- @Turning Text -----------------------------
-    if group_arrow_properties and arrow_properties[rule3] then
+    if arrow_prop_mod_globals.group_arrow_properties and arrow_properties[rule3] then
         for i,dirfeature in ipairs(dirfeaturemap) do
             if (featureindex[rule3..dirfeature] ~= nil) then
                 for i,v in ipairs(featureindex[rule3..dirfeature]) do

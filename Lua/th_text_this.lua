@@ -1,19 +1,13 @@
 register_directional_text_prefix("this")
 
 this_mod_globals = {}
-
 function reset_this_mod_globals()
     this_mod_globals = {
-        text_to_cursor = {}, -- mapping from this text unitid to cursor unitid
-        text_to_raycast_units = {}, -- mapping from this text unitid to all units that were hit by a raycast
         text_to_raycast_pos = {},
-        blocked_tiles = {}, -- all positions where "X is block" is active
-        explicit_passed_tiles = {}, -- all positions pointed by a "this is pass" rule. Used for cursor display 
-        cond_features_with_this_noun = {}, -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
-        undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
         active_this_property_text = {}, -- keep track of texts 
+        
+        undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
         on_level_start = false,
-        deferred_rules_with_this = {},
         on_already_run = false,
     
         -- These two globals assist in making regular infix conditions with "this" work.
@@ -29,6 +23,13 @@ function reset_this_mod_globals()
     }
 end   
 reset_this_mod_globals()
+
+local text_to_cursor = {} -- mapping from this text unitid to cursor unitid
+local text_to_raycast_units = {} -- mapping from this text unitid to all units that were hit by a raycast
+local blocked_tiles = {} -- all positions where "X is block" is active
+local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
+local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
+local deferred_rules_with_this = {}
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
@@ -47,7 +48,7 @@ table.insert(mod_hook_functions["level_start"],
         for i,unitid in ipairs(codeunits) do
             local unit = mmf.newObject(unitid)
             if is_name_text_this(unit.strings[NAME]) then
-                this_mod_globals.text_to_cursor[unitid] = make_cursor(unit)
+                text_to_cursor[unitid] = make_cursor(unit)
             end
         end
         this_mod_globals.on_level_start = true
@@ -60,7 +61,7 @@ table.insert( mod_hook_functions["undoed_after"],
             local unit = mmf.newObject(unitid)
             set_tt_display_direction(unit)
         end
-        this_mod_globals.blocked_tiles = {}
+        blocked_tiles = {}
         this_mod_globals.undoed_after_called = true
     end
 )
@@ -80,8 +81,8 @@ table.insert(mod_hook_functions["rule_update"],
             this_mod_globals.registered_this_unitid_as_params = {}
         end
         this_mod_globals.active_this_property_text = {}
-        this_mod_globals.deferred_rules_with_this = {}
-        this_mod_globals.cond_features_with_this_noun = {}
+        deferred_rules_with_this = {}
+        cond_features_with_this_noun = {}
     end
 )
 table.insert(mod_hook_functions["rule_update_after"],
@@ -103,6 +104,15 @@ function is_name_text_this(name, check_not_)
     else
         return string.sub(name, 1, 4) == "this"
     end
+end
+
+-- Really useless function whose only purpose is to gatekeep calling update_raycast_units() in code() before checking updatecode. Also allows
+-- the variable "text_to_cursor" to be file scoped
+function this_mod_has_this_text()
+    for _,_ in pairs(text_to_cursor) do
+        return true
+    end
+    return false
 end
 
 function is_unit_valid_this_property(unitid, verb)
@@ -130,10 +140,10 @@ function is_unit_valid_this_property(unitid, verb)
     return false
 end
 
-
+-- This is exported since it is used in clears.lua
 function reset_this_mod()
     local count = 0
-    for _, cursor_unitid in pairs(this_mod_globals.text_to_cursor) do
+    for _, cursor_unitid in pairs(text_to_cursor) do
         delunit(cursor_unitid)
         MF_remove(cursor_unitid)
         count = count + 1
@@ -142,17 +152,19 @@ function reset_this_mod()
 end
 
 function on_add_this_text(this_unitid)
-    if not this_mod_globals.text_to_cursor[this_unitid] then
+    if not text_to_cursor[this_unitid] then
         local wordunit = mmf.newObject(this_unitid)
         local cursorunit = make_cursor(wordunit)
-        this_mod_globals.text_to_cursor[this_unitid] = cursorunit
+        text_to_cursor[this_unitid] = cursorunit
     end
 end
 function on_delele_this_text(this_unitid)
-    MF_cleanremove(this_mod_globals.text_to_cursor[this_unitid])
-    this_mod_globals.text_to_cursor[this_unitid] = nil
-    this_mod_globals.text_to_raycast_units[this_unitid] = nil
-    this_mod_globals.text_to_raycast_pos[this_unitid] = nil
+    if text_to_cursor[this_unitid] then
+        MF_cleanremove(text_to_cursor[this_unitid])
+        text_to_cursor[this_unitid] = nil
+        text_to_raycast_units[this_unitid] = nil
+        this_mod_globals.text_to_raycast_pos[this_unitid] = nil
+    end
 end
 
 function make_cursor(unit)
@@ -170,7 +182,7 @@ function make_cursor(unit)
 end
 
 function update_all_cursors()
-    for this_unitid, cursor_unitid in pairs(this_mod_globals.text_to_cursor) do
+    for this_unitid, cursor_unitid in pairs(text_to_cursor) do
         local wordunit = mmf.newObject(this_unitid)
         local cursorunit = mmf.newObject(cursor_unitid)
 
@@ -195,13 +207,13 @@ function update_this_cursor(wordunit, cursorunit)
         local c1 = 0
         local c2 = 0
         cursorunit.layer = 1
-        if this_mod_globals.blocked_tiles[tileid] then
+        if blocked_tiles[tileid] then
             -- display different sprite if the tile is blocked
             cursorunit.values[ZLAYER] = 44
             cursorunit.direction = 30
             MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
             c1,c2 = getuicolour("blocked")
-        elseif this_mod_globals.explicit_passed_tiles[tileid] then
+        elseif explicit_passed_tiles[tileid] then
             cursorunit.values[ZLAYER] = 42
             cursorunit.direction = 31
             MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
@@ -242,7 +254,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     if checkpass then
         all_pass = findfeature("all", "is", "pass") ~= nil
     end
-    for unitid, _ in pairs(this_mod_globals.text_to_cursor) do
+    for unitid, _ in pairs(text_to_cursor) do
         if (include_this_units == nil or include_this_units[unitid]) and not exclude_this_units[unitid] then
             local unit = mmf.newObject(unitid)
             local x = unit.values[XPOS]
@@ -322,7 +334,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
 
             if affect_updatecode and updatecode == 0 then
                 -- set updatecode to 1 if any of the raycast units changed
-                local prev_raycast_unitids = this_mod_globals.text_to_raycast_units[unitid] or {}
+                local prev_raycast_unitids = text_to_raycast_units[unitid] or {}
                 local prev_raycast_tileid = this_mod_globals.text_to_raycast_pos[unitid] or -1
 
                 if #ray_unitids ~= #prev_raycast_unitids then
@@ -353,9 +365,9 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                 end
             end
             if #ray_unitids == 0 then
-                this_mod_globals.text_to_raycast_units[unitid] = nil
+                text_to_raycast_units[unitid] = nil
             else
-                this_mod_globals.text_to_raycast_units[unitid] = ray_unitids
+                text_to_raycast_units[unitid] = ray_unitids
             end
 
             this_mod_globals.text_to_raycast_pos[unitid] = tileid
@@ -364,7 +376,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
 end
 
 function check_cond_rules_with_this_noun()
-    for _, data in ipairs(this_mod_globals.cond_features_with_this_noun) do
+    for _, data in ipairs(cond_features_with_this_noun) do
         local checkcond = nil
         if data.ray_unitid == 2 then
             local x = math.floor(data.ray_tileid % roomsizex)
@@ -382,22 +394,22 @@ end
 
 function set_blocked_tile(tileid)
     if tileid then
-        this_mod_globals.blocked_tiles[tileid] = true
+        blocked_tiles[tileid] = true
     end
 end
 
 function set_passed_tile(tileid)
     if tileid then
-        this_mod_globals.explicit_passed_tiles[tileid] = true
+        explicit_passed_tiles[tileid] = true
     end
 end
 
 function get_raycast_units(this_text_unitid, checkblocked)
-    local raycast_units = this_mod_globals.text_to_raycast_units[this_text_unitid]
+    local raycast_units = text_to_raycast_units[this_text_unitid]
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked then
             local tileid = this_mod_globals.text_to_raycast_pos[this_text_unitid]
-            if this_mod_globals.blocked_tiles[tileid] then
+            if blocked_tiles[tileid] then
                 return {}
             end
         end
@@ -425,7 +437,7 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
         local curr_this_unitid = table.remove(raycast_this_texts) -- Pop the stack 
         local curr_raycast_tileid = this_mod_globals.text_to_raycast_pos[curr_this_unitid]
         
-        if checkblocked and this_mod_globals.blocked_tiles[curr_raycast_tileid] then
+        if checkblocked and blocked_tiles[curr_raycast_tileid] then
             -- do nothing if blocked
         elseif visited_tileids[curr_raycast_tileid] then
 
@@ -433,7 +445,7 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
             visited_tileids[curr_raycast_tileid] = true
             lit_up_this_texts[curr_this_unitid] = true
 
-            local raycast_units = this_mod_globals.text_to_raycast_units[curr_this_unitid]
+            local raycast_units = text_to_raycast_units[curr_this_unitid]
             if raycast_units then
                 for i, ray_unitid in ipairs(raycast_units) do
 
@@ -496,7 +508,7 @@ function this_raycast(x, y, dir, checkemptyblock)
 end
 
 function defer_addoption_with_this(rule)
-    table.insert(this_mod_globals.deferred_rules_with_this, rule)
+    table.insert(deferred_rules_with_this, rule)
 end
 
 function process_this_rules(this_rules, filter_property_func, checkblocked, curr_phase)
@@ -668,7 +680,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
         end
         data.last_testcond_result = checkcond
 
-        table.insert(this_mod_globals.cond_features_with_this_noun, data)
+        table.insert(cond_features_with_this_noun, data)
     end
 
     return processed_this_units
@@ -691,8 +703,8 @@ local function other_filter(unitid)
 end
 
 function do_subrule_this()
-    this_mod_globals.blocked_tiles = {}
-    this_mod_globals.explicit_passed_tiles = {}
+    blocked_tiles = {}
+    explicit_passed_tiles = {}
 
     -- Used for preventing certain this texts from updating their raycast units in later phases.
     -- This is used for this texts found in "pass" phase. 
@@ -702,19 +714,19 @@ function do_subrule_this()
     local all_processed_this_units = {}
 
     update_raycast_units(true, true, false)
-    local processed_block_this_units = process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, true, "block")
+    local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, "block")
     for unit, _ in pairs(processed_block_this_units) do
         all_processed_this_units[unit] = true
     end
 
     update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_pass_this_units = process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, true, "pass")
+    local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, "pass")
     for unit, _ in pairs(processed_pass_this_units) do
         all_processed_this_units[unit] = true
     end
     
     update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_block_this_units2 = process_this_rules(this_mod_globals.deferred_rules_with_this, block_filter, true, "ray-block")
+    local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, "ray-block")
     
     for unit, _ in pairs(processed_block_this_units2) do
         all_processed_this_units[unit] = true
@@ -722,14 +734,14 @@ function do_subrule_this()
     end
 
     update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_pass_this_units2 = process_this_rules(this_mod_globals.deferred_rules_with_this, pass_filter, true, "ray-pass")
+    local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, "ray-pass")
     for unit, _ in pairs(processed_pass_this_units2) do
         all_processed_this_units[unit] = true
         processed_pass_this_units[unit] = true
     end
 
     update_raycast_units(true, true, false, all_processed_this_units)
-    process_this_rules(this_mod_globals.deferred_rules_with_this, other_filter, true, "other")
+    process_this_rules(deferred_rules_with_this, other_filter, true, "other")
 
     for this_unitid, _ in pairs(processed_block_this_units) do
         local tileid = get_raycast_tileid(this_unitid)

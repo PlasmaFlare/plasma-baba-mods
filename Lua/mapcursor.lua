@@ -4,12 +4,12 @@ function mapcursor_move(ox,oy,mdir)
 	 ]]
 	local dir = mdir or 4
     
-    group_arrow_properties = false
+    arrow_prop_mod_globals.group_arrow_properties = false
     local cursors = getunitswitheffect("select",true)
     for i,dircursorunit in ipairs(do_directional_select(mdir)) do
         table.insert(cursors, dircursorunit)
     end
-    group_arrow_properties = true
+    arrow_prop_mod_globals.group_arrow_properties = true
 	
 	for i,unit in ipairs(cursors) do
 		local x_,y_,dir_ = unit.values[XPOS],unit.values[YPOS],unit.values[DIR]

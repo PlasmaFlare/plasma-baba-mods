@@ -1,35 +1,41 @@
-splice_mod_globals = {}
+-- Global variables
 
+splice_mod_globals = {}
 function reset_splice_mod_globals()
     splice_mod_globals = {
-        editor_objlist_letter_indexes = {},
-        editor_objlist_multi_pairing_indexes = {},
-
-        exclude_from_cut_blocking = {}, -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
-        cut_texts = {}, -- a record of all texts that were destroyed via cut when we call handle_cut_text
-        queued_cut_texts = {}, -- record of all texts that will be destroyed. (This is populated in check_text_cutting) --@TODO: why do we need cut_texts and queued_cut_texts?
-        pack_texts = {}, -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
-
-        -- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
         -- This prevents packing via pulling
         calling_push_check_on_pull = false, 
-        record_packed_text = false, -- Flag for indicating when to update splice_mod_globals.pack_texts
+        record_packed_text = false, -- Flag for indicating when to update processed_pack_texts
     }
 end
+reset_splice_mod_globals()
 
-function reset_splice_mod_globals_per_take()
-    splice_mod_globals.exclude_from_cut_blocking = {}
-    splice_mod_globals.cut_texts = {} --@Cleanup - local file scope
-    splice_mod_globals.queued_cut_texts = {} --@Cleanup - local file scope
-    splice_mod_globals.pack_texts = {} --@Cleanup - local file scope
-    splice_mod_globals.calling_push_check_on_pull = false
-    splice_mod_globals.record_packed_text = false
-end
+
+-- Local variables
+
+local editor_objlist_letter_indexes = {}
+local editor_objlist_multi_pairing_indexes = {}
+
+local cut_texts = {} -- a record of all texts that were destroyed via cut when we call handle_cut_text
+local queued_cut_texts = {} -- record of all texts that will be destroyed. (This is populated in check_text_cutting) --@TODO: why do we need cut_texts and queued_cut_texts?
+local pack_texts = {} -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
+local exclude_from_cut_blocking = {} -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
+-- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
+
+
+-- Mod hook inserts
+table.insert(mod_hook_functions["command_given"], 
+    function()
+        exclude_from_cut_blocking = {}
+        cut_texts = {}
+        processed_pack_texts = {}
+    end
+)
 
 function splice_initialize()
     local multi_pair_texts = {"text_cut", "text_turning_dir", "text_turning_fall", "text_turning_locked", "text_turning_nudge"}
     for _, name in ipairs(multi_pair_texts) do
-        splice_mod_globals.editor_objlist_multi_pairing_indexes[name] = {}
+        editor_objlist_multi_pairing_indexes[name] = {}
     end
 
     -- Store indexes of letterunits in editor_objectlist so that we can reference them faster
@@ -37,37 +43,49 @@ function splice_initialize()
         if v.unittype == "text" and string.sub(v.name, 1, 5) == "text_" then
             local textname = string.sub(v.name, 6)
             if v.type == 5 and textname ~= "sharp" and textname ~= "flat" and not tonumber(textname) then
-                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_cut"], i)
+                table.insert(editor_objlist_multi_pairing_indexes["text_cut"], i)
             end
             if textname == "right" or textname == "left" or textname == "up" or textname == "down" then
-                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_dir"], i)
+                table.insert(editor_objlist_multi_pairing_indexes["text_turning_dir"], i)
             end
             if textname == "fallright" or textname == "fallleft" or textname == "fallup" or textname == "fall" then
-                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_fall"], i)
+                table.insert(editor_objlist_multi_pairing_indexes["text_turning_fall"], i)
             end
             if textname == "lockedright" or textname == "lockedleft" or textname == "lockedup" or textname == "lockeddown" then
-                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_locked"], i)
+                table.insert(editor_objlist_multi_pairing_indexes["text_turning_locked"], i)
             end
             if textname == "nudgeright" or textname == "nudgeleft" or textname == "nudgeup" or textname == "nudgedown" then
-                table.insert(splice_mod_globals.editor_objlist_multi_pairing_indexes["text_turning_nudge"], i)
+                table.insert(editor_objlist_multi_pairing_indexes["text_turning_nudge"], i)
             end
         end
     end     
 end
-reset_splice_mod_globals()
 splice_initialize()
 
-table.insert(mod_hook_functions["command_given"], 
-    function()
-        splice_mod_globals.exclude_from_cut_blocking = {}
-        splice_mod_globals.cut_texts = {}
-        splice_mod_globals.pack_texts = {}
+
+function delete_without_triggering_has(unitid)
+    if unitid ~= 2 then
+        local unit = mmf.newObject(unitid)
+        -- All of this to delete the cut text without triggering HAS
+        addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init},unitid)
+        delunit(unit.fixed)
+        MF_remove(unit.fixed)
     end
-)
+end
+
+function reset_splice_mod_vars_per_take()
+    exclude_from_cut_blocking = {}
+    cut_texts = {}
+    pack_excluded_texts = {}
+    processed_pack_texts = {}
+
+    splice_mod_globals.calling_push_check_on_pull = false
+    splice_mod_globals.record_packed_text = false
+end
 
 function add_letterobjects_if_added_cut(editor_currobjlist, data)
-    if splice_mod_globals.editor_objlist_multi_pairing_indexes[data.name] then
-        for _, index in pairs(splice_mod_globals.editor_objlist_multi_pairing_indexes[data.name]) do
+    if editor_objlist_multi_pairing_indexes[data.name] then
+        for _, index in pairs(editor_objlist_multi_pairing_indexes[data.name]) do
             if (#editor_currobjlist >= 150) then
                 return
             end
@@ -90,17 +108,7 @@ end
 
 function add_moving_units_to_exclude_from_cut_blocking(moving_units)
     for i,data in ipairs(moving_units) do
-        splice_mod_globals.exclude_from_cut_blocking[data.unitid] = true
-    end
-end
-
-function delete_without_triggering_has(unitid)
-    if unitid ~= 2 then
-        local unit = mmf.newObject(unitid)
-        -- All of this to delete the cut text without triggering HAS
-        addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init},unitid)
-        delunit(unit.fixed)
-        MF_remove(unit.fixed)
+        exclude_from_cut_blocking[data.unitid] = true
     end
 end
 
@@ -139,8 +147,8 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
         return false 
     end
 
-    splice_mod_globals.exclude_from_cut_blocking[textunitid] = true
-    splice_mod_globals.queued_cut_texts[textunitid] = true
+    exclude_from_cut_blocking[textunitid] = true
+    pack_excluded_texts[textunitid] = true
     local data = {
         cut_text = textunitid,
         cutter_pushed_against = cutter_pushed_against,
@@ -155,7 +163,7 @@ function handle_text_cutting(data, dir)
     assert(data.cut_text > 2)
 
     -- This is to prevent stacked cut objects cutting the same text
-    if splice_mod_globals.cut_texts[data.cut_text] then
+    if cut_texts[data.cut_text] then
         return
     end
 
@@ -191,7 +199,7 @@ function handle_text_cutting(data, dir)
             local valid = true
             if (#obs > 0) then
                 for a,b in ipairs(obs) do
-                    if not splice_mod_globals.exclude_from_cut_blocking[b] then
+                    if not exclude_from_cut_blocking[b] then
                         if (b == -1) then
                             valid = false
                         elseif (b ~= 0) and (b ~= -1) then
@@ -223,7 +231,7 @@ function handle_text_cutting(data, dir)
                 -- objectlist[c] = 1 -- Commented out due to error when "X is all". But is there a need to add the lettertext to the objectlist
                 local newunitid = create("text_"..c, x + ox, y - oy, dir, x, y, nil, nil, leveldata)
 
-                splice_mod_globals.exclude_from_cut_blocking[newunitid] = true
+                exclude_from_cut_blocking[newunitid] = true
                 ox = ox + dirvec[1]
                 oy = oy + dirvec[2]
             else
@@ -237,13 +245,13 @@ function handle_text_cutting(data, dir)
 
         delete_without_triggering_has(data.cut_text)
 
-        splice_mod_globals.cut_texts[data.cut_text] = true
+        cut_texts[data.cut_text] = true
         setsoundname("removal",1,sound)
     end
 end
 
 function handle_level_cutting()
-    splice_mod_globals.exclude_from_cut_blocking = {}
+    exclude_from_cut_blocking = {}
     local cut_textunits = {} 
     for a,unitid in ipairs(codeunits) do
         local data = check_text_cutting(nil, unitid, false, false, nil, nil, true)
@@ -255,7 +263,7 @@ function handle_level_cutting()
         local textunit = mmf.newObject(cut_entry.cut_text)
         handle_text_cutting(cut_entry, textunit.values[DIR])
     end
-    splice_mod_globals.exclude_from_cut_blocking = {}
+    exclude_from_cut_blocking = {}
 end
 
 
@@ -319,7 +327,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
         if not letterunitid then
             break
         end
-        if splice_mod_globals.queued_cut_texts[letterunitid] then
+        if pack_excluded_texts[letterunitid] then
             break
         end
         if issafe(letterunitid) or not floating(letterunitid, check_unitid) then
@@ -335,7 +343,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             if not first_letterunitid then
                 return false
             end
-            if splice_mod_globals.queued_cut_texts[first_letterunitid] then
+            if pack_excluded_texts[first_letterunitid] then
                 return false
             end
             if not floating_level(first_letterunitid) then
@@ -408,7 +416,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     
     if splice_mod_globals.record_packed_text then
         for _, letter in ipairs(letterunits) do
-            splice_mod_globals.pack_texts[letter] = true
+            processed_pack_texts[letter] = true
         end
     end
     data = {
@@ -449,7 +457,7 @@ function text_packing_get_letter(unitid, x, y, dir, packer_pushed_against)
     if not valid or not letterunitid then
         return false
     end
-    if splice_mod_globals.pack_texts[letterunitid] then
+    if processed_pack_texts[letterunitid] then
         return false
     end
 
