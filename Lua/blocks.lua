@@ -151,7 +151,7 @@ function moveblock(onlystartblock_)
 							if (followedfound == false) then
 								if (highpriorityfollow > -1) then
 									if (onlystartblock == false) then
-										addundo({"followed",unit.values[ID],unit.followed,highpriorityfollow},unit.fixed)
+										addundo({"followed",unit.values[ID],unit.followed,highpriorityfollow,unit.strings[UNITNAME]},unit.fixed)
 									end
 									unit.followed = highpriorityfollow
 									targetdir = highpriorityfollowdir
@@ -159,7 +159,7 @@ function moveblock(onlystartblock_)
 									followedfound = true
 								elseif (priorityfollow > -1) then
 									if (onlystartblock == false) then
-										addundo({"followed",unit.values[ID],unit.followed,priorityfollow},unit.fixed)
+										addundo({"followed",unit.values[ID],unit.followed,priorityfollow,unit.strings[UNITNAME]},unit.fixed)
 									end
 									unit.followed = priorityfollow
 									targetdir = priorityfollowdir
@@ -167,7 +167,7 @@ function moveblock(onlystartblock_)
 									followedfound = true
 								elseif (unit.followed > -1) then
 									if (onlystartblock == false) then
-										addundo({"followed",unit.values[ID],unit.followed,0},unit.fixed)
+										addundo({"followed",unit.values[ID],unit.followed,0,unit.strings[UNITNAME]},unit.fixed)
 									end
 									unit.followed = -1
 								end
@@ -365,7 +365,7 @@ function moveblock(onlystartblock_)
 						local targetstill = hasfeature(vname,"is","still",v,x,y)
 						-- Luultavasti ei väliä onko kohde tuhoutumassa?
 						
-						if (targetstill == nil) and floating(v,unitid,x,y) then
+						if (targetstill == nil) and floating(v,unitid,x,y) and (vunit.flags[DEAD] == false) then
 							local targetname = getname(vunit)
 							if (objectdata[v] == nil) then
 								objectdata[v] = {}
@@ -706,7 +706,7 @@ function block(small_)
 		end
 	end
 	
-	delthese,doremovalsound = handledels(delthese,doremovalsound)
+	delthese,doremovalsound = handledels(delthese,doremovalsound,true)
 	
 	local ismelt = getunitswitheffect("melt",false,delthese)
 	
@@ -735,7 +735,7 @@ function block(small_)
 		end
 	end
 	
-	delthese,doremovalsound = handledels(delthese,doremovalsound)
+	delthese,doremovalsound = handledels(delthese,doremovalsound,true)
 	
 	local isyou = getunitswitheffect("you",false,delthese)
 	local isyou2 = getunitswitheffect("you2",false,delthese)
@@ -2014,6 +2014,10 @@ function levelblock()
 						elseif (action == "move") then
 							local dir = mapdir
 							
+							if (featureindex["reverse"] ~= nil) then
+								dir = reversecheck(1,dir)
+							end
+							
 							local drs = ndirs[dir + 1]
 							local ox,oy = drs[1],drs[2]
 							
@@ -2024,6 +2028,10 @@ function levelblock()
 							end
 						elseif (action == "nudgeright") then
 							local dir = 0
+							
+							if (featureindex["reverse"] ~= nil) then
+								dir = reversecheck(1,dir)
+							end
 							
 							local drs = ndirs[dir + 1]
 							local ox,oy = drs[1],drs[2]
@@ -2036,6 +2044,10 @@ function levelblock()
 						elseif (action == "nudgeup") then
 							local dir = 1
 							
+							if (featureindex["reverse"] ~= nil) then
+								dir = reversecheck(1,dir)
+							end
+							
 							local drs = ndirs[dir + 1]
 							local ox,oy = drs[1],drs[2]
 							
@@ -2047,6 +2059,10 @@ function levelblock()
 						elseif (action == "nudgeleft") then
 							local dir = 2
 							
+							if (featureindex["reverse"] ~= nil) then
+								dir = reversecheck(1,dir)
+							end
+							
 							local drs = ndirs[dir + 1]
 							local ox,oy = drs[1],drs[2]
 							
@@ -2057,6 +2073,10 @@ function levelblock()
 							end
 						elseif (action == "nudgedown") then
 							local dir = 3
+							
+							if (featureindex["reverse"] ~= nil) then
+								dir = reversecheck(1,dir)
+							end
 							
 							local drs = ndirs[dir + 1]
 							local ox,oy = drs[1],drs[2]
@@ -2073,6 +2093,10 @@ function levelblock()
 							local ox = 0
 							local oy = 1
 							
+							if (featureindex["reverse"] ~= nil) then
+								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+							end
+							
 							if (lstill == false) then
 								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
 								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
@@ -2084,6 +2108,10 @@ function levelblock()
 							
 							local ox = 1
 							local oy = 0
+							
+							if (featureindex["reverse"] ~= nil) then
+								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+							end
 							
 							if (lstill == false) then
 								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
@@ -2097,6 +2125,10 @@ function levelblock()
 							local ox = 0
 							local oy = -1
 							
+							if (featureindex["reverse"] ~= nil) then
+								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+							end
+							
 							if (lstill == false) then
 								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
 								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
@@ -2108,6 +2140,10 @@ function levelblock()
 							
 							local ox = -1
 							local oy = 0
+							
+							if (featureindex["reverse"] ~= nil) then
+								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+							end
 							
 							if (lstill == false) then
 								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})

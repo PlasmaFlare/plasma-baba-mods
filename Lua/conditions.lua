@@ -215,6 +215,8 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 						result = false
 						break
 					end
+				elseif (condtype == "not never") then
+					valid = true
 				elseif (condtype == "on") then
 					valid = true
 					local allfound = 0
@@ -2274,7 +2276,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					elseif orhandling then
 						orresult = true
 					end
-				elseif (condtype == "besideright") then
+				elseif (condtype == "besideleft") then
 					valid = true
 					local allfound = 0
 					local alreadyfound = {}
@@ -2462,7 +2464,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					elseif orhandling then
 						orresult = true
 					end
-				elseif (condtype == "not besideright") then
+				elseif (condtype == "not besideleft") then
 					valid = true
 					
 					local allfound = 0
@@ -2647,7 +2649,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					elseif orhandling then
 						orresult = true
 					end
-				elseif (condtype == "besideleft") then
+				elseif (condtype == "besideright") then
 					valid = true
 					local allfound = 0
 					local alreadyfound = {}
@@ -2675,7 +2677,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (y > 1) then
+									if (x > 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = (x - g) + y * roomsizex
@@ -2835,7 +2837,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					elseif orhandling then
 						orresult = true
 					end
-				elseif (condtype == "not besideleft") then
+				elseif (condtype == "not besideright") then
 					valid = true
 					
 					local allfound = 0
@@ -2864,7 +2866,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (y > 1) then
+									if (x > 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = (x - g) + y * roomsizex
@@ -3528,6 +3530,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 			if (valid == false) then
 				MF_alert("invalid condition!")
 				result = true
+				
+				for a,b in ipairs(conds) do
+					MF_alert(tostring(b[1]))
+				end
 			end
 		end
 	end

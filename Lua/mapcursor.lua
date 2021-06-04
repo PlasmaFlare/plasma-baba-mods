@@ -1,4 +1,4 @@
-function mapcursor_move(ox,oy,mdir)
+function mapcursor_move(ox_,oy_,mdir)
 	--[[ 
 		@mods(turning text) - Override reason: mod hook for directional select
 	 ]]
@@ -14,9 +14,14 @@ function mapcursor_move(ox,oy,mdir)
 	for i,unit in ipairs(cursors) do
 		local x_,y_,dir_ = unit.values[XPOS],unit.values[YPOS],unit.values[DIR]
 		local currlevel = unit.values[CURSOR_ONLEVEL]
+		local ox,oy = ox_,oy_
+		
+		if (featureindex["reverse"] ~= nil) then
+			dir,ox,oy = reversecheck(unit.fixed,dir,x_,y_,ox_,oy_)
+		end
 		
 		local unitname = getname(unit)
-		local still = hasfeature(unitname,"is","still",unit.fixed,x_,y_)
+		local still = cantmove(unitname,unit.fixed,dir) --hasfeature(unitname,"is","still",unit.fixed,x_,y_)
 		
 		local x = x_ + ox
 		local y = y_ + oy
@@ -25,7 +30,7 @@ function mapcursor_move(ox,oy,mdir)
 		local levelfound = false
 		local moved = false
 		
-		if (still == nil) then
+		if (still == false) then
 			local targets = findallhere(x,y,unit.fixed,true)
 			
 			for a,b in ipairs(targets) do

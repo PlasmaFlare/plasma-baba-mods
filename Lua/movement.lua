@@ -69,6 +69,10 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 			end
 		end
 		
+		if (featureindex["reverse"] ~= nil) then
+			levelmovedir = reversecheck(1,levelmovedir)
+		end
+		
 		if cantmove("level",1,levelmovedir) then
 			valid = false
 		end
@@ -326,8 +330,8 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				local movers,mempty = findallfeature(nil,"is","move")
 				moving_units,been_seen = add_moving_units("move",movers,moving_units,been_seen,mempty)
 				
-				local movers,mempty = findallfeature(nil,"is","auto")
-				moving_units,been_seen = add_moving_units("auto",movers,moving_units,been_seen,mempty)
+				local amovers,aempty = findallfeature(nil,"is","auto")
+				moving_units,been_seen = add_moving_units("auto",amovers,moving_units,been_seen,aempty)
 				
 				local chillers,cempty = findallfeature(nil,"is","chill")
 				moving_units,been_seen = add_moving_units("chill",chillers,moving_units,been_seen,cempty)
@@ -601,15 +605,17 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						name = "empty"
 					end
 					
-					--MF_alert(name .. " (" .. tostring(data.unitid) .. ") doing " .. data.reason .. ", take " .. tostring(take) .. ", state " .. tostring(state) .. ", moves " .. tostring(data.moves))
+					--MF_alert(name .. " (" .. tostring(data.unitid) .. ") doing " .. data.reason .. ", take " .. tostring(take) .. ", state " .. tostring(state) .. ", moves " .. tostring(data.moves) .. ", dir " .. tostring(dir))
 					
 					if (x ~= -1) and (y ~= -1) then
 						local result = -1
 						solved = false
 						
 						if (state == 0) then
-							if (data.reason == "move") and (data.unitid == 2) and (dir == 4) then
+							if ((data.reason == "move") or (data.reason == "chill")) and (data.unitid == 2) and (dir == 4) then
 								dir = fixedrandom(0,3)
+								
+								data.dir = dir
 								
 								if cantmove(name,data.unitid,dir,x,y) then
 									skipthis = true
@@ -647,10 +653,6 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						
 						if (dir == 4) then
 							dir = fixedrandom(0,3)
-							
-							if cantmove(name,data.unitid,dir,x,y) then
-								skipthis = true
-							end
 						end
 						
 						local olddir = dir
