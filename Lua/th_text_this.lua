@@ -30,6 +30,14 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local deferred_rules_with_this = {}
+local function reset_this_mod_locals()
+    text_to_cursor = {}
+    text_to_raycast_units = {}
+    blocked_tiles = {}
+    explicit_passed_tiles = {}
+    cond_features_with_this_noun = {}
+    deferred_rules_with_this = {}
+end
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
@@ -149,6 +157,7 @@ function reset_this_mod()
         count = count + 1
     end
     reset_this_mod_globals()
+    reset_this_mod_locals()
 end
 
 function on_add_this_text(this_unitid)

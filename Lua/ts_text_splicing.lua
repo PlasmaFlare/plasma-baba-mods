@@ -17,7 +17,6 @@ local editor_objlist_letter_indexes = {}
 local editor_objlist_multi_pairing_indexes = {}
 
 local cut_texts = {} -- a record of all texts that were destroyed via cut when we call handle_cut_text
-local queued_cut_texts = {} -- record of all texts that will be destroyed. (This is populated in check_text_cutting) --@TODO: why do we need cut_texts and queued_cut_texts?
 local pack_texts = {} -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
 local exclude_from_cut_blocking = {} -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
 -- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
