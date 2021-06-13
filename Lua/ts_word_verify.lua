@@ -76,9 +76,11 @@ function cut_word_verify_initialize()
     end 
     -- Omni text
     for branching_text, _ in pairs(branching_text_names) do
-        special_cut_mappings["branching_"..branching_text] = branching_text
+        special_cut_mappings[br_prefix..branching_text] = branching_text
+        special_cut_mappings[pivot_prefix..branching_text] = branching_text
     end
-    special_cut_mappings["branching_and"] = "and"
+    special_cut_mappings[br_prefix.."and"] = "and"
+    special_cut_mappings[pivot_prefix.."and"] = "and"
 end
 
 function pack_word_verify_initialize()
@@ -86,7 +88,8 @@ function pack_word_verify_initialize()
         special_pack_mappings["turning"..turning_prop] = "turning_"..turning_prop
     end
     for branching_text, _ in pairs(branching_text_names) do
-        special_pack_mappings["omni"..branching_text] = "branching_"..branching_text
+        special_pack_mappings["omni"..branching_text] = br_prefix..branching_text
+        special_pack_mappings["pivot"..branching_text] = pivot_prefix..branching_text
     end
 end
 

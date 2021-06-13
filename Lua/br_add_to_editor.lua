@@ -1,20 +1,49 @@
+table.insert(editor_objlist_order, "text_pivot_is")
 table.insert(editor_objlist_order, "text_branching_is")
+
+table.insert(editor_objlist_order, "text_pivot_and")
 table.insert(editor_objlist_order, "text_branching_and")
+
+table.insert(editor_objlist_order, "text_pivot_has")
 table.insert(editor_objlist_order, "text_branching_has")
+
+table.insert(editor_objlist_order, "text_pivot_near")
 table.insert(editor_objlist_order, "text_branching_near")
 
+table.insert(editor_objlist_order, "text_pivot_make")
 table.insert(editor_objlist_order, "text_branching_make")
+
+table.insert(editor_objlist_order, "text_pivot_follow")
 table.insert(editor_objlist_order, "text_branching_follow")
+
+table.insert(editor_objlist_order, "text_pivot_mimic")
 table.insert(editor_objlist_order, "text_branching_mimic")
+
+table.insert(editor_objlist_order, "text_pivot_play")
 table.insert(editor_objlist_order, "text_branching_play")
+
+table.insert(editor_objlist_order, "text_pivot_eat")
 table.insert(editor_objlist_order, "text_branching_eat")
+
+table.insert(editor_objlist_order, "text_pivot_fear")
 table.insert(editor_objlist_order, "text_branching_fear")
 
+table.insert(editor_objlist_order, "text_pivot_on")
 table.insert(editor_objlist_order, "text_branching_on")
+
+table.insert(editor_objlist_order, "text_pivot_without")
 table.insert(editor_objlist_order, "text_branching_without")
+
+table.insert(editor_objlist_order, "text_pivot_facing")
 table.insert(editor_objlist_order, "text_branching_facing")
+
+table.insert(editor_objlist_order, "text_pivot_above")
 table.insert(editor_objlist_order, "text_branching_above")
+
+table.insert(editor_objlist_order, "text_pivot_below")
 table.insert(editor_objlist_order, "text_branching_below")
+
+table.insert(editor_objlist_order, "text_pivot_feeling")
 table.insert(editor_objlist_order, "text_branching_feeling")
 
 editor_objlist["text_branching_is"] = 
@@ -26,8 +55,8 @@ editor_objlist["text_branching_is"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_is",
 }
 
@@ -40,8 +69,8 @@ editor_objlist["text_branching_and"] =
 	tiling = -1,
 	type = 6,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_and",
 }
 
@@ -54,8 +83,8 @@ editor_objlist["text_branching_has"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_has",
 }
 
@@ -68,8 +97,8 @@ editor_objlist["text_branching_fear"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = {2, 1},
+	colour_active = {2, 2},
 	pairedwith = "text_fear",
 }
 
@@ -82,8 +111,8 @@ editor_objlist["text_branching_make"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_make",
 }
 
@@ -96,8 +125,8 @@ editor_objlist["text_branching_follow"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 2},
-	colour_active = {5, 4},
+	colour = {5, 1},
+	colour_active = {5, 3},
 	pairedwith = "text_follow",
 }
 
@@ -110,8 +139,8 @@ editor_objlist["text_branching_mimic"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = {2, 1},
+	colour_active = {2, 2},
 	pairedwith = "text_mimic",
 }
 
@@ -124,8 +153,8 @@ editor_objlist["text_branching_play"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 2},
-	colour_active = {5, 4},
+	colour = {5, 1},
+	colour_active = {5, 3},
 	pairedwith = "text_play",
 }
 
@@ -138,8 +167,8 @@ editor_objlist["text_branching_eat"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = {2, 1},
+	colour_active = {2, 2},
 	pairedwith = "text_eat",
 }
 
@@ -152,8 +181,8 @@ editor_objlist["text_branching_near"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_near",
 }
 
@@ -166,8 +195,8 @@ editor_objlist["text_branching_on"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_on",
 }
 editor_objlist["text_branching_without"] = 
@@ -179,8 +208,8 @@ editor_objlist["text_branching_without"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_without",
 }
 editor_objlist["text_branching_facing"] = 
@@ -192,8 +221,8 @@ editor_objlist["text_branching_facing"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = {0, 1},
+	colour_active = {0, 3},
 	pairedwith = "text_facing",
 	argextra = {"right","up","left","down"},
 }
@@ -206,8 +235,8 @@ editor_objlist["text_branching_above"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {3, 2},
-	colour_active = {4, 4},
+	colour = {1, 2},
+	colour_active = {1, 4},
 	pairedwith = "text_above",
 }
 editor_objlist["text_branching_below"] = 
@@ -219,13 +248,235 @@ editor_objlist["text_branching_below"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {3, 2},
-	colour_active = {4, 4},
+	colour = {1, 2},
+	colour_active = {1, 4},
 	pairedwith = "text_below",
 }
 editor_objlist["text_branching_feeling"] = 
 {
 	name = "text_branching_feeling",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {0, 1},
+	colour_active = {0, 3},
+	pairedwith = "text_feeling",
+	argtype = {2},
+}
+
+-- Pivot text
+editor_objlist["text_pivot_is"] = 
+{
+	name = "text_pivot_is",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_is",
+}
+
+editor_objlist["text_pivot_and"] = 
+{
+	name = "text_pivot_and",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 6,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_and",
+}
+
+editor_objlist["text_pivot_has"] = 
+{
+	name = "text_pivot_has",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_has",
+}
+
+editor_objlist["text_pivot_fear"] = 
+{
+	name = "text_pivot_fear",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {4, 1},
+	colour_active = {4, 2},
+	pairedwith = "text_fear",
+}
+
+editor_objlist["text_pivot_make"] = 
+{
+	name = "text_pivot_make",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_make",
+}
+
+editor_objlist["text_pivot_follow"] = 
+{
+	name = "text_pivot_follow",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {5, 2},
+	colour_active = {5, 4},
+	pairedwith = "text_follow",
+}
+
+editor_objlist["text_pivot_mimic"] = 
+{
+	name = "text_pivot_mimic",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {4, 1},
+	colour_active = {4, 2},
+	pairedwith = "text_mimic",
+}
+
+editor_objlist["text_pivot_play"] = 
+{
+	name = "text_pivot_play",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {5, 2},
+	colour_active = {5, 4},
+	pairedwith = "text_play",
+}
+
+editor_objlist["text_pivot_eat"] = 
+{
+	name = "text_pivot_eat",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_verb"},
+	tiling = -1,
+	type = 1,
+	layer = 20,
+	colour = {4, 1},
+	colour_active = {4, 2},
+	pairedwith = "text_eat",
+}
+
+editor_objlist["text_pivot_near"] = 
+{
+	name = "text_pivot_near",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_near",
+}
+
+editor_objlist["text_pivot_on"] = 
+{
+	name = "text_pivot_on",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_on",
+}
+editor_objlist["text_pivot_without"] = 
+{
+	name = "text_pivot_without",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_without",
+}
+editor_objlist["text_pivot_facing"] = 
+{
+	name = "text_pivot_facing",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {2, 2},
+	colour_active = {2, 4},
+	pairedwith = "text_facing",
+	argextra = {"right","up","left","down"},
+}
+editor_objlist["text_pivot_above"] = 
+{
+	name = "text_pivot_above",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {3, 2},
+	colour_active = {4, 4},
+	pairedwith = "text_above",
+}
+editor_objlist["text_pivot_below"] = 
+{
+	name = "text_pivot_below",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"text, abstract, text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {3, 2},
+	colour_active = {4, 4},
+	pairedwith = "text_below",
+}
+editor_objlist["text_pivot_feeling"] = 
+{
+	name = "text_pivot_feeling",
 	sprite_in_root = false,
 	unittype = "text",
 	tags = {"text, abstract, text_condition"},
