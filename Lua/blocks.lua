@@ -2314,5 +2314,11 @@ function levelblock()
 			setsoundname("turn",7)
 		end
 	end
+	
+	if (#units >= unitlimit) then
+		HACK_INFINITY = 200
+		destroylevel("toocomplex")
+		return
+	end
 end
 

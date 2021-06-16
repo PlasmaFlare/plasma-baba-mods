@@ -1419,13 +1419,13 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 				
 				if (cond[2] ~= nil) then
 					if (#cond[2] > 0) then
-						local alreadyused = {}
 						local newconds = {}
-						local allfound = false
 						
 						--alreadyused[target] = 1
 						
 						for a,b in ipairs(cond[2]) do
+							local alreadyused = {}
+							
 							if is_name_text_this(b) or is_name_text_this(b, true) then
 								local this_unitid = this_params_in_conds[cond][a]
 
@@ -1440,22 +1440,18 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 								alreadyused[b] = 1
 								table.insert(newconds, b)
 							elseif (b == "all") then
-								allfound = true
+								for a,mat in pairs(objectlist) do
+									if (alreadyused[a] == nil) and (findnoun(a,nlist.short) == false) then
+										table.insert(newconds, a)
+										alreadyused[a] = 1
+									end
+								end
 							elseif (b == "not all") then
 								newconds = {"empty","text"}
 							end
 							
 							if (string.sub(b, 1, 5) == "group") or (string.sub(b, 1, 9) == "not group") then
 								groupcond = true
-							end
-						end
-						
-						if allfound then
-							for a,mat in pairs(objectlist) do
-								if (alreadyused[a] == nil) and (findnoun(a,nlist.short) == false) then
-									table.insert(newconds, a)
-									alreadyused[a] = 1
-								end
 							end
 						end
 						

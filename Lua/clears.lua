@@ -11,6 +11,7 @@ function clearunits(restore_)
 	prevunitmap = {}
 	ruleids = {}
 	objectlist = {}
+	objectpalette = {}
 	updatelist = {}
 	objectcolours = {}
 	wordunits = {}

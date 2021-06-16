@@ -217,6 +217,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					end
 				elseif (condtype == "not never") then
 					valid = true
+					
+					if orhandling then
+						orresult = true
+					end
 				elseif (condtype == "on") then
 					valid = true
 					local allfound = 0
@@ -244,7 +248,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								end
 								
 								if (unitid ~= 1) then
-									if ((b ~= "empty") and (b ~= "level")) or ((b == "level") and (alreadyfound[1] ~= nil)) then
+									if ((pname ~= "empty") and (b ~= "level")) or ((b == "level") and (alreadyfound[1] ~= nil)) then
 										if (unitmap[tileid] ~= nil) then
 											for c,d in ipairs(unitmap[tileid]) do
 												if (d ~= unitid) and (alreadyfound[d] == nil) then
@@ -281,8 +285,20 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 										else
 											print("unitmap is nil at " .. tostring(x) .. ", " .. tostring(y) .. " for object " .. tostring(name) .. " (" .. tostring(unitid) .. ")!")
 										end
-									elseif (b == "empty") then
-										result = false
+									elseif (pname == "empty") then
+										if (pnot == false) then
+											result = false
+										else
+											if (unitmap[tileid] ~= nil) then
+												for c,d in ipairs(unitmap[tileid]) do
+													if (d ~= unitid) and (alreadyfound[d] == nil) then
+														alreadyfound[bcode] = 1
+														alreadyfound[d] = 1
+														allfound = allfound + 1
+													end
+												end
+											end
+										end
 									elseif (b == "level") and (alreadyfound[bcode] == nil) and (alreadyfound[1] == nil) then
 										alreadyfound[bcode] = 1
 										alreadyfound[1] = 1
@@ -943,13 +959,15 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 												
-												if nearempty and (unitid == 2) and (g == 0) and (h == 0) then
-													nearempty = false
-												end
-												
-												if (nearempty == false) and (unitid ~= 2) and (unitid ~= 1) and (g == 0) and (h == 0) and pnot then
-													if (unitmap[tileid] == nil) or (#unitmap[tileid] == 1) then
-														nearempty = true
+												if (g == 0) and (h == 0) then
+													if (unitid == 2) then
+														if (pnot == false) then
+															nearempty = false
+														end
+													elseif (unitid ~= 1) and pnot then
+														if (unitmap[tileid] == nil) or (#unitmap[tileid] <= 1) then
+															nearempty = true
+														end
 													end
 												end
 
@@ -1147,8 +1165,16 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 												
-												if nearempty and (unitid == 2) and (g == 0) and (h == 0) then
-													nearempty = false
+												if (g == 0) and (h == 0) then
+													if (unitid == 2) then
+														if (pnot == false) then
+															nearempty = false
+														end
+													elseif (unitid ~= 1) and pnot then
+														if (unitmap[tileid] == nil) or (#unitmap[tileid] <= 1) then
+															nearempty = true
+														end
+													end
 												end
 
 												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid then
@@ -1919,7 +1945,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local dist = roomsizey - y - 1
+							local dist = roomsizey - y - 2
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
@@ -2112,7 +2138,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local dist = roomsizey - y - 1
+							local dist = roomsizey - y - 2
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
@@ -2300,7 +2326,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local dist = roomsizex - x - 1
+							local dist = roomsizex - x - 2
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
@@ -2351,7 +2377,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												
 												local tcode = tostring(tileid) .. "e"
 												
-												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and (alreadyfound[tcode] == nil) then 
+												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (alreadyfound[tcode] == nil) then 
 													nearempty = true
 												end
 												
@@ -2489,7 +2515,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local dist = roomsizex - x - 1
+							local dist = roomsizex - x - 2
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then

@@ -1283,10 +1283,15 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 				
 				local c1,c2 = 0,0
 				
-				if (unit.active == false) then
-					c1,c2 = getcolour(unitid)
+				if (unit.colour ~= nil) and (unit.colour[1] ~= nil) and (unit.colour[2] ~= nil) then
+					c1 = unit.colour[1]
+					c2 = unit.colour[2]
 				else
-					c1,c2 = getcolour(unitid,"active")
+					if (unit.active == false) then
+						c1,c2 = getcolour(unitid)
+					else
+						c1,c2 = getcolour(unitid,"active")
+					end
 				end
 				-- c1 = 0
 				-- c2 = 3
