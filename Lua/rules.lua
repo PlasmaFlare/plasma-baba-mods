@@ -467,6 +467,7 @@ function docode(firstwords)
 	local existingfinals = {}
 	local limiter = 0
 	local no_firstword_br_text = {} -- Record of branching texts that should not be processed as a firstword (prevents double parsing in certain cases)
+	local deferred_firstwords = {}
 	
 	if (#firstwords > 0) then
 		for k,unitdata in ipairs(firstwords) do
@@ -486,13 +487,8 @@ function docode(firstwords)
 			local existing_id = unitdata[8] or ""
 			local existing_br_and_text_with_split_parsing = unitdata[9] or {}
 			local existing_br_sentence_metadata = unitdata[10] or {}
+			local is_deferred_sentence = unitdata[50] or false -- @TODO: uggh I hate having to set an arbitrary index for this
 
-			if existing_br_sentence_metadata.branching_points_bitfield then
-				if existing_br_sentence_metadata.branching_points_bitfield[existing_wordid] then
-					dir = get_perp_direction(dir)
-				end
-			end
-			
 			if (string.sub(word, 1, 5) == "text_") then
 				word = string.sub(word, 6)
 			end
@@ -537,23 +533,54 @@ function docode(firstwords)
 				MF_alert("Already used: " .. tostring(unitid) .. ", " .. tostring(unique_id))
 			end
 			]]--
-
-			-- if not ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil))) then
-			-- 	print("sent id cancellation!! Unique id: "..unique_id.. " x:"..x.." y:"..y.." dir:"..dir.." Word: "..word)
-			-- 	for _, v in ipairs(existing) do
-			-- 		print(v[1])
-			-- 	end	
-			-- end
-			-- if no_firstword_br_text[unitid] then
-			-- 	print("no_firstword_br_text!! Word: "..word)
-			-- end
+			print("firstword: "..unit.strings[NAME].." | word index: "..existing_wordid.." | deferred: "..tostring(is_deferred_sentence).. " | Sentence Id: "..unique_id .. " | dir: ".. tostring(dir))
 			
-			if (not no_firstword_br_text[unitid]) and ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil)) and (limiter < 5000)) then
+			local deferred = false
+			if name_is_branching_text(unit.strings[NAME], true, false) and not is_deferred_sentence then
+				deferred = true
+				unitdata[50] = true
+				print("Deferred firstword!! Word: "..unit.strings[NAME])
+				table.insert(deferred_firstwords, unitdata)
+			else
+				if existing_br_sentence_metadata.branching_points_bitfield then
+					if existing_br_sentence_metadata.branching_points_bitfield[existing_wordid] then
+						dir = get_perp_direction(dir)
+					end
+				end
+	
+				if name_is_branching_text(unit.strings[NAME], true, false) then
+					--@TODO(sent id)
+					-- existing_id = convert_sent_id(existing_id, false)
+					local normal_sent_id = ""
+					for c in existing_id:gmatch"." do
+						local asciicode = string.byte(c)
+						local index = 0
+						if asciicode >= 65 and asciicode <= 90 then
+							index = asciicode - 65
+						elseif asciicode >= 97 and asciicode <= 122 then
+							index = asciicode - 97
+						end
+						normal_sent_id = normal_sent_id..tostring(index)
+					end
+					existing_id = normal_sent_id
+					unique_id = tostring(tileid_id) .. "_" .. existing_id
+				end
+
+				if not ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil))) then
+					print("sent id cancellation!! Unique id: "..unique_id.. " x:"..x.." y:"..y.." dir:"..dir.." Word: "..unit.strings[NAME])
+					for _, v in ipairs(existing) do
+						print(v[1])
+					end	
+				end
+				if no_firstword_br_text[unitid] then
+					print("no_firstword_br_text!! Word: "..unit.strings[NAME])
+				end
+			end
+			
+			if (not deferred and not no_firstword_br_text[unitid]) and ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil)) and (limiter < 5000)) then
 				local ox,oy = 0,0
 				local name = word
 
-				print("firstword: "..name)
-				
 				local drs = dirs[dir]
 				ox = drs[1]
 				oy = drs[2]
@@ -563,9 +590,6 @@ function docode(firstwords)
 				end
 				
 				donefirstwords[unique_id][dir] = 1
-				-- if name_is_branching_text(name) then
-				-- 	donefirstwords[unique_id][get_perp_direction(dir)] = 1
-				-- end
 								
 				local sentences = {}
 				local finals = {}
@@ -582,14 +606,14 @@ function docode(firstwords)
 				if (#existing == 0) then
 					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
 
-					-- print("==== "..dir.." variations: "..variations)
-					-- for i, sent in ipairs(sentences) do
-					-- 	print("---")
-					-- 	print("sent id:"..sent_ids[i])
-					-- 	for _, word in ipairs(sent) do
-					-- 		print(word[1])
-					-- 	end
-					-- end
+					print("==== "..dir.." variations: "..variations)
+					for i, sent in ipairs(sentences) do
+						print("---")
+						print("sent id:"..sent_ids[i])
+						for _, word in ipairs(sent) do
+							print(word[1])
+						end
+					end
 				else
 					sentences[1] = existing
 					maxlen = 3
@@ -598,10 +622,10 @@ function docode(firstwords)
 					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing --@TODO: do we still need this?
 					br_sentence_metadata = existing_br_sentence_metadata
 
-					-- print("---existing- dir: "..dir.." sent id:".. existing_id)
-					-- for _, word in ipairs(existing) do
-					-- 	print(word[1])
-					-- end
+					print("---existing- dir: "..dir.." sent id:".. existing_id)
+					for _, word in ipairs(existing) do
+						print(word[1])
+					end
 				end				
 
 				if (sentences == nil) then
@@ -826,7 +850,7 @@ function docode(firstwords)
 							end
 							end
 							
-							if stage3reached and not stop and name_is_branching_and(tilename) then
+							if stage3reached and not stop and name_is_branching_and(tilename, true, false) then
 								local br_and_unit = mmf.newObject(tileid)
 								if br_and_text_with_split_parsing[tileid] then
 									do_branching_and_sentence_elimination = true
@@ -951,7 +975,9 @@ function docode(firstwords)
 									end
 								end
 							end
-							table.insert(sents_that_might_be_removed, {index = i, and_units = and_units})
+							if #and_units > 0 then
+								table.insert(sents_that_might_be_removed, {index = i, and_units = and_units})
+							end
 						end
 
 						--MF_alert(thissent)
@@ -1276,6 +1302,14 @@ function docode(firstwords)
 					end
 				end
 			end
+
+			-- If there are no more firstwords needed to be processed but we have deferred firstwords, add them back in
+			if k == #firstwords then
+				for _, deferred_firstword in ipairs(deferred_firstwords) do
+					table.insert(firstwords, deferred_firstword)
+				end
+				deferred_firstwords = {}
+			end	
 		end
 	end
 end
@@ -1630,9 +1664,9 @@ function code(alreadyrun_)
 					end
 				end
 				
-				-- print("<<<<<<<<<<<<<start>")
+				print("<<<<<<<<<<<<<start>")
 				docode(firstwords,wordunits)
-				-- print("<<<<<<<<<<<<<end>")
+				print("<<<<<<<<<<<<<end>")
 				do_subrule_this()
 				subrules()
 				grouprules()
