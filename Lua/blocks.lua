@@ -497,15 +497,28 @@ function block(small_)
 			end
 			
 			for i,unit in ipairs(doned) do
-				addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
 				updateundo = true
+				
+				local ufloat = unit.values[FLOAT]
+				local ded = unit.flags[DEAD]
 				
 				unit.values[FLOAT] = 2
 				unit.values[EFFECTCOUNT] = math.random(-10,10)
 				unit.values[POSITIONING] = 7
 				unit.flags[DEAD] = true
 				
+				local x,y = unit.values[XPOS],unit.values[YPOS]
+				
+				if (spritedata.values[VISION] == 1) and (unit.values[ID] == spritedata.values[CAMTARGET]) then
+					updatevisiontargets()
+				end
+				
+				if (ufloat ~= 2) and (ded == false) then
+					addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,ufloat})
+				end
+				
 				delunit(unit.fixed)
+				dynamicat(x,y)
 			end
 		end
 		
@@ -605,7 +618,7 @@ function block(small_)
 				end
 			end
 			
-			--MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
+			MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
 			
 			MF_playsound_freq(tune,freq)
 			setsoundname("turn",11,nil)
@@ -1003,8 +1016,11 @@ function block(small_)
 										MF_playsound("bonus")
 										MF_bonus(1)
 										addundo({"bonus",1})
-										generaldata.values[SHAKE] = 5
-										table.insert(delthese, d)
+										
+										if (issafe(d,x,y) == false) then
+											generaldata.values[SHAKE] = 5
+											table.insert(delthese, d)
+										end
 									end
 								end
 							end

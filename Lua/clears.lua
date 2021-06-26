@@ -38,7 +38,7 @@ function clearunits(restore_)
 	visiontargets = {}
 	revertlist = {}
 	
-	generaldata.values[CURRID] = 0
+	generaldata.values[CURRID] = 1
 	updateundo = true
 	hiddenmap = nil
 	levelconversions = {}

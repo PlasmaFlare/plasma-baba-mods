@@ -7,7 +7,8 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 
 	statusblock(nil,nil,true)
 	movelist = {}
-
+	local debug_moves = 0
+	
 	local take = 1
 	local takecount = 8
 	local finaltake = false
@@ -305,22 +306,22 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 								updatedir(v, fdir)
 							end
 						end
-					end
-			
-					if (sleeping == false) and (fdir ~= 4) and domove then
-						if (been_seen[v] == nil) then
-							local x,y = -1,-1
-							if (v ~= 2) then
-								local unit = mmf.newObject(v)
-								x,y = unit.values[XPOS],unit.values[YPOS]
-								
-								table.insert(moving_units, {unitid = v, reason = "you", state = 0, moves = 1, dir = fdir, xpos = x, ypos = y})
-								been_seen[v] = #moving_units
+					
+						if (sleeping == false) and (fdir ~= 4) and domove then
+							if (been_seen[v] == nil) then
+								local x,y = -1,-1
+								if (v ~= 2) then
+									local unit = mmf.newObject(v)
+									x,y = unit.values[XPOS],unit.values[YPOS]
+									
+									table.insert(moving_units, {unitid = v, reason = "you", state = 0, moves = 1, dir = fdir, xpos = x, ypos = y})
+									been_seen[v] = #moving_units
+								end
+							else
+								local id = been_seen[v]
+								local this = moving_units[id]
+								--this.moves = this.moves + 1
 							end
-						else
-							local id = been_seen[v]
-							local this = moving_units[id]
-							--this.moves = this.moves + 1
 						end
 					end
 				end
@@ -577,7 +578,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 			moving_units = do_directional_shift_resolve_stacked_shifts(moving_units)
 		end
 		
-		while (done == false) and (skiptake == false) do
+		while (done == false) and (skiptake == false) and (debug_moves < movelimit) do
 			local smallest_state = 99
 			local delete_moving_units = {}
 			
@@ -604,6 +605,8 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 						dir = data.dir
 						name = "empty"
 					end
+					
+					debug_moves = debug_moves + 1
 					
 					--MF_alert(name .. " (" .. tostring(data.unitid) .. ") doing " .. data.reason .. ", take " .. tostring(take) .. ", state " .. tostring(state) .. ", moves " .. tostring(data.moves) .. ", dir " .. tostring(dir))
 					
@@ -1047,6 +1050,12 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				movemap = {}
 			end
 		end
+		
+		if (debug_moves >= movelimit) then
+			HACK_INFINITY = 200
+			destroylevel("toocomplex")
+			return
+		end
 
 		if (#still_moving > 0) then
 			finaltake = true
@@ -1112,14 +1121,16 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 		mapcursor_move(ox,oy,dir_)
 	end
 	
-	local vistest,vt2 = findallfeature(nil,"is","3d")
-	if (#vistest > 0) or (#vt2 > 0) then
-		local target = vistest[1] or vt[1]
-		visionmode(1)
-	elseif (spritedata.values[VISION] == 1) then
-		local vistest2 = findfeature(nil,"is","3d")
-		if (vistest2 == nil) then
-			visionmode(0)
+	if (#units > 0) then
+		local vistest,vt2 = findallfeature(nil,"is","3d",true)
+		if (#vistest > 0) or (#vt2 > 0) then
+			local target = vistest[1] or vt[1]
+			visionmode(1)
+		elseif (spritedata.values[VISION] == 1) then
+			local vistest2 = findfeature(nil,"is","3d")
+			if (vistest2 == nil) then
+				visionmode(0)
+			end
 		end
 	end
 
@@ -1276,8 +1287,10 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 				local effectid = MF_effectcreate("effect_bling")
 				local effect = mmf.newObject(effectid)
 				
-				local midx = math.floor(roomsizex * 0.5)
-				local midy = math.floor(roomsizey * 0.5)
+				local midxdelta = spritedata.values[XMIDTILE] - roomsizex * 0.5
+				local midydelta = spritedata.values[YMIDTILE] - roomsizey * 0.5
+				local midx = roomsizex * 0.5 + midxdelta * generaldata2.values[ZOOM]
+				local midy = roomsizey * 0.5 + midydelta * generaldata2.values[ZOOM]
 				local mx = x - midx
 				local my = y - midy
 				

@@ -1949,7 +1949,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (dist > 1) then
+									if (dist >= 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = x + (y + g) * roomsizex
@@ -2142,7 +2142,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (dist > 1) then
+									if (dist >= 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = x + (y + g) * roomsizex
@@ -2330,7 +2330,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (dist > 1) then
+									if (dist >= 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = (x + g) + y * roomsizex
@@ -2519,7 +2519,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									if (dist > 1) then
+									if (dist >= 1) then
 										for g=1,dist do
 											if (pname ~= "empty") and not ray_unit_is_empty then
 												local tileid = (x + g) + y * roomsizex

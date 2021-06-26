@@ -765,9 +765,8 @@ function docode(firstwords)
 											prevstage = stage
 											nocondsafterthis = true
 											stage = 3
-										elseif ((tiletype == 7) and (stage2reached == false) and (nocondsafterthis == false)) then
+										elseif (tiletype == 7) and (stage2reached == false) and (nocondsafterthis == false) and ((doingcond == false) or (prevstage ~= 4)) then
 											doingcond = true
-											condsafeand = true
 											prevstage = stage
 											stage = 3
 										elseif (tiletype == 6) and (prevtiletype ~= 4) then
@@ -802,10 +801,9 @@ function docode(firstwords)
 											nocondsafterthis = true
 											prevstage = stage
 											stage = 3
-										elseif (tiletype == 7) and (nocondsafterthis == false) and ((prevtiletype ~= 6) or ((prevtiletype == 6) and condsafeand)) then
+										elseif (tiletype == 7) and (nocondsafterthis == false) and ((prevtiletype ~= 6) or ((prevtiletype == 6) and doingcond)) then
 											doingcond = true
 											stage2reached = true
-											condsafeand = true
 											prevstage = stage
 											stage = 3
 										elseif (tiletype ~= 4) then
@@ -926,7 +924,7 @@ function docode(firstwords)
 								
 								if (wordid < #sent) then
 									if (wordid > existing_wordid) then
-										if (#notids > 0) and firstrealword and (notslot > 1) and (tiletype ~= 7) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
+										if (#notids > 0) and firstrealword and (notslot > 1) and ((tiletype ~= 7) or ((tiletype == 7) and (prevtiletype == 0))) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
 											--MF_alert(tostring(notslot) .. ", not -> A, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, (notslot - existing_wordid)+1)
 											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing})
@@ -1447,7 +1445,8 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 									end
 								end
 							elseif (b == "not all") then
-								newconds = {"empty","text"}
+								table.insert(newconds, "empty")
+								table.insert(newconds, "text")
 							end
 							
 							if (string.sub(b, 1, 5) == "group") or (string.sub(b, 1, 9) == "not group") then
@@ -1667,6 +1666,10 @@ function code(alreadyrun_)
 			if (featureindex["broken"] ~= nil) then
 				brokenblock(checkthese)
 			end
+			
+			if (featureindex["3d"] ~= nil) then
+				updatevisiontargets()
+			end
 		end
 
 		do_mod_hook("rule_update_after",{alreadyrun})
@@ -1694,6 +1697,7 @@ function findwordunits()
 	local related = {}
 	
 	local identifier = ""
+	local fullid = {}
 	
 	if (featureindex["word"] ~= nil) then
 		for i,v in ipairs(featureindex["word"]) do
@@ -1702,6 +1706,7 @@ function findwordunits()
 			local ids = v[3]
 			
 			local name = rule[1]
+			local subid = ""
 			
 			if (objectlist[name] ~= nil) and (name ~= "text") and (alreadydone[name] == nil) then
 				local these = findall({name,{}})
@@ -1720,27 +1725,31 @@ function findwordunits()
 						
 						if valid then
 							table.insert(result, {b, conds})
-							identifier = identifier .. name
+							subid = subid .. name
 							-- LISÄÄ TÄHÄN LISÄÄ DATAA
 						end
 					end
 				end
 			end
 			
-			for a,b in ipairs(conds) do
-				local condtype = b[1]
-				local params = b[2] or {}
-				
-				identifier = identifier .. condtype
-				
-				if (#params > 0) then
-					for c,d in ipairs(params) do
-						identifier = identifier .. tostring(d)
-						
-						related = findunits(d,related,conds)
+			if (#subid > 0) then
+				for a,b in ipairs(conds) do
+					local condtype = b[1]
+					local params = b[2] or {}
+					
+					subid = subid .. condtype
+					
+					if (#params > 0) then
+						for c,d in ipairs(params) do
+							subid = subid .. tostring(d)
+							
+							related = findunits(d,related,conds)
+						end
 					end
 				end
 			end
+			
+			table.insert(fullid, subid)
 			
 			--MF_alert("Going through " .. name)
 			
@@ -1762,6 +1771,14 @@ function findwordunits()
 				MF_alert("No ids listed in Word-related rule! rules.lua line 1302 - this needs fixing asap (related to grouprules line 1118)")
 			end
 		end
+		
+		table.sort(fullid)
+		for i,v in ipairs(fullid) do
+			-- MF_alert("Adding " .. v .. " to id")
+			identifier = identifier .. v
+		end
+		
+		-- MF_alert("Identifier: " .. identifier)
 		
 		for a,checkname_ in ipairs(checkrecursion) do
 			local found = false
@@ -2074,7 +2091,9 @@ function postrules(alreadyrun_)
 	
 	ruleids = newruleids
 	
-	ruleblockeffect()
+	if (spritedata.values[VISION] == 0) then
+		ruleblockeffect()
+	end
 	
 	return playrulesound
 end
