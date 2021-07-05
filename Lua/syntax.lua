@@ -93,7 +93,7 @@ function addunit(id,undoing_,levelstart_)
 		if (hasvision ~= nil) then
 			table.insert(visiontargets, id)
 		elseif (spritedata.values[CAMTARGET] == unit.values[ID]) then
-			visionmode(0,0)
+			visionmode(0,0,nil,{unit.values[XPOS],unit.values[YPOS],unit.values[DIR]})
 		end
 	end
 	

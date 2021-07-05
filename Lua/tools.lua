@@ -125,10 +125,6 @@ function delunit(unitid)
 					table.remove(visiontargets, i)
 				end
 			end
-			
-			if (spritedata.values[CAMTARGET] == unitid) then
-				changevisiontarget()
-			end
 		end
 	else
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))

@@ -97,14 +97,18 @@ function calculatesentences(unitid,x,y,dir)
 	
 	local sents = {}
 	local done = false
+	local verbfound = false
+	local objfound = false
+	local starting = true
 	
 	local step = 0
+	local rstep = 0
 	local combo = {}
 	local variantshere = {}
 	local totalvariants = 1
 	local maxpos = 0
 	
-	local limiter = 3000
+	local limiter = 5000
 	
 	local combospots = {}
 	
@@ -127,11 +131,12 @@ function calculatesentences(unitid,x,y,dir)
 	-- @Phase 1 - Go through units sequentially and build array of slots. Each slot contains a record of a text unit. So each slot can have stacked text.
 	-- Also record combo information to use in phase 2.
 	while (done == false) and (totalvariants < limiter) do
-		local words,letters,jletters = codecheck(unitid,ox*step,oy*step,dir,true)
+		local words,letters,jletters = codecheck(unitid,ox*rstep,oy*rstep,dir,true)
 		
 		--MF_alert(tostring(unitid) .. ", " .. unit.strings[UNITNAME] .. ", " .. tostring(#words))
 		
 		step = step + 1
+		rstep = rstep + 1
 		
 		if (totalvariants >= limiter) then
 			MF_alert("Level destroyed - too many variants A")
@@ -141,27 +146,7 @@ function calculatesentences(unitid,x,y,dir)
 		
 		if (totalvariants < limiter) then
 			if (#words > 0) then
-				totalvariants = totalvariants * #words
-				variantshere[step] = #words
 				sents[step] = {}
-				combo[step] = 1
-				
-				if (totalvariants >= limiter) then
-					MF_alert("Level destroyed - too many variants B")
-					destroylevel("toocomplex")
-					return nil
-				end
-				
-				if (#words > 1) then
-					combospots[#combospots + 1] = step
-				end
-				
-				if (totalvariants > #finals) then
-					local limitdiff = totalvariants - #finals
-					for i=1,limitdiff do
-						table.insert(finals, {})
-					end
-				end
 				
 				local branching_texts = {}
 
@@ -169,6 +154,18 @@ function calculatesentences(unitid,x,y,dir)
 					--unitids, width, word, wtype, dir
 					
 					--MF_alert("Step " .. tostring(step) .. ", word " .. v[3] .. " here")
+					if (v[4] == 1) then
+						verbfound = true
+					end
+					
+					if (v[4] == 0) then
+						objfound = true
+					end
+					
+					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4)) then
+						starting = false
+					end
+					
 					table.insert(sents[step], v)
 
 					local text_name = v[3]
@@ -180,6 +177,31 @@ function calculatesentences(unitid,x,y,dir)
 						local br_unitid = v[1][1]
 						local br_unit = mmf.newObject(br_unitid)
 						br_and_text_with_split_parsing[br_unitid] = nil
+					end
+				end
+				if starting then
+					sents[step] = nil
+					step = step - 1
+				else
+					totalvariants = totalvariants * #words
+					variantshere[step] = #words
+					combo[step] = 1
+				
+					if (totalvariants >= limiter) then
+						MF_alert("Level destroyed - too many variants B")
+						destroylevel("toocomplex")
+						return nil
+					end
+					
+					if (#words > 1) then
+						combospots[#combospots + 1] = step
+					end
+					
+					if (totalvariants > #finals) then
+						local limitdiff = totalvariants - #finals
+						for i=1,limitdiff do
+							table.insert(finals, {})
+						end
 					end
 				end
 
@@ -267,6 +289,10 @@ function calculatesentences(unitid,x,y,dir)
 		MF_alert("Level destroyed - too many variants C")
 		destroylevel("toocomplex")
 		return nil
+	end
+	
+	if (verbfound == false) or (step < 3) or (objfound == false) then
+		return {},{},0,0,{},{}
 	end
 	
 	maxpos = step
@@ -1092,7 +1118,7 @@ function docode(firstwords)
 									end
 								end
 								
-								testing = testing .. wname .. ", "
+								testing = testing .. wname .. " "
 								
 								local wcategory = -1
 								
@@ -1236,6 +1262,10 @@ function docode(firstwords)
 								end
 							end
 							--MF_alert("Testing: " .. testing)
+							
+							if generaldata.flags[LOGGING] then
+								rulelog(sentence, testing)
+							end
 							
 							local conds = {}
 							local condids = {}
@@ -1518,6 +1548,10 @@ function code(alreadyrun_)
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")
 		
+		if generaldata.flags[LOGGING] then
+			logrulelist.new = {}
+		end
+		
 		MF_removeblockeffect(0)
 		wordrelatedunits = {}
 		
@@ -1669,6 +1703,10 @@ function code(alreadyrun_)
 			
 			if (featureindex["3d"] ~= nil) then
 				updatevisiontargets()
+			end
+			
+			if generaldata.flags[LOGGING] then
+				updatelogrules()
 			end
 		end
 

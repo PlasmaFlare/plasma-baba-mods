@@ -1,4 +1,4 @@
-function movecommand(ox,oy,dir_,playerid_,dir_2)
+function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 	--[[ 
 		@mods(turning text) - Override reason - handle multiple directional text cases and added additional calls to code() to handle turning text resolution
 		
@@ -12,6 +12,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 	local take = 1
 	local takecount = 8
 	local finaltake = false
+	local no3d = no3d_ or false
 	local playerid = playerid_ or 1
 	local still_moving = {}
 	
@@ -264,7 +265,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 				
 				fdir = 4
 				
-				if (featureindex["3d"] ~= nil) and (spritedata.values[CAMTARGET] ~= 0) then
+				if (featureindex["3d"] ~= nil) and (spritedata.values[CAMTARGET] ~= 0) and (spritedata.values[CAMTARGET] ~= 0.5) and (no3d == false) then
 					local sleeping = false
 					local domove = false
 					local turndir = 0
@@ -1121,7 +1122,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2)
 		mapcursor_move(ox,oy,dir_)
 	end
 	
-	if (#units > 0) then
+	if (#units > 0) and (no3d == false) then
 		local vistest,vt2 = findallfeature(nil,"is","3d",true)
 		if (#vistest > 0) or (#vt2 > 0) then
 			local target = vistest[1] or vt[1]

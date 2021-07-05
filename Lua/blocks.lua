@@ -971,7 +971,11 @@ function block(small_)
 							local mem = findgroup(v)
 							
 							for c,d in ipairs(mem) do
-								create(d,x,y,dir,x,y,nil,nil,leveldata)
+								local thishere = findtype({d},x,y,nil,true)
+								
+								if (#thishere == 0) then
+									create(d,x,y,dir,x,y,nil,nil,leveldata)
+								end
 							end
 						end
 					end
@@ -1408,11 +1412,11 @@ function levelblock()
 				
 				--MF_alert(rule[1] .. " " .. rule[2] .. " " .. rule[3] .. ", " .. tostring(testcond(conds,1)))
 				
-				if testcond(conds,1) then
-					if (rule[2] == "eat") then
+				if (rule[2] == "eat") then
+					local eaten = {}
+					
+					if (rule[1] == "level") and testcond(conds,1) then
 						local target = rule[3]
-						
-						local eaten = {}
 						
 						if (target ~= "all") and (target ~= "empty") then
 							local dothese = {}
@@ -1455,742 +1459,758 @@ function levelblock()
 								delete(2,x,y)
 							end
 						end
-						
-						for a,b in ipairs(eaten) do
-							local bunit = mmf.newObject(b)
-							local x,y = bunit.values[XPOS],bunit.values[YPOS]
-							generaldata.values[SHAKE] = 4
-							
-							local pmult,sound = checkeffecthistory("eat")
-							MF_particles("eat",x,y,5 * pmult,0,3,1,1)
-							setsoundname("removal",1,sound)
-							
-							delete(b,x,y)
+					elseif (rule[1] ~= "level") and (rule[3] == "level") then
+						local dothese = {}
+						if (findnoun(rule[1]) == false) then
+							dothese = findall({rule[1],conds},nil,true)
+						elseif (rule[1] == "empty") then
+							dothese = findempty(conds,true)
 						end
-					elseif (rule[2] == "is") then
-						local action = rule[3]
+							
+						if (#dothese > 0) and (lsafe == false) then
+							local pmult,sound = checkeffecthistory("eat")
+							setsoundname("removal",1,sound)
+							destroylevel()
+							return
+						end
+					end
 						
-						if (action == "you") or (action == "you2") or (action == "3d") then
-							local defeats = findfeature(nil,"is","defeat")
-							local wins = findfeature(nil,"is","win")
-							local ends = findfeature(nil,"is","end")
-							
-							if (defeats ~= nil) then
-								for a,b in ipairs(defeats) do
-									if (b[1] ~= "level") then
-										local allyous = findall(b)
-										
-										if (#allyous > 0) then
-											for c,d in ipairs(allyous) do
-												if (issafe(1) == false) and floating_level(d) then
-													destroylevel()
-													return
-												end
+					for a,b in ipairs(eaten) do
+						local bunit = mmf.newObject(b)
+						local x,y = bunit.values[XPOS],bunit.values[YPOS]
+						generaldata.values[SHAKE] = 4
+						
+						local pmult,sound = checkeffecthistory("eat")
+						MF_particles("eat",x,y,5 * pmult,0,3,1,1)
+						setsoundname("removal",1,sound)
+						
+						delete(b,x,y)
+					end
+				end
+				
+				if (rule[1] == "level") and (rule[2] == "is") and testcond(conds,1) then
+					local action = rule[3]
+					
+					if (action == "you") or (action == "you2") or (action == "3d") then
+						local defeats = findfeature(nil,"is","defeat")
+						local wins = findfeature(nil,"is","win")
+						local ends = findfeature(nil,"is","end")
+						
+						if (defeats ~= nil) then
+							for a,b in ipairs(defeats) do
+								if (b[1] ~= "level") then
+									local allyous = findall(b)
+									
+									if (#allyous > 0) then
+										for c,d in ipairs(allyous) do
+											if (issafe(1) == false) and floating_level(d) then
+												destroylevel()
+												return
 											end
 										end
-									elseif testcond(b[2],1) and (lsafe == false) then
-										destroylevel()
-										return
 									end
+								elseif testcond(b[2],1) and (lsafe == false) then
+									destroylevel()
+									return
 								end
 							end
-							
-							if ((#findallfeature("empty","is","defeat") > 0) or (#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
-								destroylevel()
-								return
-							end
-							
-							local canwin = false
-							local canend = false
-							
-							if (wins ~= nil) then
-								for a,b in ipairs(wins) do
-									if (b[1] ~= "level") then
-										local allyous = findall(b)
-										
-										if (#allyous > 0) then
-											for c,d in ipairs(allyous) do
-												if floating_level(d) then
-													canwin = true
-												end
+						end
+						
+						if ((#findallfeature("empty","is","defeat") > 0) or (#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
+							destroylevel()
+							return
+						end
+						
+						local canwin = false
+						local canend = false
+						
+						if (wins ~= nil) then
+							for a,b in ipairs(wins) do
+								if (b[1] ~= "level") then
+									local allyous = findall(b)
+									
+									if (#allyous > 0) then
+										for c,d in ipairs(allyous) do
+											if floating_level(d) then
+												canwin = true
 											end
 										end
-									elseif testcond(b[2],1) then
-										canwin = true
 									end
+								elseif testcond(b[2],1) then
+									canwin = true
 								end
 							end
-							
-							if (ends ~= nil) then
-								for a,b in ipairs(ends) do
-									if (b[1] ~= "level") then
-										local allyous = findall(b)
-										
-										if (#allyous > 0) then
-											for c,d in ipairs(allyous) do
-												if floating_level(d) then
-													canend = true
-												end
+						end
+						
+						if (ends ~= nil) then
+							for a,b in ipairs(ends) do
+								if (b[1] ~= "level") then
+									local allyous = findall(b)
+									
+									if (#allyous > 0) then
+										for c,d in ipairs(allyous) do
+											if floating_level(d) then
+												canend = true
 											end
 										end
-									elseif testcond(b[2],1) then
-										canend = true
 									end
+								elseif testcond(b[2],1) then
+									canend = true
 								end
 							end
-							
-							if ((#findallfeature("empty","is","win") > 0) or (#findallfeature("empty","is","win") > 0)) and floating_level(2) then
-								canwin = true
-							end
-							
-							if ((#findallfeature("empty","is","end") > 0) or (#findallfeature("empty","is","end") > 0)) and floating_level(2) then
-								canend = true
-							end
-							
-							if canwin then
+						end
+						
+						if ((#findallfeature("empty","is","win") > 0) or (#findallfeature("empty","is","win") > 0)) and floating_level(2) then
+							canwin = true
+						end
+						
+						if ((#findallfeature("empty","is","end") > 0) or (#findallfeature("empty","is","end") > 0)) and floating_level(2) then
+							canend = true
+						end
+						
+						if canwin then
+							MF_win()
+							return
+						end
+						
+						if canend and (generaldata.strings[WORLD] ~= generaldata.strings[BASEWORLD]) then
+							if (editor.values[INEDITOR] ~= 0) then
+								MF_end_single()
 								MF_win()
 								return
+							else
+								MF_end_single()
+								MF_win()
+								MF_credits(1)
+								return
 							end
-							
-							if canend and (generaldata.strings[WORLD] ~= generaldata.strings[BASEWORLD]) then
-								if (editor.values[INEDITOR] ~= 0) then
-									MF_end_single()
-									MF_win()
-									return
-								else
-									MF_end_single()
-									MF_win()
-									MF_credits(1)
-									return
-								end
+						end
+					elseif (action == "defeat") then
+						local yous = findfeature(nil,"is","you")
+						local yous2 = findfeature(nil,"is","you2")
+						local yous3 = findfeature(nil,"is","3d")
+						
+						if (yous == nil) then
+							yous = {}
+						end
+						
+						if (yous2 ~= nil) then
+							for i,v in ipairs(yous2) do
+								table.insert(yous, v)
 							end
-						elseif (action == "defeat") then
-							local yous = findfeature(nil,"is","you")
-							local yous2 = findfeature(nil,"is","you2")
-							local yous3 = findfeature(nil,"is","3d")
-							
-							if (yous == nil) then
-								yous = {}
+						end
+						
+						if (yous3 ~= nil) then
+							for i,v in ipairs(yous3) do
+								table.insert(yous, v)
 							end
-							
-							if (yous2 ~= nil) then
-								for i,v in ipairs(yous2) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous3 ~= nil) then
-								for i,v in ipairs(yous3) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous ~= nil) then
-								for a,b in ipairs(yous) do
-									if (b[1] ~= "level") then
-										local allyous = findall(b)
-										
-										if (#allyous > 0) then
-											for c,d in ipairs(allyous) do
-												if (issafe(d) == false) and floating_level(d) then
-													local unit = mmf.newObject(d)
-													
-													local pmult,sound = checkeffecthistory("defeat")
-													MF_particles("destroy",unit.values[XPOS],unit.values[YPOS],5 * pmult,0,3,1,1)
-													setsoundname("removal",1,sound)
-													generaldata.values[SHAKE] = 2
-													delete(d)
-												end
-											end
-										end
-									elseif testcond(b[2],1) and (lsafe == false) then
-										destroylevel()
-										return
-									end
-								end
-							end
-						elseif (action == "weak") then
-							for i,unit in ipairs(units) do
-								local name = unit.strings[UNITNAME]
-								if (unit.strings[UNITTYPE] == "text") then
-									name = "text"
-								end
-								
-								if floating_level(unit.fixed) and (lsafe == false) then
-									destroylevel()
-								end
-							end
-						elseif (action == "hot") then
-							local melts = findfeature(nil,"is","melt")
-							
-							if (melts ~= nil) then
-								for a,b in ipairs(melts) do
-									local allmelts = findall(b)
+						end
+						
+						if (yous ~= nil) then
+							for a,b in ipairs(yous) do
+								if (b[1] ~= "level") then
+									local allyous = findall(b)
 									
-									if (#allmelts > 0) then
-										for c,d in ipairs(allmelts) do
+									if (#allyous > 0) then
+										for c,d in ipairs(allyous) do
 											if (issafe(d) == false) and floating_level(d) then
 												local unit = mmf.newObject(d)
 												
-												local pmult,sound = checkeffecthistory("hot")
-												MF_particles("smoke",unit.values[XPOS],unit.values[YPOS],5 * pmult,0,1,1,1)
+												local pmult,sound = checkeffecthistory("defeat")
+												MF_particles("destroy",unit.values[XPOS],unit.values[YPOS],5 * pmult,0,3,1,1)
+												setsoundname("removal",1,sound)
 												generaldata.values[SHAKE] = 2
-												setsoundname("removal",9,sound)
 												delete(d)
 											end
 										end
 									end
+								elseif testcond(b[2],1) and (lsafe == false) then
+									destroylevel()
+									return
 								end
 							end
-						elseif (action == "melt") then
-							local hots = findfeature(nil,"is","hot")
+						end
+					elseif (action == "weak") then
+						for i,unit in ipairs(units) do
+							local name = unit.strings[UNITNAME]
+							if (unit.strings[UNITTYPE] == "text") then
+								name = "text"
+							end
 							
-							if (hots ~= nil) and (lsafe == false) then
-								for a,b in ipairs(hots) do
-									local doit = false
+							if floating_level(unit.fixed) and (lsafe == false) then
+								destroylevel()
+							end
+						end
+					elseif (action == "hot") then
+						local melts = findfeature(nil,"is","melt")
+						
+						if (melts ~= nil) then
+							for a,b in ipairs(melts) do
+								local allmelts = findall(b)
+								
+								if (#allmelts > 0) then
+									for c,d in ipairs(allmelts) do
+										if (issafe(d) == false) and floating_level(d) then
+											local unit = mmf.newObject(d)
+											
+											local pmult,sound = checkeffecthistory("hot")
+											MF_particles("smoke",unit.values[XPOS],unit.values[YPOS],5 * pmult,0,1,1,1)
+											generaldata.values[SHAKE] = 2
+											setsoundname("removal",9,sound)
+											delete(d)
+										end
+									end
+								end
+							end
+						end
+					elseif (action == "melt") then
+						local hots = findfeature(nil,"is","hot")
+						
+						if (hots ~= nil) and (lsafe == false) then
+							for a,b in ipairs(hots) do
+								local doit = false
+								
+								if (b[1] ~= "level") then
+									local allhots = findall(b)
 									
-									if (b[1] ~= "level") then
-										local allhots = findall(b)
-										
-										for c,d in ipairs(allhots) do
-											if floating_level(d) then
-												doit = true
+									for c,d in ipairs(allhots) do
+										if floating_level(d) then
+											doit = true
+										end
+									end
+								elseif testcond(b[2],1) then
+									doit = true
+								end
+								
+								if doit then
+									destroylevel()
+								end
+							end
+						end
+						
+						if (#findallfeature("empty","is","hot") > 0) and floating_level(2) and (lsafe == false) then
+							destroylevel()
+							return
+						end
+					elseif (action == "open") then
+						local shuts = findfeature(nil,"is","shut")
+						
+						local openthese = {}
+						
+						if (shuts ~= nil) then
+							for a,b in ipairs(shuts) do
+								local doit = false
+								
+								if (b[1] ~= "level") then
+									local allshuts = findall(b)
+									
+									for c,d in ipairs(allshuts) do
+										if floating_level(d) then
+											doit = true
+											
+											if (issafe(d) == false) then
+												table.insert(openthese, d)
 											end
 										end
-									elseif testcond(b[2],1) then
-										doit = true
 									end
-									
-									if doit then
-										destroylevel()
-									end
-								end
-							end
-							
-							if (#findallfeature("empty","is","hot") > 0) and floating_level(2) and (lsafe == false) then
-								destroylevel()
-								return
-							end
-						elseif (action == "open") then
-							local shuts = findfeature(nil,"is","shut")
-							
-							local openthese = {}
-							
-							if (shuts ~= nil) then
-								for a,b in ipairs(shuts) do
-									local doit = false
-									
-									if (b[1] ~= "level") then
-										local allshuts = findall(b)
-										
-										for c,d in ipairs(allshuts) do
-											if floating_level(d) then
-												doit = true
-												
-												if (issafe(d) == false) then
-													table.insert(openthese, d)
-												end
-											end
-										end
-									elseif testcond(b[2],1) then
-										doit = true
-									end
-									
-									if doit then
-										if (lsafe == false) then
-											destroylevel()
-											return
-										end
-									end
-								end
-							end
-							
-							if (#openthese > 0) then
-								generaldata.values[SHAKE] = 8
-								
-								for a,b in ipairs(openthese) do
-									local bunit = mmf.newObject(b)
-									local bx,by = bunit.values[XPOS],bunit.values[YPOS]
-									
-									local pmult,sound = checkeffecthistory("unlock")
-									setsoundname("turn",7,sound)
-									MF_particles("unlock",bx,by,15 * pmult,2,4,1,1)
-									
-									delete(b)
-									deleted[b] = 1
-								end
-							end
-							
-							if (#findallfeature("empty","is","shut") > 0) and floating_level(2) and (lsafe == false) then
-								destroylevel()
-								return
-							end
-						elseif (action == "shut") then
-							local opens = findfeature(nil,"is","open")
-							
-							local openthese = {}
-							
-							if (opens ~= nil) then
-								for a,b in ipairs(opens) do
-									local doit = false
-									
-									if (b[1] ~= "level") then
-										local allopens = findall(b)
-										
-										for c,d in ipairs(allopens) do
-											if floating_level(d) then
-												doit = true
-												
-												if (issafe(d) == false) then
-													table.insert(openthese, d)
-												end
-											end
-										end
-									elseif testcond(b[2],1) then
-										doit = true
-									end
-									
-									if doit then
-										if (lsafe == false) then
-											destroylevel()
-											return
-										end
-									end
-								end
-							end
-							
-							if (#openthese > 0) then
-								generaldata.values[SHAKE] = 8
-								
-								for a,b in ipairs(openthese) do
-									local bunit = mmf.newObject(b)
-									local bx,by = bunit.values[XPOS],bunit.values[YPOS]
-									
-									local pmult,sound = checkeffecthistory("unlock")
-									setsoundname("turn",7,sound)
-									MF_particles("unlock",bx,by,15 * pmult,2,4,1,1)
-									
-									delete(b)
-									deleted[b] = 1
-								end
-							end
-							
-							if (#findallfeature("empty","is","open") > 0) and floating_level(2) and (lsafe == false) then
-								destroylevel()
-								return
-							end
-						elseif (action == "sink") then
-							local openthese = {}
-							
-							for a,unit in ipairs(units) do
-								local name = unit.strings[UNITNAME]
-								
-								if (unit.strings[UNITTYPE] == "text") then
-									name = "text"
+								elseif testcond(b[2],1) then
+									doit = true
 								end
 								
-								if floating_level(unit.fixed) then
+								if doit then
 									if (lsafe == false) then
 										destroylevel()
 										return
 									end
-									
-									if (issafe(unit.fixed) == false) then
-										table.insert(openthese, unit.fixed)
-									end
 								end
 							end
+						end
+						
+						if (#openthese > 0) then
+							generaldata.values[SHAKE] = 8
 							
-							if (#openthese > 0) then
-								generaldata.values[SHAKE] = 3
+							for a,b in ipairs(openthese) do
+								local bunit = mmf.newObject(b)
+								local bx,by = bunit.values[XPOS],bunit.values[YPOS]
 								
-								for a,b in ipairs(openthese) do
-									local bunit = mmf.newObject(b)
-									local bx,by = bunit.values[XPOS],bunit.values[YPOS]
-									
-									local pmult,sound = checkeffecthistory("sink")
-									setsoundname("removal",3,sound)
-									local c1,c2 = getcolour(b)
-									MF_particles("destroy",bx,by,15 * pmult,c1,c2,1,1)
-									
-									delete(b)
-									deleted[b] = 1
-								end
-							end
-						elseif (action == "cut") then
-							handle_level_cutting()
-						elseif (action == "done") then
-							local doned = {}
-							for a,unit in ipairs(units) do
-								table.insert(doned, unit)
-							end
-							
-							updateundo = true
-							
-							for a,unit in ipairs(doned) do
-								addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
+								local pmult,sound = checkeffecthistory("unlock")
+								setsoundname("turn",7,sound)
+								MF_particles("unlock",bx,by,15 * pmult,2,4,1,1)
 								
-								unit.values[FLOAT] = 2
-								unit.values[EFFECTCOUNT] = math.random(-10,10)
-								unit.values[POSITIONING] = 7
-								unit.flags[DEAD] = true
+								delete(b)
+								deleted[b] = 1
+							end
+						end
+						
+						if (#findallfeature("empty","is","shut") > 0) and floating_level(2) and (lsafe == false) then
+							destroylevel()
+							return
+						end
+					elseif (action == "shut") then
+						local opens = findfeature(nil,"is","open")
+						
+						local openthese = {}
+						
+						if (opens ~= nil) then
+							for a,b in ipairs(opens) do
+								local doit = false
 								
-								delunit(unit.fixed)
-							end
-							
-							MF_playsound("doneall_c")
-						elseif (action == "bonus") then
-							local yous = findfeature(nil,"is","you")
-							local yous2 = findfeature(nil,"is","you2")
-							local yous3 = findfeature(nil,"is","3d")
-							
-							if (yous == nil) then
-								yous = {}
-							end
-							
-							if (yous2 ~= nil) then
-								for i,v in ipairs(yous2) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous3 ~= nil) then
-								for i,v in ipairs(yous3) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous ~= nil) then
-								for a,b in ipairs(yous) do
-									if (b[1] ~= "level") then
-										local allyous = findall(b)
-										
-										if (#allyous > 0) then
-											for c,d in ipairs(allyous) do
-												if (issafe(d) == false) and floating_level(d) then
-													destroylevel("bonus")
-													return
-												end
+								if (b[1] ~= "level") then
+									local allopens = findall(b)
+									
+									for c,d in ipairs(allopens) do
+										if floating_level(d) then
+											doit = true
+											
+											if (issafe(d) == false) then
+												table.insert(openthese, d)
 											end
 										end
-									elseif testcond(b[2],1) then
-										if (lsafe == false) then
-											destroylevel("bonus")
-											return
-										end
 									end
+								elseif testcond(b[2],1) then
+									doit = true
 								end
-							end
-							
-							if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) and (lsafe == false) then
-								destroylevel("bonus")
-								return
-							end
-						elseif (action == "win") then
-							local yous = findfeature(nil,"is","you")
-							local yous2 = findfeature(nil,"is","you2")
-							local yous3 = findfeature(nil,"is","3d")
-							
-							if (yous == nil) then
-								yous = {}
-							end
-							
-							if (yous2 ~= nil) then
-								for i,v in ipairs(yous2) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous3 ~= nil) then
-								for i,v in ipairs(yous3) do
-									table.insert(yous, v)
-								end
-							end
-							
-							local canwin = false
-							
-							if (yous ~= nil) then
-								for a,b in ipairs(yous) do
-									local allyous = findall(b)
-									local doit = false
-									
-									for c,d in ipairs(allyous) do
-										if floating_level(d) then
-											doit = true
-										end
-									end
-									
-									if doit then
-										canwin = true
-										for c,d in ipairs(allyous) do
-											local unit = mmf.newObject(d)
-											local pmult,sound = checkeffecthistory("win")
-											MF_particles("win",unit.values[XPOS],unit.values[YPOS],10 * pmult,2,4,1,1)
-										end
-									end
-								end
-							end
-							
-							local emptyyou = false
-							if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) then
-								emptyyou = true
-							end
-							
-							if (hasfeature("level","is","you",1) ~= nil) or (hasfeature("level","is","you2",1) ~= nil) or (hasfeature("level","is","3d",1) ~= nil) or emptyyou then
-								canwin = true
-							end
-							
-							if canwin then
-								MF_win()
-								return
-							end
-						elseif (action == "end") then
-							local yous = findfeature(nil,"is","you")
-							local yous2 = findfeature(nil,"is","you2")
-							local yous3 = findfeature(nil,"is","3d")
-							
-							if (yous == nil) then
-								yous = {}
-							end
-							
-							if (yous2 ~= nil) then
-								for i,v in ipairs(yous2) do
-									table.insert(yous, v)
-								end
-							end
-							
-							if (yous3 ~= nil) then
-								for i,v in ipairs(yous3) do
-									table.insert(yous, v)
-								end
-							end
-							
-							local canend = false
-							
-							if (yous ~= nil) then
-								for a,b in ipairs(yous) do
-									local allyous = findall(b)
-									local doit = false
-									
-									for c,d in ipairs(allyous) do
-										if floating_level(d) then
-											doit = true
-										end
-									end
-									
-									if doit then
-										canend = true
-										for c,d in ipairs(allyous) do
-											local unit = mmf.newObject(d)
-											local pmult,sound = checkeffecthistory("win")
-											MF_particles("win",unit.values[XPOS],unit.values[YPOS],10 * pmult,2,4,1,1)
-										end
-									end
-								end
-							end
-							
-							local emptyyou = false
-							if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) then
-								emptyyou = true
-							end
-							
-							if (hasfeature("level","is","you",1) ~= nil) or (hasfeature("level","is","you2",1) ~= nil) or (hasfeature("level","is","3d",1) ~= nil) or emptyyou then
-								canend = true
-							end
-							
-							if canend and (generaldata.strings[WORLD] ~= generaldata.strings[BASEWORLD]) then
-								if (editor.values[INEDITOR] ~= 0) then
-									MF_end_single()
-									MF_win()
-									break
-								else
-									MF_end_single()
-									MF_win()
-									MF_credits(1)
-									break
-								end
-							end
-						elseif (action == "tele") and (levelteledone < 3) and (lstill == false) then
-							levelteledone = levelteledone + 1
-							
-							for a,unit in ipairs(units) do
-								local x,y = unit.values[XPOS],unit.values[YPOS]
 								
-								local tx,ty = fixedrandom(1,roomsizex-2),fixedrandom(1,roomsizey-2)
-								
-								if floating_level(unit.fixed) then
-									update(unit.fixed,tx,ty)
-									
-									local pmult,sound = checkeffecthistory("tele")
-									MF_particles("glow",x,y,5 * pmult,1,4,1,1)
-									MF_particles("glow",tx,ty,5 * pmult,1,4,1,1)
-									setsoundname("turn",6,sound)
+								if doit then
+									if (lsafe == false) then
+										destroylevel()
+										return
+									end
 								end
 							end
-						elseif (action == "move") then
-							local dir = mapdir
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir = reversecheck(1,dir)
-							end
-							
-							local drs = ndirs[dir + 1]
-							local ox,oy = drs[1],drs[2]
-							
-							if (lstill == false) and (lsleep == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,dir,dir})
-								MF_scrollroom(ox * tilesize,oy * tilesize)
-								updateundo = true
-							end
-						elseif (action == "nudgeright") then
-							local dir = 0
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir = reversecheck(1,dir)
-							end
-							
-							local drs = ndirs[dir + 1]
-							local ox,oy = drs[1],drs[2]
-							
-							if (lstill == false) and (lsleep == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
-								MF_scrollroom(ox * tilesize,oy * tilesize)
-								updateundo = true
-							end
-						elseif (action == "nudgeup") then
-							local dir = 1
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir = reversecheck(1,dir)
-							end
-							
-							local drs = ndirs[dir + 1]
-							local ox,oy = drs[1],drs[2]
-							
-							if (lstill == false) and (lsleep == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
-								MF_scrollroom(ox * tilesize,oy * tilesize)
-								updateundo = true
-							end
-						elseif (action == "nudgeleft") then
-							local dir = 2
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir = reversecheck(1,dir)
-							end
-							
-							local drs = ndirs[dir + 1]
-							local ox,oy = drs[1],drs[2]
-							
-							if (lstill == false) and (lsleep == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
-								MF_scrollroom(ox * tilesize,oy * tilesize)
-								updateundo = true
-							end
-						elseif (action == "nudgedown") then
-							local dir = 3
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir = reversecheck(1,dir)
-							end
-							
-							local drs = ndirs[dir + 1]
-							local ox,oy = drs[1],drs[2]
-							
-							if (lstill == false) and (lsleep == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
-								MF_scrollroom(ox * tilesize,oy * tilesize)
-								updateundo = true
-							end
-						elseif (action == "fall") then
-							local drop = 20
-							local dir = mapdir
-							
-							local ox = 0
-							local oy = 1
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
-							end
-							
-							if (lstill == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
-								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
-								updateundo = true
-							end
-						elseif (action == "fallright") then
-							local drop = 35
-							local dir = mapdir
-							
-							local ox = 1
-							local oy = 0
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
-							end
-							
-							if (lstill == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
-								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
-								updateundo = true
-							end
-						elseif (action == "fallup") then
-							local drop = 20
-							local dir = mapdir
-							
-							local ox = 0
-							local oy = -1
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
-							end
-							
-							if (lstill == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
-								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
-								updateundo = true
-							end
-						elseif (action == "fallleft") then
-							local drop = 35
-							local dir = mapdir
-							
-							local ox = -1
-							local oy = 0
-							
-							if (featureindex["reverse"] ~= nil) then
-								dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
-							end
-							
-							if (lstill == false) then
-								addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
-								MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
-								updateundo = true
-							end
-						elseif (rule[3] == "turn") then
-							local newmapdir = (mapdir - 1 + 4) % 4
-							local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
-							
-							updateundo = true
-							
-							addundo({"maprotation",maprotation,newmaprotation,newmapdir})
-							addundo({"mapdir",mapdir,newmapdir})
-							maprotation = newmaprotation
-							mapdir = newmapdir
-							MF_levelrotation(maprotation)
-						elseif (rule[3] == "deturn") then
-							local newmapdir = (mapdir + 1 + 4) % 4
-							local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
-							
-							updateundo = true
-							
-							addundo({"maprotation",maprotation,newmaprotation,newmapdir})
-							addundo({"mapdir",mapdir,newmapdir})
-							maprotation = newmaprotation
-							mapdir = newmapdir
-							MF_levelrotation(maprotation)
-						elseif (action == "empty") then
-							destroylevel("empty")
 						end
+						
+						if (#openthese > 0) then
+							generaldata.values[SHAKE] = 8
+							
+							for a,b in ipairs(openthese) do
+								local bunit = mmf.newObject(b)
+								local bx,by = bunit.values[XPOS],bunit.values[YPOS]
+								
+								local pmult,sound = checkeffecthistory("unlock")
+								setsoundname("turn",7,sound)
+								MF_particles("unlock",bx,by,15 * pmult,2,4,1,1)
+								
+								delete(b)
+								deleted[b] = 1
+							end
+						end
+						
+						if (#findallfeature("empty","is","open") > 0) and floating_level(2) and (lsafe == false) then
+							destroylevel()
+							return
+						end
+					elseif (action == "sink") then
+						local openthese = {}
+						
+						for a,unit in ipairs(units) do
+							local name = unit.strings[UNITNAME]
+							
+							if (unit.strings[UNITTYPE] == "text") then
+								name = "text"
+							end
+							
+							if floating_level(unit.fixed) then
+								if (lsafe == false) then
+									destroylevel()
+									return
+								end
+								
+								if (issafe(unit.fixed) == false) then
+									table.insert(openthese, unit.fixed)
+								end
+							end
+						end
+						
+						if (#openthese > 0) then
+							generaldata.values[SHAKE] = 3
+							
+							for a,b in ipairs(openthese) do
+								local bunit = mmf.newObject(b)
+								local bx,by = bunit.values[XPOS],bunit.values[YPOS]
+								
+								local pmult,sound = checkeffecthistory("sink")
+								setsoundname("removal",3,sound)
+								local c1,c2 = getcolour(b)
+								MF_particles("destroy",bx,by,15 * pmult,c1,c2,1,1)
+								
+								delete(b)
+								deleted[b] = 1
+							end
+						end
+					elseif (action == "cut") then
+						handle_level_cutting()
+					elseif (action == "done") then
+						local doned = {}
+						for a,unit in ipairs(units) do
+							table.insert(doned, unit)
+						end
+						
+						updateundo = true
+						
+						for a,unit in ipairs(doned) do
+							addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,unit.values[FLOAT]})
+							
+							unit.values[FLOAT] = 2
+							unit.values[EFFECTCOUNT] = math.random(-10,10)
+							unit.values[POSITIONING] = 7
+							unit.flags[DEAD] = true
+							
+							delunit(unit.fixed)
+						end
+						
+						MF_playsound("doneall_c")
+					elseif (action == "bonus") then
+						local yous = findfeature(nil,"is","you")
+						local yous2 = findfeature(nil,"is","you2")
+						local yous3 = findfeature(nil,"is","3d")
+						
+						if (yous == nil) then
+							yous = {}
+						end
+						
+						if (yous2 ~= nil) then
+							for i,v in ipairs(yous2) do
+								table.insert(yous, v)
+							end
+						end
+						
+						if (yous3 ~= nil) then
+							for i,v in ipairs(yous3) do
+								table.insert(yous, v)
+							end
+						end
+						
+						if (yous ~= nil) then
+							for a,b in ipairs(yous) do
+								if (b[1] ~= "level") then
+									local allyous = findall(b)
+									
+									if (#allyous > 0) then
+										for c,d in ipairs(allyous) do
+											if (issafe(d) == false) and floating_level(d) then
+												destroylevel("bonus")
+												return
+											end
+										end
+									end
+								elseif testcond(b[2],1) then
+									if (lsafe == false) then
+										destroylevel("bonus")
+										return
+									end
+								end
+							end
+						end
+						
+						if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) and (lsafe == false) then
+							destroylevel("bonus")
+							return
+						end
+					elseif (action == "win") then
+						local yous = findfeature(nil,"is","you")
+						local yous2 = findfeature(nil,"is","you2")
+						local yous3 = findfeature(nil,"is","3d")
+						
+						if (yous == nil) then
+							yous = {}
+						end
+						
+						if (yous2 ~= nil) then
+							for i,v in ipairs(yous2) do
+								table.insert(yous, v)
+							end
+						end
+						
+						if (yous3 ~= nil) then
+							for i,v in ipairs(yous3) do
+								table.insert(yous, v)
+							end
+						end
+						
+						local canwin = false
+						
+						if (yous ~= nil) then
+							for a,b in ipairs(yous) do
+								local allyous = findall(b)
+								local doit = false
+								
+								for c,d in ipairs(allyous) do
+									if floating_level(d) then
+										doit = true
+									end
+								end
+								
+								if doit then
+									canwin = true
+									for c,d in ipairs(allyous) do
+										local unit = mmf.newObject(d)
+										local pmult,sound = checkeffecthistory("win")
+										MF_particles("win",unit.values[XPOS],unit.values[YPOS],10 * pmult,2,4,1,1)
+									end
+								end
+							end
+						end
+						
+						local emptyyou = false
+						if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) then
+							emptyyou = true
+						end
+						
+						if (hasfeature("level","is","you",1) ~= nil) or (hasfeature("level","is","you2",1) ~= nil) or (hasfeature("level","is","3d",1) ~= nil) or emptyyou then
+							canwin = true
+						end
+						
+						if canwin then
+							MF_win()
+							return
+						end
+					elseif (action == "end") then
+						local yous = findfeature(nil,"is","you")
+						local yous2 = findfeature(nil,"is","you2")
+						local yous3 = findfeature(nil,"is","3d")
+						
+						if (yous == nil) then
+							yous = {}
+						end
+						
+						if (yous2 ~= nil) then
+							for i,v in ipairs(yous2) do
+								table.insert(yous, v)
+							end
+						end
+						
+						if (yous3 ~= nil) then
+							for i,v in ipairs(yous3) do
+								table.insert(yous, v)
+							end
+						end
+						
+						local canend = false
+						
+						if (yous ~= nil) then
+							for a,b in ipairs(yous) do
+								local allyous = findall(b)
+								local doit = false
+								
+								for c,d in ipairs(allyous) do
+									if floating_level(d) then
+										doit = true
+									end
+								end
+								
+								if doit then
+									canend = true
+									for c,d in ipairs(allyous) do
+										local unit = mmf.newObject(d)
+										local pmult,sound = checkeffecthistory("win")
+										MF_particles("win",unit.values[XPOS],unit.values[YPOS],10 * pmult,2,4,1,1)
+									end
+								end
+							end
+						end
+						
+						local emptyyou = false
+						if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) then
+							emptyyou = true
+						end
+						
+						if (hasfeature("level","is","you",1) ~= nil) or (hasfeature("level","is","you2",1) ~= nil) or (hasfeature("level","is","3d",1) ~= nil) or emptyyou then
+							canend = true
+						end
+						
+						if canend and (generaldata.strings[WORLD] ~= generaldata.strings[BASEWORLD]) then
+							if (editor.values[INEDITOR] ~= 0) then
+								MF_end_single()
+								MF_win()
+								break
+							else
+								MF_end_single()
+								MF_win()
+								MF_credits(1)
+								break
+							end
+						end
+					elseif (action == "tele") and (levelteledone < 3) and (lstill == false) then
+						levelteledone = levelteledone + 1
+						
+						for a,unit in ipairs(units) do
+							local x,y = unit.values[XPOS],unit.values[YPOS]
+							
+							local tx,ty = fixedrandom(1,roomsizex-2),fixedrandom(1,roomsizey-2)
+							
+							if floating_level(unit.fixed) then
+								update(unit.fixed,tx,ty)
+								
+								local pmult,sound = checkeffecthistory("tele")
+								MF_particles("glow",x,y,5 * pmult,1,4,1,1)
+								MF_particles("glow",tx,ty,5 * pmult,1,4,1,1)
+								setsoundname("turn",6,sound)
+							end
+						end
+					elseif (action == "move") then
+						local dir = mapdir
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir = reversecheck(1,dir)
+						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,dir,dir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "nudgeright") then
+						local dir = 0
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir = reversecheck(1,dir)
+						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "nudgeup") then
+						local dir = 1
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir = reversecheck(1,dir)
+						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "nudgeleft") then
+						local dir = 2
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir = reversecheck(1,dir)
+						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "nudgedown") then
+						local dir = 3
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir = reversecheck(1,dir)
+						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,mapdir,mapdir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "fall") then
+						local drop = 20
+						local dir = mapdir
+						
+						local ox = 0
+						local oy = 1
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+						end
+						
+						if (lstill == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
+							MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
+							updateundo = true
+						end
+					elseif (action == "fallright") then
+						local drop = 35
+						local dir = mapdir
+						
+						local ox = 1
+						local oy = 0
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+						end
+						
+						if (lstill == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
+							MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
+							updateundo = true
+						end
+					elseif (action == "fallup") then
+						local drop = 20
+						local dir = mapdir
+						
+						local ox = 0
+						local oy = -1
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+						end
+						
+						if (lstill == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
+							MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
+							updateundo = true
+						end
+					elseif (action == "fallleft") then
+						local drop = 35
+						local dir = mapdir
+						
+						local ox = -1
+						local oy = 0
+						
+						if (featureindex["reverse"] ~= nil) then
+							dir,ox,oy = reversecheck(1,dir,nil,nil,ox,oy)
+						end
+						
+						if (lstill == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + tilesize * drop * ox,Yoffset + tilesize * drop * oy,dir,dir})
+							MF_scrollroom(tilesize * drop * ox,tilesize * drop * oy)
+							updateundo = true
+						end
+					elseif (rule[3] == "turn") then
+						local newmapdir = (mapdir - 1 + 4) % 4
+						local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
+						
+						updateundo = true
+						
+						addundo({"maprotation",maprotation,newmaprotation,newmapdir})
+						addundo({"mapdir",mapdir,newmapdir})
+						maprotation = newmaprotation
+						mapdir = newmapdir
+						MF_levelrotation(maprotation)
+					elseif (rule[3] == "deturn") then
+						local newmapdir = (mapdir + 1 + 4) % 4
+						local newmaprotation = ((mapdir + 1 + 4) % 4) * 90
+						
+						updateundo = true
+						
+						addundo({"maprotation",maprotation,newmaprotation,newmapdir})
+						addundo({"mapdir",mapdir,newmapdir})
+						maprotation = newmaprotation
+						mapdir = newmapdir
+						MF_levelrotation(maprotation)
+					elseif (action == "empty") then
+						destroylevel("empty")
 					end
 				end
 			end
