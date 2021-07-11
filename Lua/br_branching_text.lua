@@ -158,7 +158,7 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
     local sentence_metadata = {}
 
     for _, branch in ipairs(branches) do
-        local br_sentences,br_finals,br_maxpos,br_totalvariants,br_sent_ids,perp_br_and_texts_with_split_parsing, perp_sentence_metadata = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir)
+        local br_sentences,br_finals,br_maxpos,br_totalvariants,br_sent_ids,perp_br_and_texts_with_split_parsing, perp_sentence_metadata = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir, nil,nil,nil, true)
         assert(#br_sentences == #perp_sentence_metadata, "#Br sentences:"..tostring(#br_sentences).." != #perp_sentence_metadata:"..tostring(#perp_sentence_metadata))
 		-- maxpos = math.max(maxpos, br_maxpos + branch.step_index)
 

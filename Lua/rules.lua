@@ -83,7 +83,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	return result,letters,justletters
 end
 
-function calculatesentences(unitid,x,y,dir)
+function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_branch)
 	--[[ 
 		@mods(omni text) - Override reason: extract the branching sentences and build the full 
 			sentences with lhs + branching sentence texts.
@@ -162,13 +162,11 @@ function calculatesentences(unitid,x,y,dir)
 						starting = false
 					end
 					
-					table.insert(sents[step], v)
-
+					
 					local text_name = v[3]
-
-
 					-- Note abot the second condition (all in parenthesis)
-					if name_is_branching_text(text_name) and not (name_is_branching_text(text_name, true, false) and step == 1) then
+					-- if name_is_branching_text(text_name) and not (name_is_branching_text(text_name, true, false) and step == 1) then
+					if name_is_branching_text(text_name) then
 						-- Gather all branching texts to do the perp calculatesentences on
 						table.insert(branching_texts, v)
 
@@ -184,7 +182,7 @@ function calculatesentences(unitid,x,y,dir)
 						table.insert(sents[step], v)
 					end
 				end
-				if starting then
+				if starting and not br_calling_calculatesentences_branch then
 					sents[step] = nil
 					step = step - 1
 				else
@@ -194,14 +192,9 @@ function calculatesentences(unitid,x,y,dir)
 							br_text_count = br_text_count + 1
 						end
 					end
-					local lhs_totalvariants = totalvariants
-					
 					if #words ~= br_text_count then
 						totalvariants = totalvariants * (#words - br_text_count)
 					end
-					variantshere[step] = #words
-
-					totalvariants = totalvariants * #words
 					variantshere[step] = #words
 					combo[step] = 1
 				
@@ -221,58 +214,58 @@ function calculatesentences(unitid,x,y,dir)
 							table.insert(finals, {})
 						end
 					end
-				end
-
-				-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
-				local test_br_unitid = nil
-				if #branching_texts > 0 then
-					test_br_unitid = branching_texts[1][1][1]
-				end
-
-				found_branch_on_last_word = false
-				if br_dir_vec and test_br_unitid then
-					-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
-					local br_x = x + ox*step + br_dir_vec[1]
-					local br_y = y + oy*step + br_dir_vec[2]
-					local br_tileid = br_x + br_y * roomsizex
-					local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
 					
-
-					if #br_words > 0 then
-						local br_firstwords = {}
-
-						--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
-						-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
-						-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
-						--  inside a unit object. Could that be the reason?
-						for _, word in ipairs(br_words) do
-							table.insert(br_firstwords, word[1][1])
-						end
-						for _, br_text in ipairs(branching_texts) do
-							if name_is_branching_and(br_text[3]) then
-								local br_unitid = br_text[1][1]
-								br_and_text_with_split_parsing[br_unitid] = true
+					-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
+					local test_br_unitid = nil
+					if #branching_texts > 0 then
+						test_br_unitid = branching_texts[1][1][1]
+					end
+	
+					found_branch_on_last_word = false
+					if br_dir_vec and test_br_unitid then
+						-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
+						local br_x = x + ox*step + br_dir_vec[1]
+						local br_y = y + oy*step + br_dir_vec[2]
+						local br_tileid = br_x + br_y * roomsizex
+						local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
+						
+	
+						if #br_words > 0 then
+							local br_firstwords = {}
+	
+							--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
+							-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
+							-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
+							--  inside a unit object. Could that be the reason?
+							for _, word in ipairs(br_words) do
+								table.insert(br_firstwords, word[1][1])
 							end
+							for _, br_text in ipairs(branching_texts) do
+								if name_is_branching_and(br_text[3]) then
+									local br_unitid = br_text[1][1]
+									local br_unit = mmf.newObject(br_unitid)
+									br_and_text_with_split_parsing[br_unitid] = true
+								end
+							end
+
+							local lhs_word_slots = {}
+							for s = 1, step-1 do
+								lhs_word_slots[s] = sents[s]
+							end
+							local t = {
+								lhs_word_slots = lhs_word_slots,
+								branching_texts = branching_texts,
+								step_index = step, 
+								x = br_x,
+								y = br_y,
+								firstwords = br_firstwords,
+								num_combospots = #combospots
+							}
+	
+							print("inserting branch..")
+							table.insert(branches, t)
+							found_branch_on_last_word = true
 						end
-
-						local lhs_word_slots = {}
-						for s = 1, step-1 do
-							lhs_word_slots[s] = sents[s]
-						end
-
-						local t = {
-							lhs_word_slots = lhs_word_slots,
-							branching_texts = branching_texts,
-							step_index = step, 
-							lhs_totalvariants = lhs_totalvariants*#branching_texts,
-							x = br_x,
-							y = br_y,
-							firstwords = br_firstwords,
-							num_combospots = #combospots
-						}
-
-						table.insert(branches, t)
-						found_branch_on_last_word = true
 					end
 				end
 
@@ -323,8 +316,10 @@ function calculatesentences(unitid,x,y,dir)
 		return nil
 	end
 	
+	if (#branches == 0 and not br_calling_calculatesentences_branch) then
 	if (verbfound == false) or (step < 3) or (objfound == false) then
-		return {},{},0,0,{},{}
+		return {},{},0,0,{},{},{}
+	end
 	end
 	
 	maxpos = step
