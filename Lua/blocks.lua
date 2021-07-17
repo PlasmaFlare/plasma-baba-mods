@@ -968,6 +968,7 @@ function block(small_)
 								updatecode = 1
 							end
 						elseif (string.sub(v, 1, 5) == "group") then
+							--[[
 							local mem = findgroup(v)
 							
 							for c,d in ipairs(mem) do
@@ -977,6 +978,7 @@ function block(small_)
 									create(d,x,y,dir,x,y,nil,nil,leveldata)
 								end
 							end
+							]]--
 						end
 					end
 				end

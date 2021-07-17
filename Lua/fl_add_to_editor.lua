@@ -1,4 +1,4 @@
-new_words = {
+local new_words = {
     "text_uhh",
     "text_hmm",
     "text_ellipsis",

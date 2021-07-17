@@ -202,8 +202,6 @@ end
 function update_this_cursor(wordunit, cursorunit)
     local x = wordunit.values[XPOS]
     local y = wordunit.values[YPOS]
-    local dir = wordunit.values[DIR]
-    undo = undo or false
 
     local tileid = this_mod_globals.text_to_raycast_pos[wordunit.fixed]
     if tileid then
@@ -235,6 +233,7 @@ function update_this_cursor(wordunit, cursorunit)
             end
             cursorunit.direction = 28
             MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
+            -- MF_loadsprite(cursorunit.fixed,"stable_indicator_0",28,true)
             c1,c2 = wordunit.colour[1],wordunit.colour[2]
         end
     
