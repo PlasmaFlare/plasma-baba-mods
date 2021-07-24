@@ -124,7 +124,11 @@ function findfeature(rule1,rule2,rule3)
 	end
 end
 
-function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
+function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
+	local ignorebroken = false
+	if (ignorebroken_ ~= nil) then
+		ignorebroken = ignorebroken_
+	end
 	--[[ 
 		@Mods(turning text) - Override reason: when looking for "X is stop", if 
 			"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc as part of the
@@ -138,7 +142,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
-					if testcond(conds,unitid,x,y,nil,nil,checkedconds) then
+					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
 						return true
 					end
 				end
@@ -153,7 +157,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
-					if testcond(conds,unitid,x,y,nil,nil,checkedconds) then
+					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
 						return true
 					end
 				end
@@ -199,7 +203,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds)
 					end
 					
 					if (rule[1] == rule1) and (rule[2] == rule2) and usable then
-						if testcond(conds,unitid,x,y,nil,nil,checkedconds) then
+						if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
 							return true
 						end
 					end

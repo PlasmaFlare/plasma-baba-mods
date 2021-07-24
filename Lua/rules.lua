@@ -26,7 +26,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 			local v = mmf.newObject(b)
 			local w = 1
 			
-			if (v.values[TYPE] ~= 5) then
+			if (v.values[TYPE] ~= 5) and (v.flags[DEAD] == false) then
 				if (v.strings[UNITTYPE] == "text") then
 					--@Turning text: reinterpret the meaning of the turning text by replacing its parsed name with an existing name
 					local v_name = get_turning_text_interpretation(b)
@@ -1503,7 +1503,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		local targetnot = string.sub(target, 1, 4)
 		local targetnot_ = string.sub(target, 5)
 		
-		if (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") then
+		if (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") or (((string.sub(effect, 1, 5) == "group") or (string.sub(effect, 1, 9) == "not group")) and (targetnot_ == "all")) then
 			if (targetnot_ ~= "all") then
 				for i,mat in pairs(objectlist) do
 					if (i ~= targetnot_) and (findnoun(i) == false) then
@@ -1608,7 +1608,7 @@ function code(alreadyrun_)
 
 					setcolour(unit.fixed)
 					
-					if (alreadyused[tileid] == nil) and (unit.values[TYPE] ~= 5) then
+					if (alreadyused[tileid] == nil) and (unit.values[TYPE] ~= 5) and (unit.flags[DEAD] == false) then
 						for i=1,2 do
 							local drs = dirs[i+2]
 							local ndrs = dirs[i]
