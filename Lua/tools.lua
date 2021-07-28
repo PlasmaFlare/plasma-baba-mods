@@ -130,6 +130,7 @@ function delunit(unitid)
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))
 	end
 
+	on_delete_stableunit(unitid)
 	on_delele_this_text(unitid)
 		
 	for i,v in ipairs(units) do

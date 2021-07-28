@@ -1546,6 +1546,7 @@ function code(alreadyrun_)
 			end
 		end
 	end
+	update_stable_state()
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1

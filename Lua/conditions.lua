@@ -79,6 +79,22 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 	if (broken == 1) then
 		result = false
 	end
+
+	if not checking_stable and is_stableunit(unitid, x, y) then
+		local found_stablecond = false
+		if conds ~= nil then
+			for _,cond in ipairs(conds) do
+				local condtype = cond[1]
+				if condtype == "stable" then
+					found_stablecond = true
+					break
+				end
+			end
+		end
+		if not found_stablecond then
+			return false
+		end
+	end 
 	
 	if (conds ~= nil) and ((broken == nil) or (broken == 0)) then
 		if (#conds > 0) then
@@ -220,6 +236,21 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					
 					if orhandling then
 						orresult = true
+					end
+				elseif condtype == "stable" then
+					if #params == 1 then
+						valid = true
+						local cond_ruleid = params[1]
+						if not stableunit_has_ruleid(unitid, cond_ruleid, x, y) then
+							if orhandling == false then
+								result = false
+								break
+							end
+						else 
+							if orhandling then
+								orresult = true
+							end
+						end
 					end
 				elseif (condtype == "on") then
 					valid = true

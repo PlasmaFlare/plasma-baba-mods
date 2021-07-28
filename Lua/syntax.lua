@@ -42,6 +42,8 @@ function addunit(id,undoing_,levelstart_)
 	if is_name_text_this(name_) then
 		on_add_this_text(unit.fixed)
 	end
+
+	on_add_stableunit(unit.fixed)
 	
 	if (unitlists[name] == nil) then
 		unitlists[name] = {}
