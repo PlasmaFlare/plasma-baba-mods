@@ -58,7 +58,7 @@ local turnid = 1
 local on_undo = false
 local stable_state_updated = false
 
-local STABLE_LOGGING = true
+local STABLE_LOGGING = false
 
 -- Stores the previous length of the global, undobuffer. This gets recorded at the beginning of the turn so that we can determine whether or
 -- not to add an entry to stable_undo_stack, based on if the undobuffer has added an entry. This may feel like a silly way to do this, but
@@ -139,10 +139,107 @@ local function get_ruleid(id_list, option)
         return ruleid
     else
         if #option >= 3 then
-            return option[1] .. ", " .. option[2] .. ", " .. option[3]
+            return option[1] .. " " .. option[2] .. " " .. option[3]
         end
     end
     return nil
+end
+
+local function get_stablerule_display(feature)
+    local custom = MF_read("level","general","customruleword")
+
+    local text = ""
+   
+    local rule = feature[1]
+    if (#custom == 0) then
+        text = text .. rule[1] .. " "
+    else
+        text = text .. custom .. " "
+    end
+
+    local conds = feature[2]
+    local ids = feature[3]
+    local tags = feature[4]
+
+    if #ids == 0 then
+        if (#custom == 0) then
+            return rule[1].." "..rule[2].." "..rule[3]
+        else
+            return custom.." "..custom.." "..custom 
+        end
+    end
+
+    if (#conds > 0) then
+        for a,cond in ipairs(conds) do
+            local middlecond = true
+            
+            if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
+                middlecond = false
+            end
+            
+            if middlecond then
+                if (#custom == 0) then
+                    text = text .. cond[1] .. " "
+                else
+                    text = text .. custom .. " "
+                end
+                
+                if (cond[2] ~= nil) then
+                    if (#cond[2] > 0) then
+                        for c,d in ipairs(cond[2]) do
+                            if (#custom == 0) then
+                                text = text .. d .. " "
+                            else
+                                text = text .. custom .. " "
+                            end
+                            
+                            if (#cond[2] > 1) and (c ~= #cond[2]) then
+                                text = text .. "& "
+                            end
+                        end
+                    end
+                end
+                
+                if (a < #conds) then
+                    text = text .. "& "
+                end
+            else
+                if (#custom == 0) then
+                    text = cond[1] .. " " .. text
+                else
+                    text = custom .. " " .. text
+                end
+            end
+        end
+    end
+    
+    local target = rule[3]
+    local isnot = string.sub(target, 1, 4)
+    local target_ = target
+    
+    if (isnot == "not ") then
+        target_ = string.sub(target, 5)
+    else
+        isnot = ""
+    end
+    
+    if (word_names[target_] ~= nil) then
+        target = isnot .. word_names[target_]
+    end
+    
+    if (#custom == 0) then
+        text = text .. rule[2] .. " " .. target
+    else
+        text = text .. custom .. " " .. custom
+    end
+    
+    for a,b in ipairs(tags) do
+        if (b == "mimic") then
+            text = text .. " (mimic)"
+        end
+    end
+
+    return text
 end
 
 local function get_stablefeatures_from_name(name)
@@ -163,13 +260,14 @@ local function get_stablefeatures_from_name(name)
             local ruleid = get_ruleid(feature[3], feature[1])
             assert(ruleid)
             local dup_feature = deep_copy_table(feature)
+            local rule_display = get_stablerule_display(dup_feature)
             table.insert(dup_feature[2], {"stable", { ruleid }})
             dup_feature[3] = {} --@TODO: check. This clears the list of ids. @TODO: this might interfere with "THIS" mod in th_testcond_this
             
             table.insert(dup_feature[4], "stable")
             
             
-            stable_features[ruleid] = dup_feature
+            stable_features[ruleid] = {feature = dup_feature, display = rule_display}
 
             local rule = dup_feature[1]
 
@@ -301,7 +399,9 @@ end
 
 --[[ Core logic ]]
 function update_stable_state()
-    -- print("----update_stable_state")
+    if STABLE_LOGGING then
+        print("----update_stable_state")
+    end
     if on_undo then
         return
     end
@@ -345,13 +445,14 @@ function update_stable_state()
                     end
                     
                     local ruleids = {} -- Get a list of ruleids 
-                    for ruleid, feature in pairs(stable_rules[name]) do
+                    for ruleid, v in pairs(stable_rules[name]) do
                         table.insert(ruleids, ruleid)
 
                         if not stablestate.rules[ruleid] then
                             stablestate.rules[ruleid] = {
-                                feature = feature,
+                                feature = v.feature,
                                 unit_count = 1,
+                                display = v.display,
                             }
                         else
                             stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
@@ -379,7 +480,9 @@ function update_stable_state()
     local deleted_su_key_count = 0
     for su_key, v in pairs(stablestate.units) do
         if not code_stablestate_lookup[su_key] then
-            print("deleting unit with su key: "..tostring(su_key))
+            if STABLE_LOGGING then
+                print("deleting unit with su key: "..tostring(su_key))
+            end
             on_delete_stableunit_key(su_key)
             deleted_su_key_count = deleted_su_key_count + 1
 
@@ -455,14 +558,14 @@ function update_stable_state()
             end
             
             local ruleids = {} -- Get a list of ruleids 
-            for ruleid, feature in pairs(stable_rules[name]) do
-                print(ruleid)
+            for ruleid, v in pairs(stable_rules[name]) do
                 table.insert(ruleids, ruleid)
 
                 if not stablestate.rules[ruleid] then
                     stablestate.rules[ruleid] = {
-                        feature = feature,
+                        feature = v.feature,
                         unit_count = 1,
+                        display = v.display,
                     }
                 else
                     stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
@@ -484,7 +587,6 @@ function update_stable_state()
     end
 
     if new_stableunit_count > 0 or deleted_su_key_count > 0 then
-        print("setting updatecode = 1")
         updatecode = 1
         stable_state_updated = true
     end
@@ -644,22 +746,79 @@ function update_stable_indicator(unitid, indicator_id, tileid)
         local unit = mmf.newObject(unitid)
         indicator_unit.values[XPOS] = unit.x
         indicator_unit.values[YPOS] = unit.y
+        indicator_unit.visible = unit.visible
     end
 
     indicator_unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
     indicator_unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
 end
 
-local LETTER_HEIGHT = 14
+local LETTER_HEIGHT = 24
+local LETTER_WIDTH = 8
+local LETTER_SPACING = 2
+local LINE_SPACING = LETTER_HEIGHT - 4
+local MARGIN = 12
 local PADDING = 4
 
-local function write_stable_rules(su_key, unit)
-    local offset = -1
-    if unit.y < screenh / 2 then
-        offset = 1
+local function write_stable_rules(su_key_list, x, y, empty_tileid)
+    local ruleids = {}
+    local ruleid_count = 0
+    for _, su_key in ipairs(su_key_list) do
+        for i,ruleid in ipairs(stablestate.units[su_key].ruleids) do
+            ruleids[ruleid] = true
+            ruleid_count = ruleid_count + 1
+        end
     end
-    writetext("stablerule",-1,unit.x, unit.y + 24*offset,"stablerules",true,1,true,{3,2})
-    writetext("abc",-1,unit.x, unit.y + (LETTER_HEIGHT*1+PADDING) + 24*offset,"stablerules",true,1,true,{3,2})
+    if empty_tileid then
+        local level_x = empty_tileid % roomsizex
+        local level_y = empty_tileid / roomsizex
+        assert(stablestate.empties[empty_tileid], "Stable empty at ("..tostring(level_x)..","..tostring(level_y)..") is not in stablestate")
+
+        for i,ruleid in ipairs(stablestate.empties[empty_tileid].ruleids) do
+            ruleids[ruleid] = true
+            ruleid_count = ruleid_count + 1
+        end
+    end
+
+    -- Determine final X
+    local list_width = 0
+    for ruleid, _ in pairs(ruleids) do
+        local display = stablestate.rules[ruleid].display
+        list_width = math.max(list_width, LETTER_WIDTH * #display + LETTER_SPACING * (#display - 1))
+    end
+
+    local x_lower_bound = Xoffset
+    local x_upper_bound = Xoffset + f_tilesize * roomsizex * spritedata.values[TILEMULT] * generaldata2.values[ZOOM]
+
+    local final_x = x
+    if final_x - list_width/2 < x_lower_bound then
+        final_x = x_lower_bound + list_width/2
+    elseif final_x + list_width/2 > x_upper_bound then
+        final_x = x_upper_bound - list_width/2
+    end
+    
+    -- Determine final Y
+    local y_lower_bound = Yoffset
+    local y_upper_bound = Yoffset + f_tilesize * roomsizey * spritedata.values[TILEMULT] * generaldata2.values[ZOOM]
+    local list_height = LINE_SPACING * ruleid_count
+    
+    local final_y = y + f_tilesize * generaldata2.values[ZOOM]
+    if final_y + list_height > y_upper_bound then
+        final_y = y - list_height
+        if final_y - LINE_SPACING/2 < y_lower_bound then
+            final_y = y - list_height/2
+        end
+    end
+
+    -- Write the rules
+    local y_offset = 0
+    for ruleid,_ in pairs(ruleids) do
+        local display = stablestate.rules[ruleid].display
+        local color = {3,3}
+        writetext(display,-1, final_x, final_y + y_offset,"stablerules",true,1,true, color)
+
+        y_offset = y_offset + LINE_SPACING
+    end
 end
 
 table.insert(mod_hook_functions["effect_always"],
@@ -671,22 +830,40 @@ table.insert(mod_hook_functions["effect_always"],
             update_stable_indicator(2, indicator_id, tileid)
         end
 
-        MF_letterclear("stablerules")
         local mouse_x, mouse_y = MF_mouse()
-        for id, _ in pairs(stablestate.units) do
-            local unitid = MF_getfixed(id)
+        MF_letterclear("stablerules")
+        MF_letterclear("cursorpos")
+
+        local displayed_su_keys = {}
+        local half_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT] / 2
+        local unit_x = nil
+        local unit_y = nil
+        for su_key, _ in pairs(stablestate.units) do
+            local unitid = MF_getfixed(su_key)
             local unit = mmf.newObject(unitid)
-            if mouse_x >= unit.x - 12 and mouse_x <= unit.x + 12 and mouse_y >= unit.y - 12 and mouse_y <= unit.y + 12 then
-                local offset = -1
-                if unit.y < screenh / 2 then
-                    offset = 1
-                end
-                writetext("stablerule",-1,unit.x, unit.y + 24*offset,"stablerules",true,1,true,{3,2})
-                writetext("abc",-1,unit.x, unit.y + (LETTER_HEIGHT*1+PADDING) + 24*offset,"stablerules",true,1,true,{3,2})
-                -- writetext("stablerule",-1,mouse_x, mouse_y + 10*offset,"stablerules",true,1,true,{3,2})
-                -- writetext("stablerule",-1,screenw * 0.5 - 12, screenh * 0.5 - 60,"stablerules",true,1,true,{3,2})
-                break
+            if unit.visible and mouse_x >= unit.x - half_tilesize and mouse_x < unit.x + half_tilesize and mouse_y >= unit.y - half_tilesize and mouse_y < unit.y + half_tilesize then
+                table.insert(displayed_su_keys, su_key)
+                unit_x = unit.x
+                unit_y = unit.y
             end
+        end
+
+        local level_mouse_x = mouse_x - Xoffset
+        local level_mouse_y = mouse_y - Yoffset
+        local tile_scale = (f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT])
+        local grid_x = math.floor(level_mouse_x / tile_scale)
+        local grid_y = math.floor(level_mouse_y / tile_scale)
+
+        local tileid = grid_x + grid_y * roomsizex
+        local empty_tileid = nil
+        if stablestate.empties[tileid] then
+            unit_x = mouse_x - (level_mouse_x % tile_scale) + tile_scale / 2
+            unit_y = mouse_y - (level_mouse_y % tile_scale) + tile_scale / 2
+            empty_tileid = tileid
+        end
+
+        if #displayed_su_keys > 0 or empty_tileid then
+            write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid)
         end
     end
 )
