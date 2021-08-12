@@ -414,8 +414,9 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	for _, sentence in ipairs(sentences) do
 		local branching_points_bitfield = {}
 		for _, word in ipairs(sentence) do
-			table.insert(branching_points_bitfield, false)
+			table.insert(branching_points_bitfield, false) -- @TODO: this might be used for fixing something related to pivot text. Look into this
 		end
+		-- @TODO: this metadata might be useful for getting sentence elimination to work post 420d
 		table.insert(sentence_metadata, {
 			branching_points_bitfield = branching_points_bitfield
 		})
@@ -461,8 +462,16 @@ function docode(firstwords)
 	local donefirstwords = {}
 	local existingfinals = {}
 	local limiter = 0
+
+	--[[ 
+
+	 ]]
 	local no_firstword_br_text = {} -- Record of branching texts that should not be processed as a firstword (prevents double parsing in certain cases)
 	local deferred_firstwords = {}
+	local deferred_dang_and_addoptions = {}
+	local branch_elimination_tracker = {} -- calculateSentID -> { LHS Sent id -> (-1 = disabled | dang_sent_id)}
+	local calc_sent_id = 0 -- Id representing each call to calculatesentences()
+	local curr_dang_and_sent_id = 0  -- Id representing each dangling and sentence that was parsed
 	
 	if (#firstwords > 0) then
 		for k,unitdata in ipairs(firstwords) do
@@ -483,6 +492,7 @@ function docode(firstwords)
 			local existing_br_and_text_with_split_parsing = unitdata[9] or {}
 			local existing_br_sentence_metadata = unitdata[10] or {}
 			local is_deferred_sentence = unitdata[50] or false -- @TODO: uggh I hate having to set an arbitrary index for this
+			local curr_calc_sent_id = unitdata[11] or calc_sent_id
 
 			if (string.sub(word, 1, 5) == "text_") then
 				word = string.sub(word, 6)
@@ -600,6 +610,8 @@ function docode(firstwords)
 
 				if (#existing == 0) then
 					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
+					curr_calc_sent_id = calc_sent_id
+					calc_sent_id = calc_sent_id + 1
 
 					print("==== "..dir.." variations: "..variations)
 					for i, sent in ipairs(sentences) do
@@ -628,6 +640,7 @@ function docode(firstwords)
 				end
 
 				local filler_text_found_in_parsing = {}
+				local finals_with_dangling_ands = {} -- list of indexes in finals with dangling branching ands
 				
 				--[[
 				-- BIG DEBUG MESS
@@ -681,6 +694,7 @@ function docode(firstwords)
 						local thissent = ""
 						
 						local j = 0
+						local last_branching_and_wordid = existing_wordid
 						local do_branching_and_sentence_elimination = false
 						for wordid=existing_wordid,#sent do
 							j = j + 1
@@ -849,6 +863,7 @@ function docode(firstwords)
 								local br_and_unit = mmf.newObject(tileid)
 								if br_and_text_with_split_parsing[tileid] then
 									do_branching_and_sentence_elimination = true
+									last_branching_and_wordid = wordid
 								end
 							end
 							
@@ -921,26 +936,26 @@ function docode(firstwords)
 										if (#notids > 0) and firstrealword and (notslot > 1) and ((tiletype ~= 7) or ((tiletype == 7) and (prevtiletype == 0))) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
 											-- MF_alert(tostring(notslot) .. ", not -> A, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, (notslot - existing_wordid)+1)
-											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											
 											if (nexts[2] ~= nil) and ((nexts[2] == 0) or (nexts[2] == 3) or (nexts[2] == 4)) and (tiletype ~= 3) then
 												-- MF_alert(tostring(wordid) .. ", " .. tilename .. " -> B, " .. unique_id .. ", " .. sent_id)
 												subsent_id = string.sub(sent_id, j)
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											end
 										else
 											if (prevtiletype == 0) and ((tiletype == 1) or (tiletype == 7)) then
 												-- MF_alert(tostring(wordid-1) .. ", " .. sent[wordid - 1][1] .. " -> C, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, wordid - existing_wordid)
-												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 4) and (tiletype ~= 1) and (tiletype ~= 2) then
 												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
-												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											else
 												-- MF_alert(tostring(wordid) .. ", " .. tilename .. " -> E, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, j)
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											end
 										end
 										
@@ -949,7 +964,7 @@ function docode(firstwords)
 										if (nexts[3][1] ~= -1) then
 											-- MF_alert(tostring(wordid+1) .. ", " .. nexts[1] .. " -> F, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, j+1)
-											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 										end
 										
 										break
@@ -959,62 +974,65 @@ function docode(firstwords)
 						end
 
 						if do_branching_and_sentence_elimination then
-							local and_units = {}
-							for _,v in ipairs(current) do
-								local tilename = v[1]
-								if name_is_branching_and(tilename, true, false) then
-									table.insert(and_units, tileid_id)
-									if and_unitid_to_index[tileid_id] == nil then
-										and_unitid_to_index[tileid_id] = and_index
-										and_index = and_index + 1
-									end
+							print("do_branching_and_sentence_elimination")
+							local lhs_sent_id = ""
+							for p = 1, existing_wordid-1 do
+								lhs_sent_id = lhs_sent_id.."*"
+							end
+							lhs_sent_id = lhs_sent_id..string.sub(sent_id, 1, last_branching_and_wordid-existing_wordid+1)
+							-- lhs_sent_id = lhs_sent_id..string.sub(sent_id, existing_wordid, last_branching_and_wordid)
+
+							-- eliminate any extra verbs and nots
+							print("--Curr Sent--")
+							for _, word in ipairs(current) do
+								print(word[1])
+							end
+							print("----------")
+							for i=1,#current do
+								local word = current[#current]
+								local wordtype = word[2]
+								if wordtype == 4 or wordtype == 1 or wordtype == 7 then
+									print("removed wordtype "..tostring(wordtype))
+									table.remove(current, #current)
+								else
+									break
 								end
 							end
-							if #and_units > 0 then
-								table.insert(sents_that_might_be_removed, {index = i, and_units = and_units})
+
+							-- If the sentence has a dangling and, then the entry for the tracker will be the index of this sentence.
+							-- If the sentence is full, then the entry will be -1, indicating a disabled lhs_sent_id
+							local is_dangling_and_sent = current[#current][2] == 6
+							
+							print("test: "..lhs_sent_id)
+							if not branch_elimination_tracker[curr_calc_sent_id] then
+								branch_elimination_tracker[curr_calc_sent_id] = {}
 							end
-						end
-
-						--MF_alert(thissent)
-					end
-				end
-
-				local and_combo_count = {}
-				for _, sent_entry in ipairs(sents_that_might_be_removed) do
-					local and_bitmask = 0
-					for _, unitid in ipairs(sent_entry.and_units) do
-						local bitindex = and_unitid_to_index[unitid]
-						and_bitmask = and_bitmask | (1 << bitindex)
-					end
-					if and_combo_count[and_bitmask] == nil then
-						and_combo_count[and_bitmask] = 1
-					else 	
-						and_combo_count[and_bitmask] = and_combo_count[and_bitmask] + 1
-					end
-
-					sent_entry.and_bitmask = and_bitmask
-				end
-				for _, sent_entry in ipairs(sents_that_might_be_removed) do
-					local current = finals[sent_entry.index]
-
-					-- eliminate any extra verbs and nots
-					for i=1,#current do
-						local word = current[#current]
-						local wordtype = word[2]
-						if wordtype == 4 or wordtype == 1 or wordtype == 7 then
-							table.remove(current, #current)
-						end
-					end
-					-- if the resulting sentence has a dangling and, remove the sentence
-					if current[#current][2] == 6 then
-						local curr_count = and_combo_count[sent_entry.and_bitmask]
-						if curr_count - 1 > 0 then
-							local sentlen = #current
-							for i=1,sentlen do
-								table.remove(current, #current)
+							if not branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] then
+								-- Current slot is empty
+								if is_dangling_and_sent then
+									-- If dangling and sentence, add its entry to the tracker, BUT also save its ids so that
+									-- we can defer processing it until after all firstwords have finished processing
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = curr_dang_and_sent_id
+									finals_with_dangling_ands[i] = {
+										calc_sent_id = curr_calc_sent_id,
+										lhs_sent_id = lhs_sent_id,
+										dang_and_sent_id = curr_dang_and_sent_id,
+									}
+									curr_dang_and_sent_id = curr_dang_and_sent_id + 1
+								else
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = -1
+								end
+							else
+								local curr_entry = branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id]
+								if curr_entry == -1 and is_dangling_and_sent then
+									-- A full sentence with the same lhs has already been added. Remove the dangling and sentence.
+									finals[i] = {}
+								elseif curr_entry ~= -1 and not is_dangling_and_sent then
+									-- Override the curr dangling and sent id. After processing all firstwords, the deferred dangling and
+									-- sentences will look at the tracker to find that their entry has been deleted. So delete the sentence.
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = -1
+								end
 							end
-
-							and_combo_count[sent_entry.and_bitmask] = curr_count - 1
 						end
 					end
 				end
@@ -1071,6 +1089,15 @@ function docode(firstwords)
 						end
 						
 						if valid then
+							local is_dangling_and = finals_with_dangling_ands[i] ~= nil
+							local addoption_buffer = {}
+							if is_dangling_and then
+								table.insert(deferred_dang_and_addoptions, {
+									addoption_calls = addoption_buffer,
+									tracker_ids = finals_with_dangling_ands[i],
+								})
+							end
+
 							for index,wdata in ipairs(sentence) do
 								local wname = wdata[1]
 								local wtype = wdata[2]
@@ -1122,7 +1149,7 @@ function docode(firstwords)
 										local sent = sentence.sent
 										local wordid = wdata[5]
 										local subsent_id = wdata[6]
-										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i]})
+										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 										break
 									end
 								elseif (wcategory == 1) then
@@ -1289,7 +1316,11 @@ function docode(firstwords)
 											end
 										end
 
-										addoption(rule,finalconds,ids)
+										if is_dangling_and then
+											table.insert(addoption_buffer, {rule=rule,finalconds=finalconds,ids=ids})
+										else
+											addoption(rule,finalconds,ids)
+										end
 									end
 								end
 							end
@@ -1305,6 +1336,18 @@ function docode(firstwords)
 				end
 				deferred_firstwords = {}
 			end	
+		end
+	end
+
+	-- At the VERY END, go through all deferred dangling and sentences and check if the tracker still holds their dang_sent_id.
+	-- If so, call addoption with the saved parameters. If not, the sentence is implicitly deleted. 
+	for _, data in ipairs(deferred_dang_and_addoptions) do
+		local dang_sent_id = data.tracker_ids.dang_and_sent_id
+		if branch_elimination_tracker[data.tracker_ids.calc_sent_id][data.tracker_ids.lhs_sent_id] == dang_sent_id then
+			for _, call in ipairs(data.addoption_calls) do
+				addoption(call.rule,call.finalconds,call.ids)
+				print("Adding danging and sentence!")
+			end
 		end
 	end
 end

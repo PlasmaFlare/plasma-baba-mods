@@ -46,6 +46,7 @@ function get_perp_direction(dir)
     return dir
 end
 
+-- @TODO: is this needed?
 function create_empty_sentence_metadata()
     return {
         branching_points_bitfield = {}
@@ -305,7 +306,8 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
                     --     final_sentid = final_sentid..toggle_sent_id(c)
                     -- end
                     -- table.insert(sentence_ids, final_sentid)
-                    final_sentid = final_sentid..get_branching_sent_id_char(tostring(br_word_index - 1))
+                    -- final_sentid = final_sentid..get_branching_sent_id_char(tostring(br_word_index - 1))
+                    final_sentid = final_sentid..tostring(br_word_index - 1) --@TODO: not sure branching text char should be a hard number
 
                     for c in br_sent_ids[br_sent_index]:gmatch"." do
                         final_sentid = final_sentid..get_branching_sent_id_char(c)
