@@ -323,8 +323,8 @@ local function make_stable_indicator()
 
     indicator.values[ONLINE] = 1
     indicator.layer = 1
-    indicator.direction = 28 -- @TOOD: maybe we need to change this when merging with THIS mod?
-    MF_loadsprite(indicator_id,"stable_indicator_0",28,true)
+    indicator.direction = 27
+    MF_loadsprite(indicator_id,"stable_indicator_0",27,true)
     MF_setcolour(indicator_id,3,3)
     return indicator_id
 end
