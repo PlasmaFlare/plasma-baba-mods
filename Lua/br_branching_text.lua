@@ -16,6 +16,8 @@ branching_text_names = {
     feeling = true
 }
 
+BRANCHING_TEXT_LOGGING = false
+
 function is_branching_text_defined(name)
     return branching_text_names[name] or name == "and"
 end

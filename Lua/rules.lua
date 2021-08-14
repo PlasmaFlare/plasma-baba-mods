@@ -261,8 +261,10 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 								firstwords = br_firstwords,
 								num_combospots = #combospots
 							}
-	
-							print("inserting branch..")
+
+							if BRANCHING_TEXT_LOGGING then 
+								print("inserting branch..") 
+							end
 							table.insert(branches, t)
 							found_branch_on_last_word = true
 						end
@@ -475,7 +477,6 @@ function docode(firstwords)
 	
 	if (#firstwords > 0) then
 		for k,unitdata in ipairs(firstwords) do
-			print("-- next firstword --")
 			if (type(unitdata[1]) == "number") then
 				timedmessage("Old rule format detected. Please replace modified .lua files to ensure functionality.")
 			end
@@ -493,6 +494,10 @@ function docode(firstwords)
 			local existing_br_sentence_metadata = unitdata[10] or {}
 			local is_deferred_sentence = unitdata[50] or false -- @TODO: uggh I hate having to set an arbitrary index for this
 			local curr_calc_sent_id = unitdata[11] or calc_sent_id
+
+			if BRANCHING_TEXT_LOGGING then
+				print("-- next firstword --")
+			end
 
 			if (string.sub(word, 1, 5) == "text_") then
 				word = string.sub(word, 6)
@@ -538,13 +543,17 @@ function docode(firstwords)
 				MF_alert("Already used: " .. tostring(unitid) .. ", " .. tostring(unique_id))
 			end
 			]]--
-			print("firstword: "..unit.strings[NAME].." | word index: "..existing_wordid.." | deferred: "..tostring(is_deferred_sentence).. " | Sentence Id: "..unique_id .. " | dir: ".. tostring(dir))
+			if BRANCHING_TEXT_LOGGING then 
+				print("firstword: "..unit.strings[NAME].." | word index: "..existing_wordid.." | deferred: "..tostring(is_deferred_sentence).. " | Sentence Id: "..unique_id .. " | dir: ".. tostring(dir))
+			end
 			
 			local deferred = false
 			if name_is_branching_text(unit.strings[NAME], true, false) and not is_deferred_sentence then
 				deferred = true
 				unitdata[50] = true
-				print("Deferred firstword!! Word: "..unit.strings[NAME])
+				if BRANCHING_TEXT_LOGGING then 
+					print("Deferred firstword!! Word: "..unit.strings[NAME])
+				end
 				table.insert(deferred_firstwords, unitdata)
 			else
 				if existing_br_sentence_metadata.branching_points_bitfield then
@@ -571,14 +580,16 @@ function docode(firstwords)
 					unique_id = tostring(tileid_id) .. "_" .. existing_id
 				end
 
-				if not ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil))) then
-					print("sent id cancellation!! Unique id: "..unique_id.. " x:"..x.." y:"..y.." dir:"..dir.." Word: "..unit.strings[NAME])
-					for _, v in ipairs(existing) do
-						print(v[1])
-					end	
-				end
-				if no_firstword_br_text[unitid] then
-					print("no_firstword_br_text!! Word: "..unit.strings[NAME])
+				if BRANCHING_TEXT_LOGGING then 
+					if not ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil))) then
+						print("sent id cancellation!! Unique id: "..unique_id.. " x:"..x.." y:"..y.." dir:"..dir.." Word: "..unit.strings[NAME])
+						for _, v in ipairs(existing) do
+							print(v[1])
+						end	
+					end
+					if no_firstword_br_text[unitid] then
+						print("no_firstword_br_text!! Word: "..unit.strings[NAME])
+					end
 				end
 			end
 			
@@ -613,12 +624,14 @@ function docode(firstwords)
 					curr_calc_sent_id = calc_sent_id
 					calc_sent_id = calc_sent_id + 1
 
-					print("==== "..dir.." variations: "..variations)
-					for i, sent in ipairs(sentences) do
-						print("---")
-						print("sent id:"..sent_ids[i])
-						for _, word in ipairs(sent) do
-							print(word[1])
+					if BRANCHING_TEXT_LOGGING then 
+						print("==== "..dir.." variations: "..variations)
+						for i, sent in ipairs(sentences) do
+							print("---")
+							print("sent id:"..sent_ids[i])
+							for _, word in ipairs(sent) do
+								print(word[1])
+							end
 						end
 					end
 				else
@@ -629,9 +642,11 @@ function docode(firstwords)
 					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing --@TODO: do we still need this?
 					br_sentence_metadata = existing_br_sentence_metadata
 
-					print("---existing- dir: "..dir.." sent id:".. existing_id)
-					for _, word in ipairs(existing) do
-						print(word[1])
+					if BRANCHING_TEXT_LOGGING then 
+						print("---existing- dir: "..dir.." sent id:".. existing_id)
+						for _, word in ipairs(existing) do
+							print(word[1])
+						end
 					end
 				end				
 
@@ -974,7 +989,6 @@ function docode(firstwords)
 						end
 
 						if do_branching_and_sentence_elimination then
-							print("do_branching_and_sentence_elimination")
 							local lhs_sent_id = ""
 							for p = 1, existing_wordid-1 do
 								lhs_sent_id = lhs_sent_id.."*"
@@ -983,16 +997,16 @@ function docode(firstwords)
 							-- lhs_sent_id = lhs_sent_id..string.sub(sent_id, existing_wordid, last_branching_and_wordid)
 
 							-- eliminate any extra verbs and nots
-							print("--Curr Sent--")
-							for _, word in ipairs(current) do
-								print(word[1])
+							if BRANCHING_TEXT_LOGGING then
+								print("--do_branching_and_sentence_elimination on this sentence--")
+								for _, word in ipairs(current) do
+									print(word[1])
+								end
 							end
-							print("----------")
 							for i=1,#current do
 								local word = current[#current]
 								local wordtype = word[2]
 								if wordtype == 4 or wordtype == 1 or wordtype == 7 then
-									print("removed wordtype "..tostring(wordtype))
 									table.remove(current, #current)
 								else
 									break
@@ -1003,7 +1017,6 @@ function docode(firstwords)
 							-- If the sentence is full, then the entry will be -1, indicating a disabled lhs_sent_id
 							local is_dangling_and_sent = current[#current][2] == 6
 							
-							print("test: "..lhs_sent_id)
 							if not branch_elimination_tracker[curr_calc_sent_id] then
 								branch_elimination_tracker[curr_calc_sent_id] = {}
 							end
@@ -1346,7 +1359,10 @@ function docode(firstwords)
 		if branch_elimination_tracker[data.tracker_ids.calc_sent_id][data.tracker_ids.lhs_sent_id] == dang_sent_id then
 			for _, call in ipairs(data.addoption_calls) do
 				addoption(call.rule,call.finalconds,call.ids)
-				print("Adding danging and sentence!")
+
+				if BRANCHING_TEXT_LOGGING then
+					print("Adding danging and sentence!")
+				end
 			end
 		end
 	end
@@ -1702,9 +1718,13 @@ function code(alreadyrun_)
 					end
 				end
 				
-				print("<<<<<<<<<<<<<start>")
+				if BRANCHING_TEXT_LOGGING then
+					print("<<<<<<<<<<<<<start>")
+				end
 				docode(firstwords,wordunits)
-				print("<<<<<<<<<<<<<end>")
+				if BRANCHING_TEXT_LOGGING then
+					print("<<<<<<<<<<<<<end>")
+				end
 				do_subrule_this()
 				subrules()
 				grouprules()
