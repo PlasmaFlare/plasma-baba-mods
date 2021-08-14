@@ -46,6 +46,15 @@ table.insert(editor_objlist_order, "text_branching_below")
 table.insert(editor_objlist_order, "text_pivot_feeling")
 table.insert(editor_objlist_order, "text_branching_feeling")
 
+local omni_white = { {2,  2}, {2, 4} }
+local omni_red   = { {4,  1}, {4, 2} }
+local omni_green = { {2,  3}, {3, 4} }
+local omni_blue  = { {3,  3}, {1, 4} }
+local pivot_white = { {1,  3}, {1, 4} }
+local pivot_red   = { {2,  2}, {2, 3} }
+local pivot_green = { {5,  2}, {5, 4} }
+local pivot_blue  = { {3,  2}, {3, 3} }
+
 editor_objlist["text_branching_is"] = 
 {
 	name = "text_branching_is",
@@ -55,8 +64,8 @@ editor_objlist["text_branching_is"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_is",
 }
 
@@ -69,8 +78,8 @@ editor_objlist["text_branching_and"] =
 	tiling = -1,
 	type = 6,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_and",
 }
 
@@ -83,8 +92,8 @@ editor_objlist["text_branching_has"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_has",
 }
 
@@ -97,8 +106,8 @@ editor_objlist["text_branching_fear"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 1},
-	colour_active = {2, 2},
+	colour = omni_red[1],
+	colour_active = omni_red[2],
 	pairedwith = "text_fear",
 }
 
@@ -111,8 +120,8 @@ editor_objlist["text_branching_make"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_make",
 }
 
@@ -125,8 +134,8 @@ editor_objlist["text_branching_follow"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 1},
-	colour_active = {5, 3},
+	colour = omni_green[1],
+	colour_active = omni_green[2],
 	pairedwith = "text_follow",
 }
 
@@ -139,8 +148,8 @@ editor_objlist["text_branching_mimic"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 1},
-	colour_active = {2, 2},
+	colour = omni_red[1],
+	colour_active = omni_red[2],
 	pairedwith = "text_mimic",
 }
 
@@ -153,8 +162,8 @@ editor_objlist["text_branching_play"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 1},
-	colour_active = {5, 3},
+	colour = omni_green[1],
+	colour_active = omni_green[2],
 	pairedwith = "text_play",
 }
 
@@ -167,8 +176,8 @@ editor_objlist["text_branching_eat"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 1},
-	colour_active = {2, 2},
+	colour = omni_red[1],
+	colour_active = omni_red[2],
 	pairedwith = "text_eat",
 }
 
@@ -181,8 +190,8 @@ editor_objlist["text_branching_near"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_near",
 }
 
@@ -195,8 +204,8 @@ editor_objlist["text_branching_on"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_on",
 }
 editor_objlist["text_branching_without"] = 
@@ -208,8 +217,8 @@ editor_objlist["text_branching_without"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_without",
 }
 editor_objlist["text_branching_facing"] = 
@@ -221,8 +230,8 @@ editor_objlist["text_branching_facing"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_facing",
 	argextra = {"right","up","left","down"},
 }
@@ -235,8 +244,8 @@ editor_objlist["text_branching_above"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {1, 2},
-	colour_active = {1, 4},
+	colour = omni_blue[1],
+	colour_active = omni_blue[2],
 	pairedwith = "text_above",
 }
 editor_objlist["text_branching_below"] = 
@@ -248,8 +257,8 @@ editor_objlist["text_branching_below"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {1, 2},
-	colour_active = {1, 4},
+	colour = omni_blue[1],
+	colour_active = omni_blue[2],
 	pairedwith = "text_below",
 }
 editor_objlist["text_branching_feeling"] = 
@@ -261,8 +270,8 @@ editor_objlist["text_branching_feeling"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {0, 1},
-	colour_active = {0, 3},
+	colour = omni_white[1],
+	colour_active = omni_white[2],
 	pairedwith = "text_feeling",
 	argtype = {2},
 }
@@ -277,8 +286,8 @@ editor_objlist["text_pivot_is"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_is",
 }
 
@@ -291,8 +300,8 @@ editor_objlist["text_pivot_and"] =
 	tiling = -1,
 	type = 6,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_and",
 }
 
@@ -305,8 +314,8 @@ editor_objlist["text_pivot_has"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_has",
 }
 
@@ -319,8 +328,8 @@ editor_objlist["text_pivot_fear"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = pivot_red[1],
+	colour_active = pivot_red[2],
 	pairedwith = "text_fear",
 }
 
@@ -333,8 +342,8 @@ editor_objlist["text_pivot_make"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_make",
 }
 
@@ -347,8 +356,8 @@ editor_objlist["text_pivot_follow"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 2},
-	colour_active = {5, 4},
+	colour = pivot_green[1],
+	colour_active = pivot_green[2],
 	pairedwith = "text_follow",
 }
 
@@ -361,8 +370,8 @@ editor_objlist["text_pivot_mimic"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = pivot_red[1],
+	colour_active = pivot_red[2],
 	pairedwith = "text_mimic",
 }
 
@@ -375,8 +384,8 @@ editor_objlist["text_pivot_play"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {5, 2},
-	colour_active = {5, 4},
+	colour = pivot_green[1],
+	colour_active = pivot_green[2],
 	pairedwith = "text_play",
 }
 
@@ -389,8 +398,8 @@ editor_objlist["text_pivot_eat"] =
 	tiling = -1,
 	type = 1,
 	layer = 20,
-	colour = {4, 1},
-	colour_active = {4, 2},
+	colour = pivot_red[1],
+	colour_active = pivot_red[2],
 	pairedwith = "text_eat",
 }
 
@@ -403,8 +412,8 @@ editor_objlist["text_pivot_near"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_near",
 }
 
@@ -417,8 +426,8 @@ editor_objlist["text_pivot_on"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_on",
 }
 editor_objlist["text_pivot_without"] = 
@@ -430,8 +439,8 @@ editor_objlist["text_pivot_without"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_without",
 }
 editor_objlist["text_pivot_facing"] = 
@@ -443,8 +452,8 @@ editor_objlist["text_pivot_facing"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_facing",
 	argextra = {"right","up","left","down"},
 }
@@ -458,7 +467,7 @@ editor_objlist["text_pivot_above"] =
 	type = 7,
 	layer = 20,
 	colour = {3, 2},
-	colour_active = {4, 4},
+	colour_active = pivot_blue[2],
 	pairedwith = "text_above",
 }
 editor_objlist["text_pivot_below"] = 
@@ -471,7 +480,7 @@ editor_objlist["text_pivot_below"] =
 	type = 7,
 	layer = 20,
 	colour = {3, 2},
-	colour_active = {4, 4},
+	colour_active = pivot_blue[2],
 	pairedwith = "text_below",
 }
 editor_objlist["text_pivot_feeling"] = 
@@ -483,8 +492,8 @@ editor_objlist["text_pivot_feeling"] =
 	tiling = -1,
 	type = 7,
 	layer = 20,
-	colour = {2, 2},
-	colour_active = {2, 4},
+	colour = pivot_white[1],
+	colour_active = pivot_white[2],
 	pairedwith = "text_feeling",
 	argtype = {2},
 }
