@@ -157,15 +157,14 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 					if (v[4] == 0) then
 						objfound = true
 					end
-					
-					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4)) then
+				
+					-- @omni-text: to deal with the op
+					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, false)) then
 						starting = false
 					end
 					
 					
 					local text_name = v[3]
-					-- Note abot the second condition (all in parenthesis)
-					-- if name_is_branching_text(text_name) and not (name_is_branching_text(text_name, true, false) and step == 1) then
 					if name_is_branching_text(text_name) then
 						-- Gather all branching texts to do the perp calculatesentences on
 						table.insert(branching_texts, v)
@@ -465,11 +464,71 @@ function docode(firstwords)
 	local existingfinals = {}
 	local limiter = 0
 
-	--[[ 
-
+	--[[ @omni-text no_firstword_br_text: 
+		A list of omni texts that should not, in any circumstances, be processed as a firstword, starting from the moment it was recorded
+		in this table. There are two main cases where an omni text gets inserted:
+			Case 1: if the current firstword is an omni text. 
+				- once an omni text has been processed as a firstword, it cannot be processed as a firstword again (regardless of parsing direction)
+			Case 2: If the omni text has proven to be part of a valid sentence
+				- This is a more complex reason that deals with the nature of split parsing. More details are explained in the next comment
 	 ]]
-	local no_firstword_br_text = {} -- Record of branching texts that should not be processed as a firstword (prevents double parsing in certain cases)
+	local no_firstword_br_text = {}
+
+	--[[ @omni-text Deferred Firstwords:
+		This table mostly leverages no_firstword_br_text to do the actual dup sentence cancellation. However, its main function is to defer processing any
+		firstwords that are also omni texts. Any deferred firstwords will be readded to the firstword queue (the variable is just called "firstwords" but I'll
+		refer it as a queue) once the queue is empty.
+
+		Why do we need this table? It mainly has to do with Case 2 for adding to no_firstword_br_text. Imagine you have this text layout:
+			
+			baba omni_on keke is you
+				   me
+				   is
+				  push 
+
+		The two initial firstwords will be "baba" parsed horizontally and "omni_on" parsed vertically. Without deferred_firstwords, if "omni_on" gets processed 
+		first, it will bypass the omni_on to get "keke is you" and "me is push". Then "baba" is processed as a firstword to get "baba on keke is you" and
+		"baba on me is push". 
+		
+		So you get four sentences, but doesn't it feel weird that it spits out "keke is you" and "me is push"? 
+		In comparison, if you had "baba on keke is you", you wouldn't expect it to be parsed as both "baba on keke is you" and "keke is you". deferred_firstwords deals with a similar issue for omni text.
+
+		Although we cannot fully control which firstwords should be processed first (unless you want to port most of the parsing code just for this purpose),
+		we could still control which would be processed *last*. In the above example, if we defer processing of the "omni_on" firstword and let the "baba" firstword
+		process, by Case 2 "omni_on" will be added to no_firstword_br_text. Then when we try to process the deferred "omni_on" firstword, it will be stopped
+		since no_firstword_br_text has it. Therefore we removed a duplicated sentence.
+	 ]]
 	local deferred_firstwords = {}
+
+	--[[ 
+		While no_firstword_br_text and deferred_firstwords deal with dup sentence cancellation on the front end (through firstwords), these variables deal with it
+		on the tail end. Consider this example:
+
+			baba is you omni_and lonely
+						  push
+
+		Now "lonely" isn't in correct syntax, but the parser works by extracting consecutive texts and seperating each combination into their own array. THEN afterwards
+		it runs each sentence through the syntax checker. Omni text works similar, but it extracts it by split parsing. So the above example gets split into:
+
+			baba is you and lonely -> baba is you
+			baba is you and push -> baba is you and push
+
+		One thing to note is that syntax checker is designed to extract valid sub sentences within junk text. So a text layout like "push push baba is you push push"
+		will still yield "baba is you", discarding the "push"es as junk text. With this in mind, the sentence to the right of the arrows shows the sentence after
+		running through the syntax checker.
+
+		See the problem? It's weird for the single "baba is you" to be parsed from the text layout. It's similar to the problem presented in the previous comment, but
+		this time its on the tail end of the sentence. We can't actively prevent the "baba is you and lonely" from being run through the syntax checker. 
+		But we CAN eliminate it AFTER the syntax checker.
+
+		The basic idea is to detect which sentences are left with a "dangling and". A dangling and is simply an "and" at the end of a sentence. It occurs in the 
+		main game code due to how the parser handles "and"s as potential to have more words appended to it, but without any words actually being appended. This code
+		keeps track of any dangling and sentences with the key of calculatesentences id + lhs sentid before last omni "and". But the protocol is this:
+			- If a "full sentence" (sentence without dangling and) has calculatesentences id + lhs sentid combo, the slot with that id combo will be labeled as "disabled"
+				- if the slot already has a dangling and sentence, delete the dangling and sentence and override the slot to be disabled
+			- If a dangling and sentence tries to add itself to a slot that's disabled OR occupied, remove the sentence
+		This protocol tries to account for the tree-like parsing that occurs in omni text
+	 ]]
 	local deferred_dang_and_addoptions = {}
 	local branch_elimination_tracker = {} -- calculateSentID -> { LHS Sent id -> (-1 = disabled | dang_sent_id)}
 	local calc_sent_id = 0 -- Id representing each call to calculatesentences()
@@ -606,6 +665,9 @@ function docode(firstwords)
 				end
 				
 				donefirstwords[unique_id][dir] = 1
+				if name_is_branching_text(name, true, false) then
+					no_firstword_br_text[unitid] = true
+				end
 								
 				local sentences = {}
 				local finals = {}
@@ -626,12 +688,36 @@ function docode(firstwords)
 
 					if BRANCHING_TEXT_LOGGING then 
 						print("==== "..dir.." variations: "..variations)
-						for i, sent in ipairs(sentences) do
+					end
+					for i, sent in ipairs(sentences) do
+						if BRANCHING_TEXT_LOGGING then 
 							print("---")
 							print("sent id:"..sent_ids[i])
 							for _, word in ipairs(sent) do
 								print(word[1])
 							end
+						end
+						
+						--[[ 
+							@omni-text: this deals with the optimization introduced in 421d where calculatesentences() skips texts that would "obviously" not start a sentence.
+							(Ex: "push", "facing" and "has" cannot start a sentence.) The optimization would've skipped the omni text, preventing it from being counted as
+							a firstword and and its sentence deferred (see the purpose of variables deferred_firstwords and no_firstword_br_text). To solve this, 
+							calculatesentences() was modified so that it doesn't skip omni texts, even though it would be counted as an "obvious" text that would not start a sentence.
+							calculatesentences() would then output sentences that start with omni texts at the beginning, if found. When that happens, we defer the overall sentence.
+							]]
+						local word = sent[1]
+						local start_word_unitid = word[3][1]
+						local u = mmf.newObject(start_word_unitid)
+						if start_word_unitid ~= unitid and name_is_branching_text(u.strings[NAME], true, false) then
+							local deferred_firstword = {word[3], dir, word[4], word[1], word[2], sent, 1, sent_ids[i], br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id}
+							deferred_firstword[50] = true
+							table.insert(deferred_firstwords, deferred_firstword)
+
+							if BRANCHING_TEXT_LOGGING then 
+								print("deferred above sentence from calc sentences")
+							end
+
+							sentences[i] = {}
 						end
 					end
 				else
@@ -994,19 +1080,34 @@ function docode(firstwords)
 								lhs_sent_id = lhs_sent_id.."*"
 							end
 							lhs_sent_id = lhs_sent_id..string.sub(sent_id, 1, last_branching_and_wordid-existing_wordid+1)
-							-- lhs_sent_id = lhs_sent_id..string.sub(sent_id, existing_wordid, last_branching_and_wordid)
 
-							-- eliminate any extra verbs and nots
 							if BRANCHING_TEXT_LOGGING then
 								print("--do_branching_and_sentence_elimination on this sentence--")
 								for _, word in ipairs(current) do
 									print(word[1])
 								end
 							end
+							-- eliminate any extra verbs and nots
 							for i=1,#current do
 								local word = current[#current]
 								local wordtype = word[2]
+								local remove = false
 								if wordtype == 4 or wordtype == 1 or wordtype == 7 then
+									remove = true
+								elseif wordtype == 2 then
+									-- Special case where "baba is you and has stop" is somehow parsed fully
+									-- instead of removing the "has stop" because of invalid syntax
+									local prev_word = current[#current-1]
+									if prev_word then
+										local word_name = parse_branching_text(prev_word[1])
+										print("test: "..word_name)
+										if word_name ~= "is" and word_name ~= "and" then
+											remove = true
+										end
+									end
+								end
+
+								if remove then
 									table.remove(current, #current)
 								else
 									break
@@ -1121,6 +1222,10 @@ function docode(firstwords)
 									local unit = mmf.newObject(unitid)
 									if name_is_branching_text(unit.strings[NAME], true, false) and (wtype == 6 or wtype == 7 or wtype == 1) and (stage == 0 or stage == 7) then
 										no_firstword_br_text[unitid] = true
+
+										if BRANCHING_TEXT_LOGGING then
+											print("Adding no_firstword_br_text: "..unit.strings[NAME])
+										end
 									end
 								end
 								
