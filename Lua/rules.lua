@@ -738,14 +738,14 @@ function docode(firstwords)
 							
 							for a,b in ipairs(s[3]) do
 								local unit = mmf.newObject(b)
+								-- @filler text
 								if unit.values[TYPE] == 11 then
 									if not filler_text_found_in_parsing[i] then
 										filler_text_found_in_parsing[i] = {}
 									end
 									table.insert(filler_text_found_in_parsing[i], b)
-								else
-									table.insert(tileids, b)
 								end
+								table.insert(tileids, b)
 							end
 							
 							--[[
@@ -915,8 +915,6 @@ function docode(firstwords)
 							--MF_alert(tostring(k) .. "_" .. tostring(i) .. "_" .. tostring(wordid) .. ": " .. tilename .. ", " .. tostring(tiletype) .. ", " .. tostring(stop) .. ", " .. tostring(stage) .. ", " .. tostring(letterword_firstid).. ", " .. tostring(prevtiletype))
 							
 							if (stop == false) then
-								-- @filler text
-								if tiletype ~= 11 then
 								local subsent_id = string.sub(sent_id, (wordid - existing_wordid)+1)
 								current.sent = sent
 								table.insert(current, {tilename, tiletype, tileids, tilewidth, wordid, subsent_id})
@@ -930,7 +928,6 @@ function docode(firstwords)
 									else
 										finals[i] = {}
 									end
-								end
 								end
 							else
 								for a=1,#s[3] do
@@ -1080,7 +1077,7 @@ function docode(firstwords)
 						local extraids_ifvalid = {}
 						
 						local valid = true
-						
+
 						if (#sentence >= 3) then
 							if (#finals > 1) then
 								for a,b in ipairs(finals) do
@@ -1130,7 +1127,7 @@ function docode(firstwords)
 								
 								if (wtype == 1) or (wtype == 3) or (wtype == 7) then
 									wcategory = 1
-								elseif (wtype ~= 4) and (wtype ~= 6) then
+								elseif (wtype ~= 4) and (wtype ~= 6) and (wtype ~= 11) then
 									wcategory = 0
 								else
 									table.insert(extraids_ifvalid, {prefix .. wname, wtype, wid})
