@@ -18,7 +18,7 @@ function get_this_parms_in_conds(conds, ids)
             local condtype = cond[1]
             local params = cond[2]
             
-            if condtype == "this" or condtype == "not this" then
+            if condtype == "this" or condtype == "not this" or condtype == "stable" then
                 -- skip params if the condtype is "this", since the params are actually unitids
             else
                 id_index = id_index + 1 -- consume the condition

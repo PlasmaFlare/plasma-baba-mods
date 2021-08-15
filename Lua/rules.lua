@@ -1448,7 +1448,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 					addedto[condname] = 1
 				end
 				
-				if (cond[2] ~= nil) then
+				if (cond[2] ~= nil and condname ~= "stable") then
 					if (#cond[2] > 0) then
 						local newconds = {}
 						

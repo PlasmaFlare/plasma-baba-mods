@@ -100,7 +100,6 @@ end
 
 local function get_stableunit_key(unitid)
     if unitid == 2 then
-        --@TODO: handle empty and level case
         return nil
     elseif unitid == 1 then
         return LEVEL_SU_KEY
@@ -262,7 +261,7 @@ local function get_stablefeatures_from_name(name)
             local dup_feature = deep_copy_table(feature)
             local rule_display = get_stablerule_display(dup_feature)
             table.insert(dup_feature[2], {"stable", { ruleid }})
-            dup_feature[3] = {} --@TODO: check. This clears the list of ids. @TODO: this might interfere with "THIS" mod in th_testcond_this
+            -- dup_feature[3] = {} --@TODO: check. This clears the list of ids. @TODO: this might interfere with "THIS" mod in th_testcond_this
             
             table.insert(dup_feature[4], "stable")
             
@@ -601,7 +600,6 @@ table.insert(mod_hook_functions["rule_update_after"],
             addoption(feature[1], feature[2], feature[3], false, nil, feature[4])
             local option, conds = feature[1], feature[2]
 
-            -- -- @TODO: check. quick way to add to featureindex, but lacks support of adding rules to pause menu.
             if STABLE_LOGGING then
                 print("adding stablerule: "..option[1].." "..option[2].." "..option[3])
             end
