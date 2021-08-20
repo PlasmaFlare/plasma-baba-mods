@@ -16,7 +16,7 @@ branching_text_names = {
     feeling = true
 }
 
-BRANCHING_TEXT_LOGGING = false
+BRANCHING_TEXT_LOGGING = true
 
 function is_branching_text_defined(name)
     return branching_text_names[name] or name == "and"
@@ -171,18 +171,16 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
 			return nil
         end
         
-        local lhs_totalvariants = 1
+        local lhs_totalcombos = 0 -- Note: this isn't the total number of lhs sentences, but the total number of ways to make a combination of words from lhs_word_slots
         local lhs_combo_tracker = {}
         for i, slot in ipairs(branch.lhs_word_slots) do
-            lhs_totalvariants = lhs_totalvariants * #slot
+            if #slot > 0 then
+                if lhs_totalcombos == 0 then
+                    lhs_totalcombos = 1
+                end
+                lhs_totalcombos = lhs_totalcombos * #slot
+            end
             lhs_combo_tracker[i] = 1
-        end
-
-        totalvariants = totalvariants + lhs_totalvariants * #branch.branching_texts * br_totalvariants
-        if (totalvariants >= limiter) then
-			MF_alert("Level destroyed - too many variants E")
-			destroylevel("toocomplex")
-			return nil
         end
 
         for unitid, _ in pairs(perp_br_and_texts_with_split_parsing) do
@@ -191,25 +189,36 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
         
         -- Create all lhs sentences by finding all combinations of words in slot. Also build the sentence ids of the lhs sentences
         local lhs_sentences = {}
-        for variant_num = 1, lhs_totalvariants do
+        for variant_num = 1, lhs_totalcombos do
             local lhs_sent_id_base = ""
             local lhs_sentence = {}
-            for i, slot in ipairs(branch.lhs_word_slots) do
-                local word_index = lhs_combo_tracker[i]
-                local word = slot[word_index]
+            local slotindex = 1
+            while slotindex <= #branch.lhs_word_slots do
+                local slot = branch.lhs_word_slots[slotindex]
+                if #slot > 0 then
+                    local word_index = lhs_combo_tracker[slotindex]
+                    local word = slot[word_index]
+                    local width = word[2]
 
-                local branching_text_name = parse_branching_text(word[3])
+                    local branching_text_name = parse_branching_text(word[3])
 
-                -- @Note: we might've needed this for eliminating duplicate sentences with branching ands?
-                if branching_text_name == "and" then
-                    branching_text_name = word[3]
+                    -- @Note: we might've needed this for eliminating duplicate sentences with branching ands?
+                    if branching_text_name == "and" then
+                        branching_text_name = word[3]
+                    end
+
+                    table.insert(lhs_sentence, {branching_text_name, word[4], word[1], word[2]})
+                    lhs_sent_id_base = lhs_sent_id_base..tostring(word_index-1)
+
+                    slotindex = slotindex + width
+                else
+                    break
                 end
 
-                table.insert(lhs_sentence, {branching_text_name, word[4], word[1], word[2]})
-                lhs_sent_id_base = lhs_sent_id_base..tostring(word_index-1)
             end
-
-            table.insert(lhs_sentences, {lhs_sentence = lhs_sentence, lhs_sent_id_base = lhs_sent_id_base})
+            if slotindex == branch.step_index then
+                table.insert(lhs_sentences, {lhs_sentence = lhs_sentence, lhs_sent_id_base = lhs_sent_id_base})
+            end
 
             -- Update combo tracker so that we get every single sentences in the lhs
             -- Context: in order to iterate through all possible sentence combinations, the game keeps track of a "combo" data structure. Each index represents a word position, or slot. And a slot can contain multiple words/texts.
@@ -219,7 +228,7 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
             -- Ex: baba&keke is you&push&pull. The iteration through all combinations can be represented by the numbers, 111 112 113 211 212 213. The leftmost digit is base 2 because the leftmost slot has two words and the rightmost digit
             -- is base 3 because the rightmost slot has 3 words. And same thing with the middle digit. Iteration involves adding 1 to the previous result while taking into account each of the digit's individal bases. And the resulting number
             -- is used to get the indexes of the words by matching the indexes to the digits. Note: the digit analogy doesnt hold if the index is >= 10, but it is still the same idea.
-            if variant_num ~= lhs_totalvariants then
+            if variant_num ~= lhs_totalcombos then
                 local curr_slot = 1
                 lhs_combo_tracker[curr_slot] = lhs_combo_tracker[curr_slot] + 1 -- "add one"
                 while lhs_combo_tracker[curr_slot] and lhs_combo_tracker[curr_slot] > #branch.lhs_word_slots[curr_slot] do
@@ -228,11 +237,20 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
                     curr_slot = curr_slot + 1 -- go to the next more significant digit
                 end
             end
-		end
-		
-		-- if #lhs_sentences == 0 then
-		-- 	table.insert(lhs_sentences, {lhs_sentence = {}, lhs_sent_id_base = ""})
-		-- end
+        end
+
+        if BRANCHING_TEXT_LOGGING then
+            print("totalvariants = "..tostring(totalvariants))
+            print("#lhs_sentences = "..tostring(#lhs_sentences))
+            print("#branch.branching_texts = "..tostring(#branch.branching_texts))
+            print("br_totalvariants = "..tostring(br_totalvariants))
+        end
+        totalvariants = totalvariants + #lhs_sentences * #branch.branching_texts * br_totalvariants
+        if (totalvariants >= limiter) then
+			MF_alert("Level destroyed - too many variants E")
+			destroylevel("toocomplex")
+			return nil
+        end
 
         -- Combine lhs sentence + omni text + rhs or branching sentence into one final sentence
         for _, lhs_sentence_data in ipairs(lhs_sentences) do

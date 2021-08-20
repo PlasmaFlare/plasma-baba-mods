@@ -158,7 +158,6 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						objfound = true
 					end
 				
-					-- @omni-text: to deal with the op
 					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, false)) then
 						starting = false
 					end
@@ -249,7 +248,15 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 
 							local lhs_word_slots = {}
 							for s = 1, step-1 do
-								lhs_word_slots[s] = sents[s]
+								local words = {}
+								lhs_word_slots[s] = {}
+								for _, word in ipairs(sents[s]) do
+									local width = word[2]
+									if s + width <= step then
+										table.insert(words, word)
+									end
+								end
+								lhs_word_slots[s] = words
 							end
 							local t = {
 								lhs_word_slots = lhs_word_slots,
@@ -388,20 +395,25 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	-- local merged_totalvariants = 0
 	local merged_sentences, merged_sentence_ids, merged_totalvariants, merged_maxpos, merged_br_and_text_with_split_parsing, br_sentence_metadata = br_process_branches(branches, br_dir, found_branch_on_last_word, limiter)
 
-	assert(#merged_sentences == merged_totalvariants)
-	assert(#merged_sentence_ids == merged_totalvariants)
+	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
 	if merged_sentences == nil then
 		-- Oh no! A too complex!
 		return nil
 	end
+	
 	if found_branch_on_last_word then
 		sentences = {}
 		finals = {}
 		sentence_ids = {}
-		totalvariants = totalvariants * merged_totalvariants
+		if merged_totalvariants > 0 then
+			totalvariants = merged_totalvariants
+		end
 		maxpos = merged_maxpos
 	else
-		totalvariants = totalvariants + merged_totalvariants
+		if merged_totalvariants > 0 then
+			totalvariants = totalvariants + merged_totalvariants
+		end
 		maxpos = math.max(maxpos, merged_maxpos)
 	end
 		
@@ -720,6 +732,7 @@ function docode(firstwords)
 							sentences[i] = {}
 						end
 					end
+					assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
 				else
 					sentences[1] = existing
 					maxlen = 3
