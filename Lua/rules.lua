@@ -1460,10 +1460,10 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 							if is_name_text_this(b) or is_name_text_this(b, true) then
 								local this_unitid = this_params_in_conds[cond][a]
 
-								local is_param_this_formatted = parse_this_param_and_get_raycast_units(b)
-								if not is_param_this_formatted then
+								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
+								if not is_param_this_formatted and not is_this_unit_in_stablerule(this_param_id) then
 									local param_id = register_this_param_id(this_unitid)
-									table.insert(newconds, b.." "..param_id)
+									table.insert(newconds, make_this_param(b, param_id))
 								else
 									table.insert(newconds, b)
 								end
@@ -1536,6 +1536,7 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
+	update_stable_state()
 	if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
 			update_raycast_units(true, true, true)
@@ -1546,7 +1547,6 @@ function code(alreadyrun_)
 			end
 		end
 	end
-	update_stable_state()
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1

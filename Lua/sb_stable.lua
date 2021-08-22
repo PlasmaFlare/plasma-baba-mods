@@ -29,6 +29,14 @@ local stablestate = {
            ruleids: [ruleids: string]
        }  
      ]]
+
+    stable_this_raycast_units = {},
+    --[[ 
+        stable_this_id -> {
+            ids: [list of raycast units], 
+            tileid: int
+        }
+     ]]
 }
 
 local stable_undo_stack = {}
@@ -53,8 +61,11 @@ local stable_indicators = {}
   ]]
     
 local LEVEL_SU_KEY = -1
+local STABLE_THIS_ID_BASE = -50
+local STABLE_THIS_ID_EMPTY = -49
 local stableid = 1
 local turnid = 1
+local curr_stable_this_id = STABLE_THIS_ID_BASE
 local on_undo = false
 local stable_state_updated = false
 
@@ -72,10 +83,12 @@ local function clear_stable_mod()
         units = {},
         rules = {},
         empties = {},
+        stable_this_raycast_units = {},
     }
     stable_undo_stack = {}
     stableid = 1
     turnid = 1
+    curr_stable_this_id = STABLE_THIS_ID_BASE
 
     local count = 0
     for _, v in pairs(stable_indicators) do
@@ -127,6 +140,9 @@ local function get_ruleid(id_list, option)
                 ruleid = ruleid..unit.strings[UNITNAME]
             else
                 ruleid = ruleid..unit.strings[NAME]
+                if unit.strings[NAME] == "this" then
+                    ruleid = ruleid..tostring(unit.values[ID])
+                end
             end
         end
         if i ~= #id_list then
@@ -241,6 +257,84 @@ local function get_stablerule_display(feature)
     return text
 end
 
+local function register_this_text_in_stablerule(this_unitid)
+    local raycast_units = get_raycast_units(this_unitid, true)
+    local raycast_tileid = get_raycast_tileid(this_unitid)
+
+    -- @NOTE: if THIS mod changes get_raycast_units() to output values[ID] instead of unitid, then delete this block
+    local ids = {}
+    for _, ray_unitid in ipairs(raycast_units) do
+        if ray_unitid == 2 then
+            table.insert(ids, STABLE_THIS_ID_EMPTY)
+        else
+            local u = mmf.newObject(ray_unitid)
+            table.insert(ids, u.values[ID])
+        end
+    end
+
+    local stable_this_id = curr_stable_this_id  
+    curr_stable_this_id = curr_stable_this_id - 1
+
+    stablestate.stable_this_raycast_units[stable_this_id] = {ids = ids, tileid = raycast_tileid}
+    return stable_this_id
+end
+
+local function remove_this_text_in_stablerule(stable_this_id)
+    stablestate.stable_this_raycast_units[stable_this_id] = nil
+end
+
+local function remove_stable_this_in_conds(conds)
+    for _, cond in ipairs(conds) do
+        local condtype = cond[1]
+        local params = cond[2]
+
+        if condtype == "this" or condtype == "not this" then
+            local this_unitid = params[1]
+            if is_this_unit_in_stablerule(this_unitid) then
+                remove_this_text_in_stablerule(this_unitid)
+            end
+        else
+            for a,b in ipairs(params) do
+                local pname = b
+                local isnot_prefix = ""
+                if (string.sub(b, 1, 4) == "not ") then
+                    pname = string.sub(b, 5)
+                    isnot_prefix = "not "
+                end
+                local this_param_name,_,_,_,this_unitid = parse_this_param_and_get_raycast_units(pname)
+                if is_this_unit_in_stablerule(this_unitid) then
+                    remove_this_text_in_stablerule(tonumber(this_unitid))
+                end
+            end
+        end
+    end
+end
+
+function get_stable_this_raycast_units(stable_this_id)
+    if stablestate.stable_this_raycast_units[stable_this_id] then
+        local unitids = {} -- @TODO: when THIS mod converts to using values[ID], just return stablestate.stable_this_raycast_units[stable_this_id] directly
+        for _, id in ipairs(stablestate.stable_this_raycast_units[stable_this_id].ids) do
+            if id == STABLE_THIS_ID_EMPTY then
+                table.insert(unitids, 2)
+            else    
+                local unitid = MF_getfixed(id)
+                table.insert(unitids, unitid)
+            end
+        end
+        return unitids
+    else
+        return {}
+    end
+end
+
+function get_stable_this_raycast_pos(stable_this_id)
+    return stablestate.stable_this_raycast_units[stable_this_id].tileid
+end
+
+function is_this_unit_in_stablerule(this_unitid)
+    return tonumber(this_unitid) and tonumber(this_unitid) <= STABLE_THIS_ID_BASE
+end 
+
 local function get_stablefeatures_from_name(name)
     local stable_features = {}
     for _, feature in ipairs(featureindex[name]) do
@@ -260,7 +354,40 @@ local function get_stablefeatures_from_name(name)
             assert(ruleid)
             local dup_feature = deep_copy_table(feature)
             local rule_display = get_stablerule_display(dup_feature)
-            table.insert(dup_feature[2], {"stable", { ruleid }})
+
+            local newcond = {}
+            for i, cond in ipairs(dup_feature[2]) do
+                local condtype = cond[1]
+                local params = cond[2]
+
+                if condtype == "this" or condtype == "not this" then
+                    local this_unitid = params[1]
+                    local stable_this_id = register_this_text_in_stablerule(this_unitid)
+                    table.insert(newcond, {condtype, { stable_this_id } })
+                else
+                    local new_params = {}
+                    for a,b in ipairs(params) do
+                        local pname = b
+                        local isnot_prefix = ""
+                        if (string.sub(b, 1, 4) == "not ") then
+                            pname = string.sub(b, 5)
+                            isnot_prefix = "not "
+                        end
+                        local this_param_name,_,_,_,this_unitid = parse_this_param_and_get_raycast_units(pname)
+                        if this_param_name then
+                            local stable_this_id = register_this_text_in_stablerule(this_unitid)
+                            local this_param = make_this_param(this_param_name, tostring(stable_this_id))
+                            table.insert(new_params, isnot_prefix..this_param)
+                        else
+                            table.insert(new_params, b)
+                        end
+                    end
+                    table.insert(newcond, {condtype, new_params})
+                end
+            end
+
+            table.insert(newcond, {"stable", { ruleid }})
+            dup_feature[2] = newcond
             -- dup_feature[3] = {} --@TODO: check. This clears the list of ids. @TODO: this might interfere with "THIS" mod in th_testcond_this
             
             table.insert(dup_feature[4], "stable")
@@ -498,6 +625,8 @@ function update_stable_state()
                     if STABLE_LOGGING then
                         print("deleting stableid sentence "..tostring(ruleid))
                     end
+
+                    remove_stable_this_in_conds(stablestate.rules[ruleid].feature[2])
                     stablestate.rules[ruleid] = nil
                 end
             end
@@ -621,6 +750,11 @@ table.insert(mod_hook_functions["turn_end"],
             if stable_state_updated then
                 record_stable_undo()
             end
+        end
+        
+        print("stable_this_raycast_units: ")
+        for stable_this_id, v in pairs(stablestate.stable_this_raycast_units) do
+            print("stable_this_id: "..tostring(stable_this_id).." #ids: "..#v.ids)
         end
 
         stable_state_updated = false

@@ -413,6 +413,10 @@ function set_passed_tile(tileid)
 end
 
 function get_raycast_units(this_text_unitid, checkblocked)
+    if is_this_unit_in_stablerule(this_text_unitid) then
+        return get_stable_this_raycast_units(tonumber(this_text_unitid))
+    end
+
     local raycast_units = text_to_raycast_units[this_text_unitid]
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked then
@@ -484,6 +488,9 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
 end
 
 function get_raycast_tileid(this_text_unitid)
+    if is_this_unit_in_stablerule(this_text_unitid) then
+        return get_stable_this_raycast_pos(tonumber(this_text_unitid))
+    end
     return this_mod_globals.text_to_raycast_pos[this_text_unitid]
 end
 

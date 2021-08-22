@@ -3525,7 +3525,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
-								if this_mod_globals.text_to_raycast_pos[this_text_unitid] == tileid then
+								if get_raycast_tileid(this_text_unitid) == tileid then
 									pass = true
 								end
 								break
@@ -3552,7 +3552,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
-								if this_mod_globals.text_to_raycast_pos[this_text_unitid] == tileid then
+								if get_raycast_tileid(this_text_unitid) == tileid then
 									pass = false
 								end
 								break
