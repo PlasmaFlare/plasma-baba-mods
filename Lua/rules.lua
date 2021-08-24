@@ -83,7 +83,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	return result,letters,justletters
 end
 
-function calculatesentences(unitid,x,y,dir)
+function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_branch)
 	--[[ 
 		@mods(omni text) - Override reason: extract the branching sentences and build the full 
 			sentences with lhs + branching sentence texts.
@@ -118,14 +118,8 @@ function calculatesentences(unitid,x,y,dir)
 	local found_branch_on_last_word = false -- flag for detecting if the tail end of a sentence parsed in one direction continues perpendicularly without branching
 	local br_and_text_with_split_parsing = {} -- List of branching ands with next text in both directions. Used to determine which sentences to potentially eliminate in docode.
 
-	local br_dir = nil
-	local br_dir_vec = nil
-	if dir == 1 then
-		br_dir = 2
-	elseif dir == 2 then
-		br_dir = 1
-	end
-	br_dir_vec = dirs[br_dir]
+	local br_dir = get_perp_direction(dir)
+	local br_dir_vec = dirs[br_dir]
 	
 	local done = false
 	-- @Phase 1 - Go through units sequentially and build array of slots. Each slot contains a record of a text unit. So each slot can have stacked text.
@@ -146,6 +140,7 @@ function calculatesentences(unitid,x,y,dir)
 		
 		if (totalvariants < limiter) then
 			if (#words > 0) then
+				local br_text_count = 0
 				sents[step] = {}
 				
 				local branching_texts = {}
@@ -162,13 +157,12 @@ function calculatesentences(unitid,x,y,dir)
 					if (v[4] == 0) then
 						objfound = true
 					end
-					
-					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4)) then
+				
+					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, false)) then
 						starting = false
 					end
 					
-					table.insert(sents[step], v)
-
+					
 					local text_name = v[3]
 					if name_is_branching_text(text_name) then
 						-- Gather all branching texts to do the perp calculatesentences on
@@ -178,13 +172,27 @@ function calculatesentences(unitid,x,y,dir)
 						local br_unitid = v[1][1]
 						local br_unit = mmf.newObject(br_unitid)
 						br_and_text_with_split_parsing[br_unitid] = nil
+
+						if name_is_branching_text(text_name, true, false) then
+							table.insert(sents[step], v)
+						end	
+					else
+						table.insert(sents[step], v)
 					end
 				end
-				if starting then
+				if starting and not br_calling_calculatesentences_branch then
 					sents[step] = nil
 					step = step - 1
 				else
-					totalvariants = totalvariants * #words
+					for i,v in ipairs(words) do
+						local text_name = v[3]
+						if name_is_branching_text(text_name, false, true) then
+							br_text_count = br_text_count + 1
+						end
+					end
+					if #words ~= br_text_count then
+						totalvariants = totalvariants * (#words - br_text_count)
+					end
 					variantshere[step] = #words
 					combo[step] = 1
 				
@@ -204,55 +212,74 @@ function calculatesentences(unitid,x,y,dir)
 							table.insert(finals, {})
 						end
 					end
-				end
-
-				-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
-				local test_br_unitid = nil
-				if #branching_texts > 0 then
-					test_br_unitid = branching_texts[1][1][1]
-				end
-
-				found_branch_on_last_word = false
-				if br_dir_vec and test_br_unitid then
-					-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
-					local br_x = x + ox*step + br_dir_vec[1]
-					local br_y = y + oy*step + br_dir_vec[2]
-					local br_tileid = br_x + br_y * roomsizex
-					local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
 					
-
-					if #br_words > 0 then
-						local br_firstwords = {}
-
-						--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
-						-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
-						-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
-						--  inside a unit object. Could that be the reason?
-						for _, word in ipairs(br_words) do
-							table.insert(br_firstwords, word[1][1])
-						end
-						for _, br_text in ipairs(branching_texts) do
-							if name_is_branching_and(br_text[3]) then
-								local br_unitid = br_text[1][1]
-								local br_unit = mmf.newObject(br_unitid)
-								br_and_text_with_split_parsing[br_unitid] = true
+					-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
+					local test_br_unitid = nil
+					if #branching_texts > 0 then
+						test_br_unitid = branching_texts[1][1][1]
+					end
+	
+					found_branch_on_last_word = false
+					if br_dir_vec and test_br_unitid then
+						-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
+						local br_x = x + ox*step + br_dir_vec[1]
+						local br_y = y + oy*step + br_dir_vec[2]
+						local br_tileid = br_x + br_y * roomsizex
+						local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
+						
+	
+						if #br_words > 0 then
+							local br_firstwords = {}
+	
+							--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
+							-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
+							-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
+							--  inside a unit object. Could that be the reason?
+							for _, word in ipairs(br_words) do
+								table.insert(br_firstwords, word[1][1])
 							end
-						end
-						local t = {
-							branching_texts = branching_texts,
-							step_index = step, 
-							lhs_totalvariants = math.floor(totalvariants/#words*#branching_texts),
-							x = br_x,
-							y = br_y,
-							firstwords = br_firstwords,
-							num_combospots = #combospots
-						}
+							for _, br_text in ipairs(branching_texts) do
+								if name_is_branching_and(br_text[3]) then
+									local br_unitid = br_text[1][1]
+									local br_unit = mmf.newObject(br_unitid)
+									br_and_text_with_split_parsing[br_unitid] = true
+								end
+							end
 
-						table.insert(branches, t)
-						found_branch_on_last_word = true
+							local lhs_word_slots = {}
+							for s = 1, step-1 do
+								local words = {}
+								lhs_word_slots[s] = {}
+								for _, word in ipairs(sents[s]) do
+									local width = word[2]
+									if s + width <= step then
+										table.insert(words, word)
+									end
+								end
+								lhs_word_slots[s] = words
+							end
+							local t = {
+								lhs_word_slots = lhs_word_slots,
+								branching_texts = branching_texts,
+								step_index = step, 
+								x = br_x,
+								y = br_y,
+								firstwords = br_firstwords,
+								num_combospots = #combospots
+							}
+
+							if BRANCHING_TEXT_LOGGING then 
+								print("inserting branch..") 
+							end
+							table.insert(branches, t)
+							found_branch_on_last_word = true
+						end
 					end
 				end
 
+				if br_text_count == #words then
+					done = true
+				end
 			else
 				--MF_alert("Step " .. tostring(step) .. ", no words here, " .. tostring(letters) .. ", " .. tostring(jletters))
 				
@@ -297,8 +324,10 @@ function calculatesentences(unitid,x,y,dir)
 		return nil
 	end
 	
+	if (#branches == 0 and not br_calling_calculatesentences_branch) then
 	if (verbfound == false) or (step < 3) or (objfound == false) then
-		return {},{},0,0,{},{}
+		return {},{},0,0,{},{},{}
+	end
 	end
 	
 	maxpos = step
@@ -358,199 +387,68 @@ function calculatesentences(unitid,x,y,dir)
 		end
 	end
 	-- @End Phase 2
-	for br_index, branch in ipairs(branches) do
-		br_sentences,br_finals,br_maxpos,br_totalvariants,br_sent_ids,perp_br_and_texts_with_split_parsing = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir)
-		maxpos = math.max(maxpos, br_maxpos + branch.step_index)
 
-		if (br_totalvariants >= limiter) then
-			MF_alert("Level destroyed - too many variants C")
-			destroylevel("toocomplex")
-			return nil
-		end
+	-- br_per_sentence_data.branching_sentence_start_index = #sentences -- Record the starting index in the table "sentences" where branching sentences start
 
-		for unitid, _ in pairs(perp_br_and_texts_with_split_parsing) do
-			br_and_text_with_split_parsing[unitid] = true
-		end
+	-- local merged_sentences = {} 
+	-- local merged_sentence_ids = {} 
+	-- local merged_totalvariants = 0
+	local merged_sentences, merged_sentence_ids, merged_totalvariants, merged_maxpos, merged_br_and_text_with_split_parsing, br_sentence_metadata = br_process_branches(branches, br_dir, found_branch_on_last_word, limiter)
 
-		-- If the end of the original sentence has a valid branch, then append that branch onto the main sentences
-		if found_branch_on_last_word and br_index == 1 then -- 
-			local oldtotalvariants = totalvariants
-			totalvariants = totalvariants * br_totalvariants
-			
-			if (totalvariants >= limiter) then
-				MF_alert("Level destroyed - too many variants F")
-				destroylevel("toocomplex")
-				return nil
-			end
-
-			for s, rhs_sentence in ipairs(br_sentences) do
-				if s == #br_sentences then
-					for a=1,oldtotalvariants do
-						local lhs_sentence = sentences[a]
-						for _, word in ipairs(rhs_sentence) do
-							table.insert(lhs_sentence, word)
-						end
-						sentence_ids[a] = sentence_ids[a]..br_sent_ids[s]
-					end
-				else
-					for a=1,oldtotalvariants do
-						local final_sentence = {}
-						local lhs_sentence = sentences[a]
-						for _, word in ipairs(lhs_sentence) do
-							table.insert(final_sentence, word)
-						end
-						for _, word in ipairs(rhs_sentence) do
-							table.insert(final_sentence, word)
-						end
-						table.insert(sentences, final_sentence)
-						table.insert(finals, {})
-						table.insert(sentence_ids, sentence_ids[a]..br_sent_ids[s])
-					end
-				end
-			end
-		else
-			if #branch.branching_texts > 0 then
-				totalvariants = totalvariants + branch.lhs_totalvariants * br_totalvariants
-				if (totalvariants >= limiter) then
-					MF_alert("Level destroyed - too many variants E")
-					destroylevel("toocomplex")
-					return nil
-				end
-
-				for step = 1, branch.step_index do
-					combo[step] = 1
-				end
-
-				local branch_text_combo = 1
-
-				for i = 1, branch.lhs_totalvariants do
-					local br_step = 1
-					local lhs_sentence = {}
-					local lhs_sent_id_base = ""
-
-					-- Determine the lhs sentence before the branching point. Also build the sentence id base based off a similar algorithm to how an entry in the table "sentence_ids" gets calculated (See phase 2)
-					while (br_step <= branch.step_index) do
-						local c = combo[br_step]
-						
-						if (c ~= nil) then
-							if (c > 0) then
-								
-								local word = nil
-								if br_step == branch.step_index then
-									word = branch.branching_texts[c]
-								else
-									local s = sents[br_step]
-									word = s[c]
-								end
-								
-								local w = word[2]
-								
-								-- table.insert(sentences[i], {word[3], word[4], word[1], word[2]})
-								local text_name = parse_branching_text(word[3])
-								if text_name == "and" then
-									text_name = word[3]
-								end
-								table.insert(lhs_sentence, {text_name, word[4], word[1], word[2]})
-
-								lhs_sent_id_base = lhs_sent_id_base..tostring(c - 1)
-								
-								br_step = br_step + w
-							else
-								break
-							end
-						else
-							MF_alert("c is nil, " .. tostring(step))
-							break
-						end
-					end
-
-					-- Construct all sentences by cross producting the lhs sentences and all sentences after the branching point
-					for i, rhs_sent in ipairs(br_sentences) do
-						local final_sentence = {}
-						local final_sentid = lhs_sent_id_base
-						for _, sent_word in ipairs(lhs_sentence) do
-							table.insert(final_sentence, sent_word)
-						end
-						
-						for _, sent_word in ipairs(rhs_sent) do
-							table.insert(final_sentence, sent_word)
-						end
-
-						-- Omni text does sentence ids a bit differently than the main game. For context a "sentence id" is a unique id within the scope of a single calculatesentences() call that identifies the sentence by
-						-- a concatenation of indexes of each word within its slot. For example, if the game has Baba/Keke is you/push, and we parse the sentence "Baba is push", the sentence id would look like "112" where 
-						-- the two 1s represent the first word of the first slot (Baba) and the first word of the second slot (is), while the "2" represents the second word of the third slot (push).
-
-						-- The problem with this id scheme is that if the index is at least two digits, then you store more characters to represent a single slot. If in the previous example, the index of "push" was 10, then
-						-- the sentence id of "baba is push" would be "1110", where the last two characters represent the third slot. However, these sentence ids also get spliced to represent sub sentences and the splicing
-						-- assumes that each character in a sentence id = 1 slot (look for "string.sub(sent_id,...)"). This could lead to id collisions since splicing "1112" and "1113" after the third "1" will yield the
-						-- same sub sentence id, even if "1113" actually represents 3 slots while "1112" represents 4 slots.
-
-						-- As of 5/19/21, we don't know how Hempuli will resolve this, if at all. So in omni text, we do our own implementation of this. A BIG assumption is that the game does not interpret the index information
-						-- directly from the sentence id. It only uses the combination of indexes to uniquely identify a sentence. So knowing this, we can put in any character to represent an index within each slot, which includes
-						-- letters. With this implementation, ascii values from 58-126 are supported, which significantly increases the max num of stacked text it could handle without losing support of detecting stacked text bugs.
-
-						-- One thing to note is that the lhs sentences still uses the old algorithm while the branched sentences uses the new algorithm. This is so that splicing the lhs part of the sent id will match other sentences
-						-- that share the same slots.
-						local id_index = 1
-						for c in br_sent_ids[i]:gmatch"." do
-							local maxcombo = combo[branch.step_index + id_index] or 0
-							local asciicode = string.byte(c) + maxcombo
-							if asciicode > 126 then
-								asciicode = 126
-							end
-							final_sentid = final_sentid..string.char(asciicode)
-							id_index = id_index + 1
-						end
-						
-						table.insert(sentences, final_sentence)
-						table.insert(finals, {})
-						table.insert(sentence_ids, final_sentid)
-					end
-
-					if (branch.num_combospots > 0) then
-						combostep = 0
-						
-						local targetstep = combospots[combostep + 1]
-						
-						combo[targetstep] = combo[targetstep] + 1
-
-						local combo_num = 0
-						local maxcombo = 0
-						if targetstep == branch.step_index then
-							combo_num = branch_text_combo
-							maxcombo = #branch.branching_texts
-						else
-							combo_num = combo[targetstep]
-							maxcombo = variantshere[targetstep]
-						end
-						
-						while (combo_num > maxcombo) do
-							if targetstep == branch.step_index then
-								branch_text_combo = 1
-							else
-								combo[targetstep] = 1
-							end
-							
-							combostep = (combostep + 1) % branch.num_combospots
-							
-							targetstep = combospots[combostep + 1]
-							
-							
-							if targetstep == branch.step_index then
-								branch_text_combo = branch_text_combo + 1
-								combo_num = branch_text_combo
-								maxcombo = #branch.branching_texts
-							else
-								combo[targetstep] = combo[targetstep] + 1
-								combo_num = combo[targetstep]
-								maxcombo = variantshere[targetstep]
-							end
-						end
-					end
-				end
-			end
-		end
+	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	if merged_sentences == nil then
+		-- Oh no! A too complex!
+		return nil
 	end
+	
+	if found_branch_on_last_word then
+		sentences = {}
+		finals = {}
+		sentence_ids = {}
+		if merged_totalvariants > 0 then
+			totalvariants = merged_totalvariants
+		end
+		maxpos = merged_maxpos
+	else
+		if merged_totalvariants > 0 then
+			totalvariants = totalvariants + merged_totalvariants
+		end
+		maxpos = math.max(maxpos, merged_maxpos)
+	end
+		
+	if (totalvariants >= limiter) then
+		MF_alert("Level destroyed - too many variants F")
+		destroylevel("toocomplex")
+		return nil
+	end
+
+	local sentence_metadata = {}
+	for _, sentence in ipairs(sentences) do
+		local branching_points_bitfield = {}
+		for _, word in ipairs(sentence) do
+			table.insert(branching_points_bitfield, false) -- @TODO: this might be used for fixing something related to pivot text. Look into this
+		end
+		-- @TODO: this metadata might be useful for getting sentence elimination to work post 420d
+		table.insert(sentence_metadata, {
+			branching_points_bitfield = branching_points_bitfield
+		})
+	end
+	for _, metadata in ipairs(br_sentence_metadata) do
+		table.insert(sentence_metadata, metadata)
+	end
+
+	for _, merged_sent in ipairs(merged_sentences) do
+		table.insert(sentences, merged_sent)
+		table.insert(finals, {})
+	end
+	for _, merged_sent_id in ipairs(merged_sentence_ids) do
+		table.insert(sentence_ids, merged_sent_id)
+	end
+	for unitid, _ in pairs(merged_br_and_text_with_split_parsing) do
+		br_and_text_with_split_parsing[unitid] = true
+	end
+	
 	--[[
 	MF_alert(tostring(totalvariants) .. ", " .. tostring(#sentences))
 	for i,v in ipairs(sentences) do
@@ -564,7 +462,7 @@ function calculatesentences(unitid,x,y,dir)
 	end
 	]]--
 	
-	return sentences,finals,maxpos,totalvariants,sentence_ids,br_and_text_with_split_parsing
+	return sentences,finals,maxpos,totalvariants,sentence_ids,br_and_text_with_split_parsing, sentence_metadata
 end
 
 function docode(firstwords)
@@ -577,7 +475,76 @@ function docode(firstwords)
 	local donefirstwords = {}
 	local existingfinals = {}
 	local limiter = 0
-	local no_firstword_br_text = {} -- Record of branching texts that should not be processed as a firstword (prevents double parsing in certain cases)
+
+	--[[ @omni-text no_firstword_br_text: 
+		A list of omni texts that should not, in any circumstances, be processed as a firstword, starting from the moment it was recorded
+		in this table. There are two main cases where an omni text gets inserted:
+			Case 1: if the current firstword is an omni text. 
+				- once an omni text has been processed as a firstword, it cannot be processed as a firstword again (regardless of parsing direction)
+			Case 2: If the omni text has proven to be part of a valid sentence
+				- This is a more complex reason that deals with the nature of split parsing. More details are explained in the next comment
+	 ]]
+	local no_firstword_br_text = {}
+
+	--[[ @omni-text Deferred Firstwords:
+		This table mostly leverages no_firstword_br_text to do the actual dup sentence cancellation. However, its main function is to defer processing any
+		firstwords that are also omni texts. Any deferred firstwords will be readded to the firstword queue (the variable is just called "firstwords" but I'll
+		refer it as a queue) once the queue is empty.
+
+		Why do we need this table? It mainly has to do with Case 2 for adding to no_firstword_br_text. Imagine you have this text layout:
+			
+			baba omni_on keke is you
+				   me
+				   is
+				  push 
+
+		The two initial firstwords will be "baba" parsed horizontally and "omni_on" parsed vertically. Without deferred_firstwords, if "omni_on" gets processed 
+		first, it will bypass the omni_on to get "keke is you" and "me is push". Then "baba" is processed as a firstword to get "baba on keke is you" and
+		"baba on me is push". 
+		
+		So you get four sentences, but doesn't it feel weird that it spits out "keke is you" and "me is push"? 
+		In comparison, if you had "baba on keke is you", you wouldn't expect it to be parsed as both "baba on keke is you" and "keke is you". deferred_firstwords deals with a similar issue for omni text.
+
+		Although we cannot fully control which firstwords should be processed first (unless you want to port most of the parsing code just for this purpose),
+		we could still control which would be processed *last*. In the above example, if we defer processing of the "omni_on" firstword and let the "baba" firstword
+		process, by Case 2 "omni_on" will be added to no_firstword_br_text. Then when we try to process the deferred "omni_on" firstword, it will be stopped
+		since no_firstword_br_text has it. Therefore we removed a duplicated sentence.
+	 ]]
+	local deferred_firstwords = {}
+
+	--[[ 
+		While no_firstword_br_text and deferred_firstwords deal with dup sentence cancellation on the front end (through firstwords), these variables deal with it
+		on the tail end. Consider this example:
+
+			baba is you omni_and lonely
+						  push
+
+		Now "lonely" isn't in correct syntax, but the parser works by extracting consecutive texts and seperating each combination into their own array. THEN afterwards
+		it runs each sentence through the syntax checker. Omni text works similar, but it extracts it by split parsing. So the above example gets split into:
+
+			baba is you and lonely -> baba is you
+			baba is you and push -> baba is you and push
+
+		One thing to note is that syntax checker is designed to extract valid sub sentences within junk text. So a text layout like "push push baba is you push push"
+		will still yield "baba is you", discarding the "push"es as junk text. With this in mind, the sentence to the right of the arrows shows the sentence after
+		running through the syntax checker.
+
+		See the problem? It's weird for the single "baba is you" to be parsed from the text layout. It's similar to the problem presented in the previous comment, but
+		this time its on the tail end of the sentence. We can't actively prevent the "baba is you and lonely" from being run through the syntax checker. 
+		But we CAN eliminate it AFTER the syntax checker.
+
+		The basic idea is to detect which sentences are left with a "dangling and". A dangling and is simply an "and" at the end of a sentence. It occurs in the 
+		main game code due to how the parser handles "and"s as potential to have more words appended to it, but without any words actually being appended. This code
+		keeps track of any dangling and sentences with the key of calculatesentences id + lhs sentid before last omni "and". But the protocol is this:
+			- If a "full sentence" (sentence without dangling and) has calculatesentences id + lhs sentid combo, the slot with that id combo will be labeled as "disabled"
+				- if the slot already has a dangling and sentence, delete the dangling and sentence and override the slot to be disabled
+			- If a dangling and sentence tries to add itself to a slot that's disabled OR occupied, remove the sentence
+		This protocol tries to account for the tree-like parsing that occurs in omni text
+	 ]]
+	local deferred_dang_and_addoptions = {}
+	local branch_elimination_tracker = {} -- calculateSentID -> { LHS Sent id -> (-1 = disabled | dang_sent_id)}
+	local calc_sent_id = 0 -- Id representing each call to calculatesentences()
+	local curr_dang_and_sent_id = 0  -- Id representing each dangling and sentence that was parsed
 	
 	if (#firstwords > 0) then
 		for k,unitdata in ipairs(firstwords) do
@@ -595,7 +562,14 @@ function docode(firstwords)
 			local existing_wordid = unitdata[7] or 1
 			local existing_id = unitdata[8] or ""
 			local existing_br_and_text_with_split_parsing = unitdata[9] or {}
-			
+			local existing_br_sentence_metadata = unitdata[10] or {}
+			local is_deferred_sentence = unitdata[50] or false -- @TODO: uggh I hate having to set an arbitrary index for this
+			local curr_calc_sent_id = unitdata[11] or calc_sent_id
+
+			if BRANCHING_TEXT_LOGGING then
+				print("-- next firstword --")
+			end
+
 			if (string.sub(word, 1, 5) == "text_") then
 				word = string.sub(word, 6)
 			end
@@ -604,6 +578,24 @@ function docode(firstwords)
 			local x,y = unit.values[XPOS],unit.values[YPOS]
 			local tileid_id = x + y * roomsizex
 			local unique_id = tostring(tileid_id) .. "_" .. existing_id
+
+			if name_is_branching_text(unit.strings[NAME], true, false) then
+				--@TODO(sent id)
+				-- existing_id = convert_sent_id(existing_id, false)
+				local normal_sent_id = ""
+				for c in existing_id:gmatch"." do
+					local asciicode = string.byte(c)
+					local index = 0
+					if asciicode >= 65 and asciicode <= 90 then
+						index = asciicode - 65
+					elseif asciicode >= 97 and asciicode <= 122 then
+						index = asciicode - 97
+					end
+					normal_sent_id = normal_sent_id..tostring(index)
+				end
+				existing_id = normal_sent_id
+				unique_id = tostring(tileid_id) .. "_" .. existing_id
+			end
 			
 			--MF_alert("Testing " .. word .. ": " .. tostring(donefirstwords[unique_id]) .. ", " .. tostring(dir) .. ", " .. tostring(unitid) .. ", " .. tostring(unique_id))
 			
@@ -622,11 +614,60 @@ function docode(firstwords)
 				MF_alert("Already used: " .. tostring(unitid) .. ", " .. tostring(unique_id))
 			end
 			]]--
+			if BRANCHING_TEXT_LOGGING then 
+				print("firstword: "..unit.strings[NAME].." | word index: "..existing_wordid.." | deferred: "..tostring(is_deferred_sentence).. " | Sentence Id: "..unique_id .. " | dir: ".. tostring(dir))
+			end
 			
-			if (not no_firstword_br_text[unitid]) and ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil)) and (limiter < 5000)) then
+			local deferred = false
+			if name_is_branching_text(unit.strings[NAME], true, false) and not is_deferred_sentence then
+				deferred = true
+				unitdata[50] = true
+				if BRANCHING_TEXT_LOGGING then 
+					print("Deferred firstword!! Word: "..unit.strings[NAME])
+				end
+				table.insert(deferred_firstwords, unitdata)
+			else
+				if existing_br_sentence_metadata.branching_points_bitfield then
+					if existing_br_sentence_metadata.branching_points_bitfield[existing_wordid] then
+						dir = get_perp_direction(dir)
+					end
+				end
+	
+				if name_is_branching_text(unit.strings[NAME], true, false) then
+					--@TODO(sent id)
+					-- existing_id = convert_sent_id(existing_id, false)
+					local normal_sent_id = ""
+					for c in existing_id:gmatch"." do
+						local asciicode = string.byte(c)
+						local index = 0
+						if asciicode >= 65 and asciicode <= 90 then
+							index = asciicode - 65
+						elseif asciicode >= 97 and asciicode <= 122 then
+							index = asciicode - 97
+						end
+						normal_sent_id = normal_sent_id..tostring(index)
+					end
+					existing_id = normal_sent_id
+					unique_id = tostring(tileid_id) .. "_" .. existing_id
+				end
+
+				if BRANCHING_TEXT_LOGGING then 
+					if not ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil))) then
+						print("sent id cancellation!! Unique id: "..unique_id.. " x:"..x.." y:"..y.." dir:"..dir.." Word: "..unit.strings[NAME])
+						for _, v in ipairs(existing) do
+							print(v[1])
+						end	
+					end
+					if no_firstword_br_text[unitid] then
+						print("no_firstword_br_text!! Word: "..unit.strings[NAME])
+					end
+				end
+			end
+			
+			if (not deferred and not no_firstword_br_text[unitid]) and ((donefirstwords[unique_id] == nil) or ((donefirstwords[unique_id] ~= nil) and (donefirstwords[unique_id][dir] == nil)) and (limiter < 5000)) then
 				local ox,oy = 0,0
 				local name = word
-				
+
 				local drs = dirs[dir]
 				ox = drs[1]
 				oy = drs[2]
@@ -636,6 +677,9 @@ function docode(firstwords)
 				end
 				
 				donefirstwords[unique_id][dir] = 1
+				if name_is_branching_text(name, true, false) then
+					no_firstword_br_text[unitid] = true
+				end
 								
 				local sentences = {}
 				local finals = {}
@@ -643,19 +687,66 @@ function docode(firstwords)
 				local variations = 1
 				local sent_ids = {}
 				local br_and_text_with_split_parsing = {}
+				local br_sentence_metadata = {}
 
 				local sents_that_might_be_removed = {}
 				local and_index = 0
 				local and_unitid_to_index = {}
 
 				if (#existing == 0) then
-					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing = calculatesentences(unitid,x,y,dir)
+					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
+					curr_calc_sent_id = calc_sent_id
+					calc_sent_id = calc_sent_id + 1
+
+					if BRANCHING_TEXT_LOGGING then 
+						print("==== "..dir.." variations: "..variations)
+					end
+					for i, sent in ipairs(sentences) do
+						if BRANCHING_TEXT_LOGGING then 
+							print("---")
+							print("sent id:"..sent_ids[i])
+							for _, word in ipairs(sent) do
+								print(word[1])
+							end
+						end
+						
+						--[[ 
+							@omni-text: this deals with the optimization introduced in 421d where calculatesentences() skips texts that would "obviously" not start a sentence.
+							(Ex: "push", "facing" and "has" cannot start a sentence.) The optimization would've skipped the omni text, preventing it from being counted as
+							a firstword and and its sentence deferred (see the purpose of variables deferred_firstwords and no_firstword_br_text). To solve this, 
+							calculatesentences() was modified so that it doesn't skip omni texts, even though it would be counted as an "obvious" text that would not start a sentence.
+							calculatesentences() would then output sentences that start with omni texts at the beginning, if found. When that happens, we defer the overall sentence.
+							]]
+						local word = sent[1]
+						local start_word_unitid = word[3][1]
+						local u = mmf.newObject(start_word_unitid)
+						if start_word_unitid ~= unitid and name_is_branching_text(u.strings[NAME], true, false) then
+							local deferred_firstword = {word[3], dir, word[4], word[1], word[2], sent, 1, sent_ids[i], br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id}
+							deferred_firstword[50] = true
+							table.insert(deferred_firstwords, deferred_firstword)
+
+							if BRANCHING_TEXT_LOGGING then 
+								print("deferred above sentence from calc sentences")
+							end
+
+							sentences[i] = {}
+						end
+					end
+					assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
 				else
 					sentences[1] = existing
 					maxlen = 3
 					finals[1] = {}
 					sent_ids = {existing_id}
-					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing
+					br_and_text_with_split_parsing = existing_br_and_text_with_split_parsing --@TODO: do we still need this?
+					br_sentence_metadata = existing_br_sentence_metadata
+
+					if BRANCHING_TEXT_LOGGING then 
+						print("---existing- dir: "..dir.." sent id:".. existing_id)
+						for _, word in ipairs(existing) do
+							print(word[1])
+						end
+					end
 				end				
 
 				if (sentences == nil) then
@@ -663,6 +754,7 @@ function docode(firstwords)
 				end
 
 				local filler_text_found_in_parsing = {}
+				local finals_with_dangling_ands = {} -- list of indexes in finals with dangling branching ands
 				
 				--[[
 				-- BIG DEBUG MESS
@@ -716,6 +808,7 @@ function docode(firstwords)
 						local thissent = ""
 						
 						local j = 0
+						local last_branching_and_wordid = existing_wordid
 						local do_branching_and_sentence_elimination = false
 						for wordid=existing_wordid,#sent do
 							j = j + 1
@@ -880,10 +973,11 @@ function docode(firstwords)
 							end
 							end
 							
-							if stage3reached and not stop and tilename == "branching_and" then
+							if stage3reached and not stop and name_is_branching_and(tilename, true, false) then
 								local br_and_unit = mmf.newObject(tileid)
 								if br_and_text_with_split_parsing[tileid] then
 									do_branching_and_sentence_elimination = true
+									last_branching_and_wordid = wordid
 								end
 							end
 							
@@ -956,26 +1050,26 @@ function docode(firstwords)
 										if (#notids > 0) and firstrealword and (notslot > 1) and ((tiletype ~= 7) or ((tiletype == 7) and (prevtiletype == 0))) and ((tiletype ~= 1) or ((tiletype == 1) and (prevtiletype == 0))) then
 											-- MF_alert(tostring(notslot) .. ", not -> A, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, (notslot - existing_wordid)+1)
-											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing})
+											table.insert(firstwords, {notids, dir, notwidth, "not", 4, sent, notslot, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											
 											if (nexts[2] ~= nil) and ((nexts[2] == 0) or (nexts[2] == 3) or (nexts[2] == 4)) and (tiletype ~= 3) then
 												-- MF_alert(tostring(wordid) .. ", " .. tilename .. " -> B, " .. unique_id .. ", " .. sent_id)
 												subsent_id = string.sub(sent_id, j)
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											end
 										else
 											if (prevtiletype == 0) and ((tiletype == 1) or (tiletype == 7)) then
 												-- MF_alert(tostring(wordid-1) .. ", " .. sent[wordid - 1][1] .. " -> C, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, wordid - existing_wordid)
-												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing})
+												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 4) and (tiletype ~= 1) and (tiletype ~= 2) then
 												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
-												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing})
+												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											else
 												-- MF_alert(tostring(wordid) .. ", " .. tilename .. " -> E, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, j)
-												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
+												table.insert(firstwords, {s[3], dir, tilewidth, tilename, tiletype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											end
 										end
 										
@@ -984,7 +1078,7 @@ function docode(firstwords)
 										if (nexts[3][1] ~= -1) then
 											-- MF_alert(tostring(wordid+1) .. ", " .. nexts[1] .. " -> F, " .. unique_id .. ", " .. sent_id)
 											local subsent_id = string.sub(sent_id, j+1)
-											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing})
+											table.insert(firstwords, {nexts[3], dir, nexts[4], nexts[1], nexts[2], sent, wordid+1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 										end
 										
 										break
@@ -994,64 +1088,78 @@ function docode(firstwords)
 						end
 
 						if do_branching_and_sentence_elimination then
-							local and_units = {}
-							for _,v in ipairs(current) do
-								local tilename = v[1]
-								if tilename == "branching_and" then
-									table.insert(and_units, tileid_id)
-									if and_unitid_to_index[tileid_id] == nil then
-										and_unitid_to_index[tileid_id] = and_index
-										and_index = and_index + 1
-									end
+							local lhs_sent_id = ""
+							for p = 1, existing_wordid-1 do
+								lhs_sent_id = lhs_sent_id.."*"
+							end
+							lhs_sent_id = lhs_sent_id..string.sub(sent_id, 1, last_branching_and_wordid-existing_wordid+1)
+
+							if BRANCHING_TEXT_LOGGING then
+								print("--do_branching_and_sentence_elimination on this sentence--")
+								for _, word in ipairs(current) do
+									print(word[1])
 								end
 							end
-							table.insert(sents_that_might_be_removed, {index = i, and_units = and_units})
-						end
+							-- eliminate any extra verbs and nots
+							for i=1,#current do
+								local word = current[#current]
+								local wordtype = word[2]
+								local remove = false
+								if wordtype == 4 or wordtype == 1 or wordtype == 7 then
+									remove = true
+								elseif wordtype == 2 then
+									-- Special case where "baba is you and has stop" is somehow parsed fully
+									-- instead of removing the "has stop" because of invalid syntax
+									local prev_word = current[#current-1]
+									if prev_word then
+										local word_name = parse_branching_text(prev_word[1])
+										print("test: "..word_name)
+										if word_name ~= "is" and word_name ~= "and" then
+											remove = true
+										end
+									end
+								end
 
-						--MF_alert(thissent)
-					end
-				end
-
-				local and_combo_count = {}
-				for _, sent_entry in ipairs(sents_that_might_be_removed) do
-					local and_bitmask = 0
-					for _, unitid in ipairs(sent_entry.and_units) do
-						local bitindex = and_unitid_to_index[unitid]
-						and_bitmask = and_bitmask | (1 << bitindex)
-					end
-					if and_combo_count[and_bitmask] == nil then
-						and_combo_count[and_bitmask] = 1
-					else 	
-						and_combo_count[and_bitmask] = and_combo_count[and_bitmask] + 1
-					end
-
-					sent_entry.and_bitmask = and_bitmask
-				end
-				for _, sent_entry in ipairs(sents_that_might_be_removed) do
-					local current = finals[sent_entry.index]
-
-					-- eliminate any extra verbs and nots
-					for i=1,#current do
-						local word = current[#current]
-						local wordtype = word[2]
-						if wordtype == 4 or wordtype == 1 or wordtype == 7 then
-							table.remove(current, #current)
-						end
-					end
-					-- if the resulting sentence has a dangling and, remove the sentence
-					if current[#current][2] == 6 then
-						local curr_count = and_combo_count[sent_entry.and_bitmask]
-						if curr_count - 1 > 0 then
-							-- print("eliminating sentence:")
-							-- for _,v in ipairs(current) do
-							-- 	print(v[1])
-							-- end
-							local sentlen = #current
-							for i=1,sentlen do
-								table.remove(current, #current)
+								if remove then
+									table.remove(current, #current)
+								else
+									break
+								end
 							end
 
-							and_combo_count[sent_entry.and_bitmask] = curr_count - 1
+							-- If the sentence has a dangling and, then the entry for the tracker will be the index of this sentence.
+							-- If the sentence is full, then the entry will be -1, indicating a disabled lhs_sent_id
+							local is_dangling_and_sent = current[#current][2] == 6
+							
+							if not branch_elimination_tracker[curr_calc_sent_id] then
+								branch_elimination_tracker[curr_calc_sent_id] = {}
+							end
+							if not branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] then
+								-- Current slot is empty
+								if is_dangling_and_sent then
+									-- If dangling and sentence, add its entry to the tracker, BUT also save its ids so that
+									-- we can defer processing it until after all firstwords have finished processing
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = curr_dang_and_sent_id
+									finals_with_dangling_ands[i] = {
+										calc_sent_id = curr_calc_sent_id,
+										lhs_sent_id = lhs_sent_id,
+										dang_and_sent_id = curr_dang_and_sent_id,
+									}
+									curr_dang_and_sent_id = curr_dang_and_sent_id + 1
+								else
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = -1
+								end
+							else
+								local curr_entry = branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id]
+								if curr_entry == -1 and is_dangling_and_sent then
+									-- A full sentence with the same lhs has already been added. Remove the dangling and sentence.
+									finals[i] = {}
+								elseif curr_entry ~= -1 and not is_dangling_and_sent then
+									-- Override the curr dangling and sent id. After processing all firstwords, the deferred dangling and
+									-- sentences will look at the tracker to find that their entry has been deleted. So delete the sentence.
+									branch_elimination_tracker[curr_calc_sent_id][lhs_sent_id] = -1
+								end
+							end
 						end
 					end
 				end
@@ -1108,6 +1216,15 @@ function docode(firstwords)
 						end
 						
 						if valid then
+							local is_dangling_and = finals_with_dangling_ands[i] ~= nil
+							local addoption_buffer = {}
+							if is_dangling_and then
+								table.insert(deferred_dang_and_addoptions, {
+									addoption_calls = addoption_buffer,
+									tracker_ids = finals_with_dangling_ands[i],
+								})
+							end
+
 							for index,wdata in ipairs(sentence) do
 								local wname = wdata[1]
 								local wtype = wdata[2]
@@ -1116,8 +1233,12 @@ function docode(firstwords)
 								-- Record all branching text that is part of a valid sentence
 								for _, unitid in ipairs(wid) do
 									local unit = mmf.newObject(unitid)
-									if name_is_branching_text(unit.strings[NAME]) and (wtype == 6 or wtype == 7) and (stage == 0 or stage == 7) then
+									if name_is_branching_text(unit.strings[NAME], true, false) and (wtype == 6 or wtype == 7 or wtype == 1) and (stage == 0 or stage == 7) then
 										no_firstword_br_text[unitid] = true
+
+										if BRANCHING_TEXT_LOGGING then
+											print("Adding no_firstword_br_text: "..unit.strings[NAME])
+										end
 									end
 								end
 								
@@ -1159,7 +1280,7 @@ function docode(firstwords)
 										local sent = sentence.sent
 										local wordid = wdata[5]
 										local subsent_id = wdata[6]
-										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype, sent, wordid, subsent_id, br_and_text_with_split_parsing})
+										table.insert(firstwords, {{wid[1]}, dir, 1, wname, wtype, sent, wordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 										break
 									end
 								elseif (wcategory == 1) then
@@ -1170,7 +1291,7 @@ function docode(firstwords)
 										local testunit = mmf.newObject(wid[1])
 										if name_is_branching_text(testunit.strings[NAME]) then
 											realname = unitreference["text_"..testunit.strings[NAME]]
-											if testunit.strings[NAME] == "branching_is" or testunit.strings[NAME] == "branching_play" then
+											if name_is_branching_text_with_special_unitreference(testunit.strings[NAME]) then
 												realname = unitreference["text_"..wname]
 											else
 												realname = unitreference["text_"..testunit.strings[NAME]]
@@ -1326,12 +1447,39 @@ function docode(firstwords)
 											end
 										end
 
-										addoption(rule,finalconds,ids)
+										if is_dangling_and then
+											table.insert(addoption_buffer, {rule=rule,finalconds=finalconds,ids=ids})
+										else
+											addoption(rule,finalconds,ids)
+										end
 									end
 								end
 							end
 						end
 					end
+				end
+			end
+
+			-- If there are no more firstwords needed to be processed but we have deferred firstwords, add them back in
+			if k == #firstwords then
+				for _, deferred_firstword in ipairs(deferred_firstwords) do
+					table.insert(firstwords, deferred_firstword)
+				end
+				deferred_firstwords = {}
+			end	
+		end
+	end
+
+	-- At the VERY END, go through all deferred dangling and sentences and check if the tracker still holds their dang_sent_id.
+	-- If so, call addoption with the saved parameters. If not, the sentence is implicitly deleted. 
+	for _, data in ipairs(deferred_dang_and_addoptions) do
+		local dang_sent_id = data.tracker_ids.dang_and_sent_id
+		if branch_elimination_tracker[data.tracker_ids.calc_sent_id][data.tracker_ids.lhs_sent_id] == dang_sent_id then
+			for _, call in ipairs(data.addoption_calls) do
+				addoption(call.rule,call.finalconds,call.ids)
+
+				if BRANCHING_TEXT_LOGGING then
+					print("Adding danging and sentence!")
 				end
 			end
 		end
@@ -1532,6 +1680,7 @@ function code(alreadyrun_)
 	--[[ 
 		@mods(this) - Override reason: provide hook for do_subrule_this and also update_raycast units 
 			before doing any processing
+		@mods(omni text) - Override reason: when checking for the first round of firstwords, we need to adjust which spaces to check for pivot text to be an initial firstword
 	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
@@ -1607,8 +1756,22 @@ function code(alreadyrun_)
 					
 					if (alreadyused[tileid] == nil) and (unit.values[TYPE] ~= 5) and (unit.flags[DEAD] == false) then
 						for i=1,2 do
+							--[[
+								@mods(omni text) - If its pivot text, forward direction should be perpendicular 
+								Context: A firstword is a starting text object where the game starts extracting sentences. It determines these set of texts through a simple criteria:
+									1. The space behind it does not contain any texts
+									2. The space in front of it contains at least one text
+								("front" and "behind" are relative to the current parsing direction, which can either be right or down)
+								If we are checking on a pivot text for firstword eligibility, instead of checking in opposite directions, we have to check in perpendicular directions
+							 ]]
+							local forward_dir = i
+							-- print("perp: "..unit.strings[NAME])
+							if name_is_branching_text(unit.strings[NAME], false, true) then
+								forward_dir = get_perp_direction(i)
+							end
+
 							local drs = dirs[i+2]
-							local ndrs = dirs[i]
+							local ndrs = dirs[forward_dir]
 							ox = drs[1]
 							oy = drs[2]
 							nox = ndrs[1]
@@ -1617,7 +1780,7 @@ function code(alreadyrun_)
 							--MF_alert("Doing firstwords check for " .. unit.strings[UNITNAME] .. ", dir " .. tostring(i))
 							
 							local hm = codecheck(unitid,ox,oy,i)
-							local hm2 = codecheck(unitid,nox,noy,i)
+							local hm2 = codecheck(unitid,nox,noy,forward_dir)
 							
 							if (#hm == 0) and (#hm2 > 0) then
 								--MF_alert("Added " .. unit.strings[UNITNAME] .. " to firstwords, dir " .. tostring(i))
@@ -1673,7 +1836,13 @@ function code(alreadyrun_)
 					end
 				end
 				
+				if BRANCHING_TEXT_LOGGING then
+					print("<<<<<<<<<<<<<start>")
+				end
 				docode(firstwords,wordunits)
+				if BRANCHING_TEXT_LOGGING then
+					print("<<<<<<<<<<<<<end>")
+				end
 				do_subrule_this()
 				subrules()
 				grouprules()
