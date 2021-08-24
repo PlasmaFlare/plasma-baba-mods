@@ -2233,7 +2233,9 @@ function levelblock()
 					local targets = findallfeature(nil,"is","done",true)
 					local found = false
 					
-					for i,v in ipairs(targets) do
+					local levelunits_ = {}
+					
+					for a,v in ipairs(targets) do
 						local unit = mmf.newObject(v)
 						
 						if (unit.className ~= "level") then
@@ -2242,18 +2244,26 @@ function levelblock()
 						end
 					end
 					
+					if (objectlist["level"] ~= nil) then
+						for a,unit in ipairs(units) do
+							if (unit.className == "level") then
+								table.insert(levelunits_, unit.fixed)
+							end
+						end
+					end
+					
 					if found then
 						if (generaldata.strings[WORLD] == generaldata.strings[BASEWORLD]) and (editor.values[INEDITOR] == 0) then
 							MF_playsound("doneall_c")
 							MF_allisdone()
-						elseif (editor.values[INEDITOR] ~= 0) and (#targets >= #units - #codeunits) then
+						elseif (editor.values[INEDITOR] ~= 0) and (#targets >= #units - #codeunits - #levelunits_) then
 							local pmult = checkeffecthistory("win")
 							
 							MF_playsound("doneall_c")
 							MF_done_single()
 							MF_win()
 							break
-						elseif (#targets >= #units - #codeunits) then
+						elseif (#targets >= #units - #codeunits - #levelunits_) then
 							local pmult = checkeffecthistory("win")
 							
 							local mods_run = do_mod_hook("levelpack_done", {})

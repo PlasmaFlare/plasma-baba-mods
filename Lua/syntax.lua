@@ -87,6 +87,8 @@ function addunit(id,undoing_,levelstart_)
 	unit.colours = {}
 	unit.currcolour = 0
 	unit.followed = -1
+	unit.xpos = unit.values[XPOS]
+	unit.ypos = unit.values[YPOS]
 	
 	if (spritedata.values[VISION] == 1) and (undoing == false) then
 		local hasvision = hasfeature(name,"is","3d",id,unit.values[XPOS],unit.values[YPOS])

@@ -120,7 +120,7 @@ function delunit(unitid)
 			for i,v in pairs(visiontargets) do
 				if (v == unitid) then
 					local currentundo = undobuffer[1]
-					table.insert(currentundo.visiontargets, unit.values[ID])
+					--table.insert(currentundo.visiontargets, unit.values[ID])
 					v = {}
 					table.remove(visiontargets, i)
 				end
