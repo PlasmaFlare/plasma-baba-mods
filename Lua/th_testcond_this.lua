@@ -55,7 +55,7 @@ function parse_this_param_and_get_raycast_units(this_param)
     if not end_index then
         end_index = #this_param
     end
-    local this_param_name = string.sub(this_param, 1, end_index-1) 
+    local this_param_name = this_param_name..string.sub(this_param, 1, end_index-1) 
     local param_id = string.sub(this_param, end_index + 1)
 
     local this_unitid = nil

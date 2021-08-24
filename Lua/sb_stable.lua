@@ -68,6 +68,8 @@ local turnid = 1
 local curr_stable_this_id = STABLE_THIS_ID_BASE
 local on_undo = false
 local stable_state_updated = false
+local stablerule_timer = 0 -- Used mainly for changing color on stablerule display
+local TIMER_PERIOD = 400 -- Used mainly for changing color on stablerule display
 
 local STABLE_LOGGING = false
 
@@ -186,43 +188,50 @@ local function get_stablerule_display(feature)
 
     if (#conds > 0) then
         for a,cond in ipairs(conds) do
-            local middlecond = true
-            
-            if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
-                middlecond = false
-            end
-            
-            if middlecond then
-                if (#custom == 0) then
-                    text = text .. cond[1] .. " "
-                else
-                    text = text .. custom .. " "
+            if cond[1] ~= "this" and cond[1] ~= "not this" then
+                local middlecond = true
+                
+                if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
+                    middlecond = false
                 end
                 
-                if (cond[2] ~= nil) then
-                    if (#cond[2] > 0) then
-                        for c,d in ipairs(cond[2]) do
-                            if (#custom == 0) then
-                                text = text .. d .. " "
-                            else
-                                text = text .. custom .. " "
-                            end
-                            
-                            if (#cond[2] > 1) and (c ~= #cond[2]) then
-                                text = text .. "& "
+                if middlecond then
+                    if (#custom == 0) then
+                        text = text .. cond[1] .. " "
+                    else
+                        text = text .. custom .. " "
+                    end
+                    
+                    if (cond[2] ~= nil) then
+                        if (#cond[2] > 0) then
+                            for c,d in ipairs(cond[2]) do
+                                local this_param_name = parse_this_param_and_get_raycast_units(d)
+                                if this_param_name then
+                                    text = text .. this_param_name.." "
+                                else
+                                    if (#custom == 0) then
+                                        text = text .. d .. " "
+                                    else
+                                        text = text .. custom .. " "
+                                    end
+                                    
+                                    if (#cond[2] > 1) and (c ~= #cond[2]) then
+                                        text = text .. "& "
+                                    end
+                                end
                             end
                         end
                     end
-                end
-                
-                if (a < #conds) then
-                    text = text .. "& "
-                end
-            else
-                if (#custom == 0) then
-                    text = cond[1] .. " " .. text
+                    
+                    if (a < #conds) then
+                        text = text .. "& "
+                    end
                 else
-                    text = custom .. " " .. text
+                    if (#custom == 0) then
+                        text = cond[1] .. " " .. text
+                    else
+                        text = custom .. " " .. text
+                    end
                 end
             end
         end
@@ -450,6 +459,7 @@ local function make_stable_indicator()
     indicator.values[ONLINE] = 1
     indicator.layer = 1
     indicator.direction = 27
+    indicator.values[ZLAYER] = 30
     MF_loadsprite(indicator_id,"stable_indicator_0",27,true)
     MF_setcolour(indicator_id,3,3)
     return indicator_id
@@ -572,16 +582,35 @@ function update_stable_state()
                     
                     local ruleids = {} -- Get a list of ruleids 
                     for ruleid, v in pairs(stable_rules[name]) do
-                        table.insert(ruleids, ruleid)
+                        local conds_to_test = {}
+                        for _, cond in ipairs(v.feature[2]) do
+                            local condtype = cond[1]
+                            if condtype == "this" or condtype == "not this" then
+                                table.insert(conds_to_test, cond)
+                            end
+                        end
 
-                        if not stablestate.rules[ruleid] then
-                            stablestate.rules[ruleid] = {
-                                feature = v.feature,
-                                unit_count = 1,
-                                display = v.display,
-                            }
-                        else
-                            stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+                        local add_ruleid = true
+                        if #conds_to_test ~= 0 then
+                            if su_key == LEVEL_SU_KEY then
+                                add_ruleid = testcond(conds_to_test, 1)
+                            else
+                                add_ruleid = testcond(conds_to_test, unitid)
+                            end
+                        end
+
+                        if add_ruleid then
+                            table.insert(ruleids, ruleid)
+
+                            if not stablestate.rules[ruleid] then
+                                stablestate.rules[ruleid] = {
+                                    feature = v.feature,
+                                    unit_count = 1,
+                                    display = v.display,
+                                }
+                            else
+                                stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+                            end
                         end
                     end
 
@@ -721,19 +750,23 @@ function update_stable_state()
 end
 
 
-table.insert(mod_hook_functions["rule_update_after"],
+table.insert(mod_hook_functions["rule_baserules"],
     function()
         -- adding all stablestate.rules into the featureindex
         for _, v in pairs(stablestate.rules) do
             local feature = v.feature
-            addoption(feature[1], feature[2], feature[3], false, nil, feature[4])
+            addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
             local option, conds = feature[1], feature[2]
 
             if STABLE_LOGGING then
                 print("adding stablerule: "..option[1].." "..option[2].." "..option[3])
             end
         end
+    end
+)
 
+table.insert(mod_hook_functions["rule_update_after"],
+    function()
         if on_undo then
             reload_indicators()
             on_undo = false
@@ -752,11 +785,6 @@ table.insert(mod_hook_functions["turn_end"],
             end
         end
         
-        print("stable_this_raycast_units: ")
-        for stable_this_id, v in pairs(stablestate.stable_this_raycast_units) do
-            print("stable_this_id: "..tostring(stable_this_id).." #ids: "..#v.ids)
-        end
-
         stable_state_updated = false
     end
 )
@@ -892,7 +920,7 @@ local LINE_SPACING = LETTER_HEIGHT - 4
 local MARGIN = 12
 local PADDING = 4
 
-local function write_stable_rules(su_key_list, x, y, empty_tileid)
+local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
     local ruleids = {}
     local ruleid_count = 0
     for _, su_key in ipairs(su_key_list) do
@@ -934,7 +962,7 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
     local y_upper_bound = Yoffset + f_tilesize * roomsizey * spritedata.values[TILEMULT] * generaldata2.values[ZOOM]
     local list_height = LINE_SPACING * ruleid_count
     
-    local final_y = y + f_tilesize * generaldata2.values[ZOOM]
+    local final_y = y + (f_tilesize + 4) * generaldata2.values[ZOOM]
     if final_y + list_height > y_upper_bound then
         final_y = y - list_height
         if final_y - LINE_SPACING/2 < y_lower_bound then
@@ -946,7 +974,12 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
     local y_offset = 0
     for ruleid,_ in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
-        local color = {3,3}
+        local color = nil
+        if timer < TIMER_PERIOD/2 then
+            color = {3,2}
+        else
+            color = {1,4}
+        end
         writetext(display,-1, final_x, final_y + y_offset,"stablerules",true,1,true, color)
 
         y_offset = y_offset + LINE_SPACING
@@ -995,7 +1028,11 @@ table.insert(mod_hook_functions["effect_always"],
         end
 
         if #displayed_su_keys > 0 or empty_tileid then
-            write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid)
+            write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid, stablerule_timer)
+        end
+        stablerule_timer = stablerule_timer + 1
+        if stablerule_timer >= TIMER_PERIOD then
+            stablerule_timer = 0
         end
     end
 )

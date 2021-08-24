@@ -1338,7 +1338,7 @@ function docode(firstwords)
 	end
 end
 
-function addoption(option,conds_,ids,visible,notrule,tags_)
+function addoption(option,conds_,ids,visible,notrule,tags_, dont_display_ids)
 	--[[ 
 		@mods(this) - Override reason: handle "not this is X. Also treat "this<string>" as part of 
 			featureindex["this"]
@@ -1373,7 +1373,9 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 			return
 		end
 
-		table.insert(features, rule)
+		if not dont_display_ids then
+			table.insert(features, rule)
+		end
 		local target = option[1]
 		local verb = option[2]
 		local effect = option[3]
