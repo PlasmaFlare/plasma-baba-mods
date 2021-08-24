@@ -130,6 +130,7 @@ function delunit(unitid)
 		MF_alert("delunit(): no object found with id " .. tostring(unitid))
 	end
 
+	on_delete_stableunit(unitid)
 	on_delele_this_text(unitid)
 		
 	for i,v in ipairs(units) do
@@ -225,19 +226,14 @@ function writerules(parent,name,x_,y_)
 						if (cond[2] ~= nil) then
 							if (#cond[2] > 0) then
 								for c,d in ipairs(cond[2]) do
-									local this_param_name = parse_this_param_and_get_raycast_units(d)
-									if this_param_name then
-										text = text .. this_param_name
+									if (#custom == 0) then
+										text = text .. d .. " "
 									else
-										if (#custom == 0) then
-											text = text .. d .. " "
-										else
-											text = text .. custom .. " "
-										end
-										
-										if (#cond[2] > 1) and (c ~= #cond[2]) then
-											text = text .. "& "
-										end
+										text = text .. custom .. " "
+									end
+									
+									if (#cond[2] > 1) and (c ~= #cond[2]) then
+										text = text .. "& "
 									end
 								end
 							end

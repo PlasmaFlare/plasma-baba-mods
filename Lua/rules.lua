@@ -1486,7 +1486,7 @@ function docode(firstwords)
 	end
 end
 
-function addoption(option,conds_,ids,visible,notrule,tags_)
+function addoption(option,conds_,ids,visible,notrule,tags_, dont_display_ids)
 	--[[ 
 		@mods(this) - Override reason: handle "not this is X. Also treat "this<string>" as part of 
 			featureindex["this"]
@@ -1521,7 +1521,9 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 			return
 		end
 
-		table.insert(features, rule)
+		if not dont_display_ids then
+			table.insert(features, rule)
+		end
 		local target = option[1]
 		local verb = option[2]
 		local effect = option[3]
@@ -1596,7 +1598,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 					addedto[condname] = 1
 				end
 				
-				if (cond[2] ~= nil) then
+				if (cond[2] ~= nil and condname ~= "stable") then
 					if (#cond[2] > 0) then
 						local newconds = {}
 						
@@ -1608,10 +1610,10 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 							if is_name_text_this(b) or is_name_text_this(b, true) then
 								local this_unitid = this_params_in_conds[cond][a]
 
-								local is_param_this_formatted = parse_this_param_and_get_raycast_units(b)
-								if not is_param_this_formatted then
+								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
+								if not is_param_this_formatted and not is_this_unit_in_stablerule(this_param_id) then
 									local param_id = register_this_param_id(this_unitid)
-									table.insert(newconds, b.." "..param_id)
+									table.insert(newconds, make_this_param(b, param_id))
 								else
 									table.insert(newconds, b)
 								end
@@ -1685,6 +1687,7 @@ function code(alreadyrun_)
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
+	update_stable_state()
 	if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
 			update_raycast_units(true, true, true)

@@ -3,9 +3,7 @@ register_directional_text_prefix("this")
 this_mod_globals = {}
 function reset_this_mod_globals()
     this_mod_globals = {
-        text_to_raycast_pos = {},
         active_this_property_text = {}, -- keep track of texts 
-        
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
         on_level_start = false,
         on_already_run = false,
@@ -26,6 +24,7 @@ reset_this_mod_globals()
 
 local text_to_cursor = {} -- mapping from this text unitid to cursor unitid
 local text_to_raycast_units = {} -- mapping from this text unitid to all units that were hit by a raycast
+local text_to_raycast_pos = {}
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
@@ -33,6 +32,7 @@ local deferred_rules_with_this = {}
 local function reset_this_mod_locals()
     text_to_cursor = {}
     text_to_raycast_units = {}
+    text_to_raycast_pos = {}
     blocked_tiles = {}
     explicit_passed_tiles = {}
     cond_features_with_this_noun = {}
@@ -172,7 +172,7 @@ function on_delele_this_text(this_unitid)
         MF_cleanremove(text_to_cursor[this_unitid])
         text_to_cursor[this_unitid] = nil
         text_to_raycast_units[this_unitid] = nil
-        this_mod_globals.text_to_raycast_pos[this_unitid] = nil
+        text_to_raycast_pos[this_unitid] = nil
     end
 end
 
@@ -203,7 +203,7 @@ function update_this_cursor(wordunit, cursorunit)
     local x = wordunit.values[XPOS]
     local y = wordunit.values[YPOS]
 
-    local tileid = this_mod_globals.text_to_raycast_pos[wordunit.fixed]
+    local tileid = text_to_raycast_pos[wordunit.fixed]
     if tileid then
         local nx = math.floor(tileid % roomsizex)
         local ny = math.floor(tileid / roomsizex)
@@ -343,7 +343,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
             if affect_updatecode and updatecode == 0 then
                 -- set updatecode to 1 if any of the raycast units changed
                 local prev_raycast_unitids = text_to_raycast_units[unitid] or {}
-                local prev_raycast_tileid = this_mod_globals.text_to_raycast_pos[unitid] or -1
+                local prev_raycast_tileid = text_to_raycast_pos[unitid] or -1
 
                 if #ray_unitids ~= #prev_raycast_unitids then
                     updatecode = 1
@@ -378,7 +378,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                 text_to_raycast_units[unitid] = ray_unitids
             end
 
-            this_mod_globals.text_to_raycast_pos[unitid] = tileid
+            text_to_raycast_pos[unitid] = tileid
         end
     end
 end
@@ -413,10 +413,14 @@ function set_passed_tile(tileid)
 end
 
 function get_raycast_units(this_text_unitid, checkblocked)
+    if is_this_unit_in_stablerule(this_text_unitid) then
+        return get_stable_this_raycast_units(tonumber(this_text_unitid))
+    end
+
     local raycast_units = text_to_raycast_units[this_text_unitid]
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked then
-            local tileid = this_mod_globals.text_to_raycast_pos[this_text_unitid]
+            local tileid = text_to_raycast_pos[this_text_unitid]
             if blocked_tiles[tileid] then
                 return {}
             end
@@ -428,7 +432,7 @@ end
 
 -- Like get_raycast_units, but factors in this redirection
 function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
-    if not this_mod_globals.text_to_raycast_pos[this_text_unitid] then
+    if not text_to_raycast_pos[this_text_unitid] then
         return {}, {}
     end
     local this_text_unit = mmf.newObject(this_text_unitid)
@@ -443,7 +447,7 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
 
     while #raycast_this_texts > 0 do
         local curr_this_unitid = table.remove(raycast_this_texts) -- Pop the stack 
-        local curr_raycast_tileid = this_mod_globals.text_to_raycast_pos[curr_this_unitid]
+        local curr_raycast_tileid = text_to_raycast_pos[curr_this_unitid]
         
         if checkblocked and blocked_tiles[curr_raycast_tileid] then
             -- do nothing if blocked
@@ -484,7 +488,10 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
 end
 
 function get_raycast_tileid(this_text_unitid)
-    return this_mod_globals.text_to_raycast_pos[this_text_unitid]
+    if is_this_unit_in_stablerule(this_text_unitid) then
+        return get_stable_this_raycast_pos(tonumber(this_text_unitid))
+    end
+    return text_to_raycast_pos[this_text_unitid]
 end
 
 function this_raycast(x, y, dir, checkemptyblock)
