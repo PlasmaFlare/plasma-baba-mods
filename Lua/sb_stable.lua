@@ -397,7 +397,6 @@ local function get_stablefeatures_from_name(name)
 
             table.insert(newcond, {"stable", { ruleid }})
             dup_feature[2] = newcond
-            -- dup_feature[3] = {} --@TODO: check. This clears the list of ids. @TODO: this might interfere with "THIS" mod in th_testcond_this
             
             table.insert(dup_feature[4], "stable")
             
@@ -566,13 +565,6 @@ function update_stable_state()
                     else
                         local unit = mmf.newObject(unitid)
                         name = getname(unit)
-
-                        --@TODO: when integrating with my modpack, handle "THIS" mod
-                        -- if unit.strings[UNITTYPE] == "text" then
-                        --     name = "text"
-                        -- else
-                        --     name = unit.strings[NAME]
-                        -- end
                     end
 
                     if not stable_rules[name] then
@@ -925,8 +917,10 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
     local ruleid_count = 0
     for _, su_key in ipairs(su_key_list) do
         for i,ruleid in ipairs(stablestate.units[su_key].ruleids) do
+            if not ruleids[ruleid] then
+                ruleid_count = ruleid_count + 1
+            end
             ruleids[ruleid] = true
-            ruleid_count = ruleid_count + 1
         end
     end
     if empty_tileid then
