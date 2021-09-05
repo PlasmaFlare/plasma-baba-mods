@@ -3519,7 +3519,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 				elseif (condtype == "this") then
                     if #params == 1 then
 						valid = true
-                        local this_text_unitid = params[1]
+						local this_text_unitid = parse_this_unit_from_param_id(params[1])
                         
 						local pass = false
 						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
@@ -3546,7 +3546,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 				elseif (condtype == "not this") then
                     if #params == 1 then
 						valid = true
-                        local this_text_unitid = params[1]
+                        local this_text_unitid = parse_this_unit_from_param_id(params[1])
                         
 						local pass = true
 						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do

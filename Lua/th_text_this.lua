@@ -5,19 +5,6 @@ function reset_this_mod_globals()
     this_mod_globals = {
         active_this_property_text = {}, -- keep track of texts 
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
-        on_level_start = false,
-        on_already_run = false,
-    
-        -- These two globals assist in making regular infix conditions with "this" work.
-        -- Infix conditions have a list of parameters that determine what objects to compare the testing object
-        -- to (Eg "Baba on keke is you" has the param "keke" for condition type "on").
-        -- The game doesn't respect the table containing this list of parameters and transfers each
-        -- parameter between different tables at will. So we have to imbed some key into the parameter itself.
-        -- This key we call it a "parameter id". Currently it is calculated as tostring(unitid). Since
-        -- unitids in number form are floats and tonumber(tostring(unitid)) ~= unitid, we have to use a
-        -- seperate table to get a mapping from param ids to unitids
-        this_param_to_unitid = {}, -- mapping of this text unitids to a "param id"
-        registered_this_unitid_as_params = {}, -- record of which text unitids have param ids. This is to ensure that we don't register a unitid twice
     }
 end   
 reset_this_mod_globals()
@@ -29,6 +16,8 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local deferred_rules_with_this = {}
+local on_level_start = false
+
 local function reset_this_mod_locals()
     text_to_cursor = {}
     text_to_raycast_units = {}
@@ -59,7 +48,7 @@ table.insert(mod_hook_functions["level_start"],
                 text_to_cursor[unitid] = make_cursor(unit)
             end
         end
-        this_mod_globals.on_level_start = true
+        on_level_start = true
     end
 )
 
@@ -83,11 +72,6 @@ table.insert( mod_hook_functions["command_given"],
 
 table.insert(mod_hook_functions["rule_update"],
     function(is_this_a_repeated_update)
-        this_mod_globals.on_already_run = is_this_a_repeated_update
-        if not is_this_a_repeated_update then
-            this_mod_globals.this_param_to_unitid = {}
-            this_mod_globals.registered_this_unitid_as_params = {}
-        end
         this_mod_globals.active_this_property_text = {}
         deferred_rules_with_this = {}
         cond_features_with_this_noun = {}
@@ -95,8 +79,8 @@ table.insert(mod_hook_functions["rule_update"],
 )
 table.insert(mod_hook_functions["rule_update_after"],
     function()
-        if this_mod_globals.on_level_start then
-            this_mod_globals.on_level_start = false
+        if on_level_start then
+            on_level_start = false
         end
         if this_mod_globals.undoed_after_called then
             this_mod_globals.undoed_after_called = false
@@ -595,13 +579,14 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
             target_options = property_options
         elseif #property_options > 0 then
             local this_text_unitid = ids[1][1]
+            local this_unit_as_param_id = convert_this_unit_to_param_id(this_text_unitid)
             if target_isnot then
                 for i,mat in pairs(objectlist) do
                     if (findnoun(i) == false) then
                         for _, option in ipairs(property_options) do
                             local newrule = {i, option.rule[2], option.rule[3]}
                             local newconds = {}
-                            table.insert(newconds, {"not this", {this_text_unitid}})
+                            table.insert(newconds, {"not this", {this_unit_as_param_id} })
                             for a,b in ipairs(conds) do
                                 table.insert(newconds, b)
                             end
@@ -631,7 +616,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
                     for _, option in ipairs(property_options) do
                         local newrule = {ray_name, option.rule[2], option.rule[3]}
                         local newconds = {}
-                        table.insert(newconds, {"this", {this_text_unitid}})
+                        table.insert(newconds, {"this", {this_unit_as_param_id} })
                         for a,b in ipairs(option.conds) do
                             table.insert(newconds, b)
                         end

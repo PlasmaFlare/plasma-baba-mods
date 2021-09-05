@@ -58,12 +58,7 @@ function parse_this_param_and_get_raycast_units(this_param)
     local this_param_name = this_param_name..string.sub(this_param, 1, end_index-1) 
     local param_id = string.sub(this_param, end_index + 1)
 
-    local this_unitid = nil
-    if is_this_unit_in_stablerule(param_id) then
-        this_unitid = tonumber(param_id)
-    else
-        this_unitid = get_this_unit_from_param_id(param_id)
-    end
+    local this_unitid = parse_this_unit_from_param_id(param_id)
     if not this_unitid then
         return false, nil, nil, 0, nil
     end
@@ -80,26 +75,36 @@ function parse_this_param_and_get_raycast_units(this_param)
     return this_param_name, out, tileid, count, this_unitid
 end
 
---[[ 
-    @TODO: I need to formalize this param id buisness. The code feels like a mess currently
- ]]
-
-function get_this_unit_from_param_id(param_id)
-    return this_mod_globals.this_param_to_unitid[param_id]
-end 
-
-function is_this_param_id_registered(unitid)
-    return this_mod_globals.registered_this_unitid_as_params[unitid] ~= nil
-end
-
-function register_this_param_id(unitid)
-    local param_id = tostring(unitid)
-    this_mod_globals.this_param_to_unitid[param_id] = unitid
-    this_mod_globals.registered_this_unitid_as_params[unitid] = true
-    return param_id 
-end
 
 --@TODO: might delete or refactor this later when we make THIS mod use values[ID] to represent the specific THIS text instead of unitids
 function make_this_param(param_name, param_id)
     return param_name.." "..param_id
+end
+
+--[[ 
+    Return a string representing the THIS text that can be used in parameters for rule conditions. Throws an error if the provided unitid isn't a THIS text
+ ]]
+function convert_this_unit_to_param_id(this_unitid)
+    local this_unit = mmf.newObject(this_unitid)
+    if not this_unit or not is_name_text_this(this_unit.strings[NAME]) then
+        error("Provided unit id that points to invalid THIS text. Stack trace: "..debug.traceback())
+    end
+    return tostring(this_unit.values[ID])
+end
+
+--[[ 
+    Return the unitid of a THIS text from the output of convert_this_unit_to_param_id(). Returns nil if this_param_id isn't a number. 
+    If this_param_id is a stable_this_id, it returns the stable_this_id directly.
+ ]]
+function parse_this_unit_from_param_id(this_param_id)
+    local this_unitid = tonumber(this_param_id)
+    if not this_unitid then
+        return nil
+    end
+
+    if not is_this_unit_in_stablerule(this_unitid) then
+        this_unitid = MF_getfixed(this_unitid)
+    end
+
+    return this_unitid
 end

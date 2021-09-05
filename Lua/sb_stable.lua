@@ -298,7 +298,7 @@ local function remove_stable_this_in_conds(conds)
         local params = cond[2]
 
         if condtype == "this" or condtype == "not this" then
-            local this_unitid = params[1]
+            local this_unitid = MF_getfixed(params[1])
             if is_this_unit_in_stablerule(this_unitid) then
                 remove_this_text_in_stablerule(this_unitid)
             end
@@ -370,7 +370,7 @@ local function get_stablefeatures_from_name(name)
                 local params = cond[2]
 
                 if condtype == "this" or condtype == "not this" then
-                    local this_unitid = params[1]
+                    local this_unitid = parse_this_unit_from_param_id(params[1])
                     local stable_this_id = register_this_text_in_stablerule(this_unitid)
                     table.insert(newcond, {condtype, { stable_this_id } })
                 else
@@ -385,8 +385,8 @@ local function get_stablefeatures_from_name(name)
                         local this_param_name,_,_,_,this_unitid = parse_this_param_and_get_raycast_units(pname)
                         if this_param_name then
                             local stable_this_id = register_this_text_in_stablerule(this_unitid)
-                            local this_param = make_this_param(this_param_name, tostring(stable_this_id))
-                            table.insert(new_params, isnot_prefix..this_param)
+                            local this_param = make_this_param(isnot_prefix..this_param_name, tostring(stable_this_id))
+                            table.insert(new_params, this_param)
                         else
                             table.insert(new_params, b)
                         end
