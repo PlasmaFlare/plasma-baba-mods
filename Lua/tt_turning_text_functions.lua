@@ -256,7 +256,7 @@ function finalize_turning_text_dir()
         end
     end
     
-    code() --@TODO: instead of calling code yet again, why not just populate a local table with turning dir information? Its not like the set of normal rules is gonna change during this time
+    code() --Question: instead of calling code yet again, why not just populate a local table with turning dir information? Its not like the set of normal rules is gonna change during this time.
     -- Answer: you need testcond to work with turning dir
     
     for i,v in ipairs(turning_text_mod_globals.turning_units) do

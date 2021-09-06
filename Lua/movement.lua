@@ -127,7 +127,6 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 
 				elseif (playerid == 2) then
 					players,empty = findallfeature(nil,"is","you2")
-					a,b = findallfeature(nil,"is","you2")
 
 					local players_tt,empty_tt = do_directional_you2(dir_)
 					for i,v in ipairs(players_tt) do
