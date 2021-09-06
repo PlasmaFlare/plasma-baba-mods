@@ -58,6 +58,7 @@ function clearunits(restore_)
 	end
 
 	reset_this_mod()
+	clear_stable_mod()
 	
 	if restore then
 		newundo()

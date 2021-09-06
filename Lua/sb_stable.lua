@@ -59,6 +59,7 @@ local stable_indicators = {}
  --[[ 
      tileid -> unitid of indicator: unitid
   ]]
+local stable_this_indicators = {}
     
 local LEVEL_SU_KEY = -1
 local STABLE_THIS_ID_BASE = -50
@@ -80,7 +81,7 @@ local prev_undobuffer_len = 0
 
 checking_stable = false
 
-local function clear_stable_mod()
+function clear_stable_mod()
     stablestate = {
         units = {},
         rules = {},
@@ -97,7 +98,15 @@ local function clear_stable_mod()
         MF_cleanremove(v.indicator_id)
         count = count + 1
     end
+    for _, v in pairs(stable_empty_indicators) do
+        MF_cleanremove(v.indicator_id)
+        count = count + 1
+    end
+    for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
+        MF_cleanremove(indicator_id)
+    end
     stable_indicators = {}
+    stable_this_indicators = {}
     stable_empty_indicators = {}
 end
 
@@ -205,9 +214,33 @@ local function get_stablerule_display(feature)
                     if (cond[2] ~= nil) then
                         if (#cond[2] > 0) then
                             for c,d in ipairs(cond[2]) do
-                                local this_param_name = parse_this_param_and_get_raycast_units(d)
+                                local this_param_name,_,_,_,this_unitid = parse_this_param_and_get_raycast_units(d)
                                 if this_param_name then
                                     text = text .. this_param_name.." "
+
+                                    local names = {}
+                                    local raycast_units = get_raycast_units(this_unitid)
+                                    for _, ray_unitid in ipairs(raycast_units) do
+                                        if ray_unitid == 2 then
+                                            names["empty"] = true
+                                        else
+                                            local ray_unit = mmf.newObject(ray_unitid)
+                                            names[ray_unit.strings[NAME]] = true
+                                        end
+                                    end
+
+                                    if #raycast_units > 0 then
+                                        text = text.."("
+                                        local first = true
+                                        for name, _ in pairs(names) do
+                                            if not first then
+                                                text = text.." or "
+                                            end
+                                            first = false
+                                            text = text..name
+                                        end
+                                        text = text..") "
+                                    end
                                 else
                                     if (#custom == 0) then
                                         text = text .. d .. " "
@@ -350,6 +383,7 @@ local function get_stablefeatures_from_name(name)
         local rule = feature[1]
         local tags = feature[4]
         local is_stablerule = false
+        local stable_this_ids = {}
         for _, tag in ipairs(tags) do
             if tag == "stable" then
                 is_stablerule = true
@@ -387,6 +421,7 @@ local function get_stablefeatures_from_name(name)
                             local stable_this_id = register_this_text_in_stablerule(this_unitid)
                             local this_param = make_this_param(isnot_prefix..this_param_name, tostring(stable_this_id))
                             table.insert(new_params, this_param)
+                            table.insert(stable_this_ids, stable_this_id)
                         else
                             table.insert(new_params, b)
                         end
@@ -401,7 +436,7 @@ local function get_stablefeatures_from_name(name)
             table.insert(dup_feature[4], "stable")
             
             
-            stable_features[ruleid] = {feature = dup_feature, display = rule_display}
+            stable_features[ruleid] = {feature = dup_feature, display = rule_display, stable_this_ids = stable_this_ids}
 
             local rule = dup_feature[1]
 
@@ -595,10 +630,12 @@ function update_stable_state()
                             table.insert(ruleids, ruleid)
 
                             if not stablestate.rules[ruleid] then
+                                -- @TODO: if in the future we want to add more fields, consider just deepcopying "v" and add unit_count
                                 stablestate.rules[ruleid] = {
                                     feature = v.feature,
                                     unit_count = 1,
                                     display = v.display,
+                                    stable_this_ids = v.stable_this_ids,
                                 }
                             else
                                 stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
@@ -715,6 +752,7 @@ function update_stable_state()
                         feature = v.feature,
                         unit_count = 1,
                         display = v.display,
+                        stable_this_ids = v.stable_this_ids,
                     }
                 else
                     stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
@@ -936,9 +974,36 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
 
     -- Determine final X
     local list_width = 0
+    local found_ray_unit_ids = {}
     for ruleid, _ in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
         list_width = math.max(list_width, LETTER_WIDTH * #display + LETTER_SPACING * (#display - 1))
+
+        for _, stable_this_id in ipairs(stablestate.rules[ruleid].stable_this_ids) do
+            for _, rayunit_id in ipairs(get_stable_this_raycast_units(stable_this_id)) do
+                local ray_unit = mmf.newObject(rayunit_id)
+                found_ray_unit_ids[ray_unit.values[ID]] = true
+                local indicator_id
+
+                if not stable_this_indicators[ray_unit.values[ID]] then
+                    indicator_id = make_stable_indicator()
+                    MF_setcolour(indicator_id,4,2)
+                else
+                    indicator_id = stable_this_indicators[ray_unit.values[ID]]
+                end
+                local indicator = mmf.newObject(indicator_id)
+                indicator.values[XPOS] = ray_unit.x
+                indicator.values[YPOS] = ray_unit.y
+
+                stable_this_indicators[ray_unit.values[ID]] = indicator_id
+            end
+        end
+    end
+    for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
+        if not found_ray_unit_ids[ray_unit_id] then
+            MF_cleanremove(indicator_id)
+            stable_this_indicators[ray_unit_id] = nil
+        end
     end
 
     local x_lower_bound = Xoffset
@@ -1023,6 +1088,11 @@ table.insert(mod_hook_functions["effect_always"],
 
         if #displayed_su_keys > 0 or empty_tileid then
             write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid, stablerule_timer)
+        else
+            for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
+                MF_cleanremove(indicator_id)
+                stable_this_indicators[ray_unit_id] = nil
+            end
         end
         stablerule_timer = stablerule_timer + 1
         if stablerule_timer >= TIMER_PERIOD then
