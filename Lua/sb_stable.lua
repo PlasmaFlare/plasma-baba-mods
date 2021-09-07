@@ -1034,10 +1034,13 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
     for ruleid,_ in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
         local color = nil
-        if timer < TIMER_PERIOD/2 then
-            color = {3,2}
-        else
-            color = {1,4}
+        color = {3,3}
+
+        -- Create the text "outline". (Hacky but does the job. Though if there's a more supported way to do this I'm all ears)
+        for outline_x = -2, 2, 2 do
+            for outline_y = -2, 2, 2 do
+                writetext(display,-1, final_x + outline_x, final_y + y_offset + outline_y,"stablerules",true,1,true, {0, 4})
+            end
         end
         writetext(display,-1, final_x, final_y + y_offset,"stablerules",true,1,true, color)
 
