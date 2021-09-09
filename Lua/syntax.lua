@@ -170,7 +170,7 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 					
 					if (vunit.flags[CONVERTED] == false) then
 						for b,unit in pairs(objectlist) do
-							if (findnoun(b) == false) and (b ~= matdata[1]) then
+							if (findnoun(b) == false) and (b ~= matdata[1]) and (not is_name_text_this(b)) then
 								local protect = hasfeature(matdata[1],"is","not " .. b,v,x,y)
 								
 								if (protect == nil) then
@@ -221,7 +221,7 @@ function createall(matdata,x_,y_,id_,dolevels_,leveldata_)
 						
 						if (blocked["all"] == nil) then
 							for b,mat in pairs(objectlist) do
-								if (findnoun(b) == false) and (blocked[target] == nil)  then
+								if (findnoun(b) == false) and (blocked[target] == nil) and (not is_name_text_this(b)) then
 									local nunitid,ningameid = create(b,x,y,dir,nil,nil,nil,nil,leveldata)
 									local nrevertdata = getrevertorigin(ningameid,2,matdata[1])
 									addundo({"convert",matdata[1],mat,ningameid,2,x,y,dir,nrevertdata})
