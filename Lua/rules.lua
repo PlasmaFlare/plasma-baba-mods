@@ -1511,14 +1511,9 @@ function addoption(option,conds_,ids,visible,notrule,tags_, dont_display_ids)
 	
 	if (#option == 3) then
 		local rule = {option,conds,ids,tags}
-		-- Defer processing any sentences with "this" as target or effect. Special exception is "not this" as target
-		-- since it translates to "all" with a custom "not this" condtype
-		if is_name_text_this(option[1]) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
-			defer_addoption_with_this(rule)
-			return
-		elseif is_name_text_this(option[1], true) then
-			defer_addoption_with_this(rule)
-			return
+		-- Don't display any rules with THIS as either target or property
+		if is_name_text_this(option[1]) or is_name_text_this(option[1], true) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
+			visual = false
 		end
 
 		if not dont_display_ids then
@@ -1846,9 +1841,9 @@ function code(alreadyrun_)
 				if BRANCHING_TEXT_LOGGING then
 					print("<<<<<<<<<<<<<end>")
 				end
-				do_subrule_this()
 				subrules()
 				grouprules()
+				do_subrule_this()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
 				

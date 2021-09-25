@@ -533,24 +533,26 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
         -- Process properties first
         local property_options = {}
         if not is_name_text_this(property) then
-            if filter_property_func(ids[3][1]) then
+            if filter_property_func(property) then
                 table.insert(property_options, {rule = rule, conds = conds})    
             end
         else
-            local this_text_unitid = ids[3][1]
+            local this_text_unitid = get_property_unitid_from_rule(rules)
             local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
             for _, unitid in ipairs(raycast_units) do
-                if filter_property_func(unitid) then
-                    local rulename = ""
+                local rulename = ""
+                local ray_unit = mmf.newObject(unitid)
+                if unitid == 2 then
+                    rulename = "empty"
+                else
+                    rulename = ray_unit.strings[NAME]
+                    if is_turning_text(rulename) then
+                        rulename = get_turning_text_interpretation(unitid)
+                    end
+                end
 
-                    if unitid == 2 then
-                        rulename = "empty"
-                    else
-                        local ray_unit = mmf.newObject(unitid)
-                        rulename = ray_unit.strings[NAME]
-                        if is_turning_text(rulename) then
-                            rulename = get_turning_text_interpretation(unitid)
-                        end
+                if filter_property_func(rulename) then
+                    if unitid ~= "empty" then
                         if ray_unit.strings[UNITTYPE] == "text" then
                             this_mod_globals.active_this_property_text[unitid] = true
                         end
@@ -578,7 +580,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
         if not is_name_text_this(target) then
             target_options = property_options
         elseif #property_options > 0 then
-            local this_text_unitid = ids[1][1]
+            local this_text_unitid = get_target_unitid_from_rule(rules)
             local this_unit_as_param_id = convert_this_unit_to_param_id(this_text_unitid)
             if target_isnot then
                 for i,mat in pairs(objectlist) do
@@ -596,7 +598,7 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
                 end
                 
                 -- Rule display in pause menu
-                if #target_options > 0 and filter_property_func(ids[3][1]) then
+                if #target_options > 0 and filter_property_func(property) then
                     table.insert(visualfeatures, {rule, conds, ids, tags})
                 end
             else
@@ -686,20 +688,14 @@ function process_this_rules(this_rules, filter_property_func, checkblocked, curr
     return processed_this_units
 end
 
-local function block_filter(unitid)
-    if unitid == 2 then return true end
-    local unit = mmf.newObject(unitid)
-    return unit.strings[NAME] == "block"
+local function block_filter(name)
+    return name == "block"
 end
-local function pass_filter(unitid)
-    if unitid == 2 then return true end
-    local unit = mmf.newObject(unitid)
-    return unit.strings[NAME] == "pass"
+local function pass_filter(name)
+    return name == "pass"
 end
-local function other_filter(unitid)
-    if unitid == 2 then return true end
-    local unit = mmf.newObject(unitid)
-    return unit.strings[NAME] ~= "block" and unit.strings[NAME] ~= "pass"
+local function other_filter(name)
+    return name ~= "block" and name ~= "pass"
 end
 
 function do_subrule_this()
@@ -713,89 +709,92 @@ function do_subrule_this()
     -- The idea is that "block" will be "active" in enforcing its effect while "pass" will be "passive" in doing the same thing.
     local all_processed_this_units = {}
 
-    update_raycast_units(true, true, false)
-    local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, "block")
-    for unit, _ in pairs(processed_block_this_units) do
-        all_processed_this_units[unit] = true
-    end
+    if (featureindex["this"] ~= nil) then
+        deferred_rules_with_this = featureindex["this"]
+        update_raycast_units(true, true, false)
+        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, "block")
+        for unit, _ in pairs(processed_block_this_units) do
+            all_processed_this_units[unit] = true
+        end
 
-    update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, "pass")
-    for unit, _ in pairs(processed_pass_this_units) do
-        all_processed_this_units[unit] = true
-    end
-    
-    update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, "ray-block")
-    
-    for unit, _ in pairs(processed_block_this_units2) do
-        all_processed_this_units[unit] = true
-        processed_block_this_units[unit] = true
-    end
+        update_raycast_units(true, true, false, all_processed_this_units)
+        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, "pass")
+        for unit, _ in pairs(processed_pass_this_units) do
+            all_processed_this_units[unit] = true
+        end
+        
+        update_raycast_units(true, true, false, all_processed_this_units)
+        local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, "ray-block")
+        
+        for unit, _ in pairs(processed_block_this_units2) do
+            all_processed_this_units[unit] = true
+            processed_block_this_units[unit] = true
+        end
 
-    update_raycast_units(true, true, false, all_processed_this_units)
-    local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, "ray-pass")
-    for unit, _ in pairs(processed_pass_this_units2) do
-        all_processed_this_units[unit] = true
-        processed_pass_this_units[unit] = true
-    end
+        update_raycast_units(true, true, false, all_processed_this_units)
+        local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, "ray-pass")
+        for unit, _ in pairs(processed_pass_this_units2) do
+            all_processed_this_units[unit] = true
+            processed_pass_this_units[unit] = true
+        end
 
-    update_raycast_units(true, true, false, all_processed_this_units)
-    process_this_rules(deferred_rules_with_this, other_filter, true, "other")
+        update_raycast_units(true, true, false, all_processed_this_units)
+        process_this_rules(deferred_rules_with_this, other_filter, true, "other")
 
-    for this_unitid, _ in pairs(processed_block_this_units) do
-        local tileid = get_raycast_tileid(this_unitid)
-        local x = math.floor(tileid % roomsizex)
-        local y = math.floor(tileid / roomsizex)
+        for this_unitid, _ in pairs(processed_block_this_units) do
+            local tileid = get_raycast_tileid(this_unitid)
+            local x = math.floor(tileid % roomsizex)
+            local y = math.floor(tileid / roomsizex)
 
-        for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
-            local has_block = false
-            local has_not_block = false
-            if ray_unitid == 2 then
-                has_block = hasfeature("empty", "is", "block", 2, x, y)
-                has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
-            else
-                local ray_unit = mmf.newObject(ray_unitid)
-                local ray_unit_name = ray_unit.strings[NAME]
-                if ray_unit.strings[UNITTYPE] == "text" then
-                    ray_unit_name = "text"
+            for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
+                local has_block = false
+                local has_not_block = false
+                if ray_unitid == 2 then
+                    has_block = hasfeature("empty", "is", "block", 2, x, y)
+                    has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    local ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
+                    end
+                    has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
+                    has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
                 end
-                has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
-                has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
-            end
-            
-            if has_block and not has_not_block then
-                set_blocked_tile(tileid)
-                break
+                
+                if has_block and not has_not_block then
+                    set_blocked_tile(tileid)
+                    break
+                end
             end
         end
-    end
-    for this_unitid, _ in pairs(processed_pass_this_units) do
-        local tileid = get_raycast_tileid(this_unitid)
-        local x = math.floor(tileid % roomsizex)
-        local y = math.floor(tileid / roomsizex)
-        for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
-            local ray_unit_name = ""
-            local has_pass = false
-            local has_not_pass = false
+        for this_unitid, _ in pairs(processed_pass_this_units) do
+            local tileid = get_raycast_tileid(this_unitid)
+            local x = math.floor(tileid % roomsizex)
+            local y = math.floor(tileid / roomsizex)
+            for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
+                local ray_unit_name = ""
+                local has_pass = false
+                local has_not_pass = false
 
-            if ray_unitid == 2 then
-                ray_unit_name = "empty"
-                has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
-                has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
-            else
-                local ray_unit = mmf.newObject(ray_unitid)
-                ray_unit_name = ray_unit.strings[NAME]
-                if ray_unit.strings[UNITTYPE] == "text" then
-                    ray_unit_name = "text"
+                if ray_unitid == 2 then
+                    ray_unit_name = "empty"
+                    has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
+                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
+                    end
+                    has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
                 end
-                has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
-            end
 
-            if has_pass and not has_not_pass then
-                set_passed_tile(tileid)
-                break
+                if has_pass and not has_not_pass then
+                    set_passed_tile(tileid)
+                    break
+                end
             end
         end
     end

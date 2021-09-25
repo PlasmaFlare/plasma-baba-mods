@@ -264,7 +264,7 @@ function finalize_turning_text_dir()
         local unit = mmf.newObject(unitid)
         local unitname = getname(unit)
 
-        if unit.strings[NAME] ~= "turning_dir" then
+        if unit.strings[NAME] == "turning_dir" then
             local r = hasfeature_count(unitname,"is","right",unit.fixed)
             local u = hasfeature_count(unitname,"is","up",unit.fixed)
             local l = hasfeature_count(unitname,"is","left",unit.fixed)

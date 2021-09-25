@@ -226,7 +226,10 @@ function writerules(parent,name,x_,y_)
 						if (cond[2] ~= nil) then
 							if (#cond[2] > 0) then
 								for c,d in ipairs(cond[2]) do
-									if (#custom == 0) then
+									local this_param_name = parse_this_param_and_get_raycast_units(d)
+									if this_param_name then
+										text = text .. this_param_name.." "
+									elseif (#custom == 0) then
 										text = text .. d .. " "
 									else
 										text = text .. custom .. " "
@@ -320,3 +323,20 @@ function writerules(parent,name,x_,y_)
 	end
 end
 
+function findnoun(noun,list_)
+	--[[ 
+		@mods(this) - Override reason: in the many cases where the game iterates through objectlist, it uses this function to exclude special nouns from "all". 
+			Since we want THIS and all of its variations to be excluded, override this function, not just nlist.full 
+	 ]]
+	local list = list_ or nlist.full
+	if is_name_text_this(noun) then
+		return true
+	end
+	for i,v in ipairs(list) do
+		if (v == noun) or ((v == "group") and (string.sub(noun, 1, 5) == "group")) then
+			return true
+		end
+	end
+	
+	return false
+end
