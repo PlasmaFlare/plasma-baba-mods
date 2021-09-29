@@ -40,18 +40,20 @@ function get_this_parms_in_conds(conds, ids)
                 -- Say we have "baba on rock is group" and "lonely group is push", the list of ids would look like {baba, is, group, on, rock, group, is, push, lonely }.
                 -- In this case we skip over "group is push" to get to "lonely"
                 if i < #conds then
-                    local u = mmf.newObject(ids[id_index][1])
-                    if u and u.strings[NAME] == "group" then
-                        id_index = id_index + 3 -- Consume the "group is X"
-                        -- skip through all extraids (aka ands and nots and filler texts)
-                        while id_index <= #ids do
-                            local unit = mmf.newObject(ids[id_index][1])
-                            local type = unit.values[TYPE]
-    
-                            if type ~= 4 and type ~= 6 and type ~= 11 then
-                                break
+                    if ids[id_index] then
+                        local u = mmf.newObject(ids[id_index][1])
+                        if u and u.strings[NAME] == "group" then
+                            id_index = id_index + 3 -- Consume the "group is X"
+                            -- skip through all extraids (aka ands and nots and filler texts)
+                            while id_index <= #ids do
+                                local unit = mmf.newObject(ids[id_index][1])
+                                local type = unit.values[TYPE]
+        
+                                if type ~= 4 and type ~= 6 and type ~= 11 then
+                                    break
+                                end
+                                id_index = id_index + 1
                             end
-                            id_index = id_index + 1
                         end
                     end
                 end

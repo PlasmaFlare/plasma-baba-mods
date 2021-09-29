@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: Beta 418b on PC**
+**Current compatable Baba Is You version: Beta 431D on PC**
 
 This is a merged collection of all of my Baba mods I made so far. Download this if you want to use all of my mods at once rather than individually.
 
@@ -8,12 +8,13 @@ This is a merged collection of all of my Baba mods I made so far. Download this 
 
 Total list of mods (Click on one to get a *stylized* description of each mod)
 - [Arrow Properties Plus/Turning Text](docs/arrow_properties_plus.md)
-- [Omni Connectors](docs/omni_connectors.md)
+- [Omni/Pivot Connectors](docs/omni_connectors.md)
 - [Filler Text](docs/filler_text.md)
 - [THIS](docs/this.md)
 - [CUT and PACK](docs/textcraft.md)
+- [STABLE](docs/stable.md)
 
-Mods with seperate repositories
+Mods with seperate repositories (old and deprecated)
 - [Arrow Properties Plus/Turning Text](https://github.com/PlasmaFlare/Baba-Is-You-Arrow-Properties-Plus)
 - [Omni Connectors](https://github.com/PlasmaFlare/Baba-Is-You-Mod-Omni-Connectors)
 
@@ -28,15 +29,31 @@ To install, copy both Lua and Sprites folder into the levelpack you want to incl
 
 **If you are new to baba modding**, [check this more detailed guide I made for installing this mod.](docs/installation_guide.md)
 
+### Installing future updates
+If you previously installed my modpack and it has updated since then, the safest bet is to uninstall the old version before installing the new version. **BACKUP YOUR LEVELPACKS BEFORE DOING THIS.** Reinstalling involves:
+  1) Deleting all files that are part of the modpack in both `Sprites` and `Lua` folder.
+  2) Download the release you want to install
+  3) Copy all lua files in the release into the levelpack's `Lua` folder
+  4) Copy all png files in the release into the levelpack's `Sprites` folder
+
+
 ----
 ## Known Bugs that might be too complex to fix
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
-- "This is group is block" does not work.
-## Potential bugs that might also be too complex to fix
-- Messing around with THIS + special nouns (All, Empty, Group) will most likely encounter some weird behaviors
-- Experimenting with Omni text layouts may possibly yield incorrect repeated parsing amounts of the same sentence
 
 # Changelog
+- **1.3.0** (9/29/21)
+  - Updated for Beta 431D
+  - STABLE mod!
+  - Added **pivot text** as part of the omni text mod. This is a more restricted version of omni text where parsing doesn't split, but changes direction
+      - Pivot text sprites will use the old omni text sprites. New omni text sprites have another glow layer to make it feel more potent. 
+  - Heavily reworked omni text code to reduce several rule duplication cases
+  - Updated THIS text sprite so that arrow looks a bit more defined
+  - Added a small black border around the THIS indicator arrows to see it better against different backgrounds
+  - Bug-fix: "THIS is group is block/pass" now works! 
+  - Bug-fix: stacking filler text now works 
+  - Bug-fix: omni text works with letters 
+  - Bug-fix: "Level is auto" does not cause "you" and "you2(dir)" objects to move at the same time with one button
 - **1.2.5** (6/4/21)
   - Updated for Beta 418b
 - **1.2.4** (5/28/21)
