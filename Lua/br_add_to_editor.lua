@@ -48,11 +48,11 @@ table.insert(editor_objlist_order, "text_branching_feeling")
 
 local omni_white = { {2,  2}, {2, 4} }
 local omni_red   = { {4,  1}, {4, 2} }
-local omni_green = { {2,  3}, {3, 4} }
+local omni_green = { {5,  2}, {5, 4} }
 local omni_blue  = { {3,  3}, {1, 4} }
 local pivot_white = { {1,  3}, {1, 4} }
 local pivot_red   = { {2,  2}, {2, 3} }
-local pivot_green = { {5,  2}, {5, 4} }
+local pivot_green = { {4,  1}, {4, 2} }
 local pivot_blue  = { {3,  2}, {3, 3} }
 
 editor_objlist["text_branching_is"] = 

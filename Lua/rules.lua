@@ -395,14 +395,14 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	-- local merged_totalvariants = 0
 	local merged_sentences, merged_sentence_ids, merged_totalvariants, merged_maxpos, merged_br_and_text_with_split_parsing, br_sentence_metadata = br_process_branches(branches, br_dir, found_branch_on_last_word, limiter)
 
-	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
-	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
+	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
 	if merged_sentences == nil then
 		-- Oh no! A too complex!
 		return nil
 	end
-	
-	if found_branch_on_last_word then
+
+	if found_branch_on_last_word and #merged_sentences > 0 then
 		sentences = {}
 		finals = {}
 		sentence_ids = {}
@@ -517,7 +517,7 @@ function docode(firstwords)
 		on the tail end. Consider this example:
 
 			baba is you omni_and lonely
-						  push
+						    push
 
 		Now "lonely" isn't in correct syntax, but the parser works by extracting consecutive texts and seperating each combination into their own array. THEN afterwards
 		it runs each sentence through the syntax checker. Omni text works similar, but it extracts it by split parsing. So the above example gets split into:

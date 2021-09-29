@@ -243,9 +243,18 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
             print("totalvariants = "..tostring(totalvariants))
             print("#lhs_sentences = "..tostring(#lhs_sentences))
             print("#branch.branching_texts = "..tostring(#branch.branching_texts))
+            print("#br_sentences = "..tostring(#br_sentences))
             print("br_totalvariants = "..tostring(br_totalvariants))
         end
-        totalvariants = totalvariants + #lhs_sentences * #branch.branching_texts * br_totalvariants
+
+        if #lhs_sentences == 0 then
+            -- This case specifically handles when there are no non branching texts before the current branching point. 
+            totalvariants = totalvariants + #branch.branching_texts * br_totalvariants -- Exclude #lhs_sentences from totalvariants since it doesn't contribute any new words
+            table.insert(lhs_sentences, {lhs_sentence = {}, lhs_sent_id_base = ""}) -- Add a dummy entry so that the below for loop can run once without adding extra words from lhs
+        else
+            totalvariants = totalvariants + #lhs_sentences * #branch.branching_texts * br_totalvariants
+        end
+
         if (totalvariants >= limiter) then
 			MF_alert("Level destroyed - too many variants E")
 			destroylevel("toocomplex")
