@@ -1486,7 +1486,7 @@ function docode(firstwords)
 	end
 end
 
-function addoption(option,conds_,ids,visible,notrule,tags_, dont_display_ids)
+function addoption(option,conds_,ids,visible,notrule,tags_)
 	--[[ 
 		@mods(this) - Override reason: handle "not this is X. Also treat "this<string>" as part of 
 			featureindex["this"]
@@ -1516,9 +1516,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_, dont_display_ids)
 			visual = false
 		end
 
-		if not dont_display_ids then
-			table.insert(features, rule)
-		end
+		table.insert(features, rule)
 		local target = option[1]
 		local verb = option[2]
 		local effect = option[3]
@@ -2088,6 +2086,7 @@ function postrules(alreadyrun_)
 			local rule = rules[1]
 			local conds = rules[2]
 			local ids = rules[3]
+			local tags = rules[4]
 			
 			if (rule[1] == rule[3]) and (rule[2] == "is") then
 				table.insert(protects, i)
@@ -2097,8 +2096,16 @@ function postrules(alreadyrun_)
 				local works = true
 				local idlist = {}
 				local effectsok = false
+
+				local is_stable = false
+				for _,tag in ipairs(tags) do
+					if tag == "stable" then
+						is_stable = true
+						break
+					end
+				end
 				
-				if (#ids > 0) then
+				if (#ids > 0 and not is_stable) then
 					for a,b in ipairs(ids) do
 						table.insert(idlist, b)
 					end
