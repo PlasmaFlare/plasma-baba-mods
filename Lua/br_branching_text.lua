@@ -162,14 +162,15 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
 
     for _, branch in ipairs(branches) do
         local br_sentences,br_finals,br_maxpos,br_totalvariants,br_sent_ids,perp_br_and_texts_with_split_parsing, perp_sentence_metadata = calculatesentences(branch.firstwords[1], branch.x, branch.y, br_dir, nil,nil,nil, true)
-        assert(#br_sentences == #perp_sentence_metadata, "#Br sentences:"..tostring(#br_sentences).." != #perp_sentence_metadata:"..tostring(#perp_sentence_metadata))
 		-- maxpos = math.max(maxpos, br_maxpos + branch.step_index)
 
-		if (br_totalvariants >= limiter) then
-			MF_alert("Level destroyed - too many variants D")
+		if (br_sentences == nil or br_totalvariants >= limiter) then
+            MF_alert("Level destroyed - too many variants D")
 			destroylevel("toocomplex")
 			return nil
         end
+
+        assert(#br_sentences == #perp_sentence_metadata, "#Br sentences:"..tostring(#br_sentences).." != #perp_sentence_metadata:"..tostring(#perp_sentence_metadata))
         
         local lhs_totalcombos = 0 -- Note: this isn't the total number of lhs sentences, but the total number of ways to make a combination of words from lhs_word_slots
         local lhs_combo_tracker = {}
@@ -256,7 +257,7 @@ function br_process_branches(branches, br_dir, found_branch_on_last_word, limite
         end
 
         if (totalvariants >= limiter) then
-			MF_alert("Level destroyed - too many variants E")
+            MF_alert("Level destroyed - too many variants E")
 			destroylevel("toocomplex")
 			return nil
         end

@@ -158,7 +158,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						objfound = true
 					end
 				
-					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, false)) then
+					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, true)) then
 						starting = false
 					end
 					
@@ -395,12 +395,12 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	-- local merged_totalvariants = 0
 	local merged_sentences, merged_sentence_ids, merged_totalvariants, merged_maxpos, merged_br_and_text_with_split_parsing, br_sentence_metadata = br_process_branches(branches, br_dir, found_branch_on_last_word, limiter)
 
-	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
-	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
 	if merged_sentences == nil then
 		-- Oh no! A too complex!
 		return nil
 	end
+	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
+	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
 
 	if found_branch_on_last_word and #merged_sentences > 0 then
 		sentences = {}
@@ -695,6 +695,13 @@ function docode(firstwords)
 
 				if (#existing == 0) then
 					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
+
+					-- @mods(omni text)This is here to handle a too complex situation. The same code is further below just to mostly 
+					-- match the main game code
+					if (sentences == nil) then
+						return
+					end
+
 					curr_calc_sent_id = calc_sent_id
 					calc_sent_id = calc_sent_id + 1
 
