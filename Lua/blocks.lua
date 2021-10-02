@@ -578,8 +578,6 @@ function block(small_)
 			end
 		end
 
-		--@Turning Text(more)
-		do_directional_more(ismore, delthese)
 		arrow_prop_mod_globals.group_arrow_properties = true
 	end
 
