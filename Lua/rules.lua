@@ -1600,7 +1600,8 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 						for a,b in ipairs(cond[2]) do
 							local alreadyused = {}
 							
-							if is_name_text_this(b) or is_name_text_this(b, true) then
+							local this_param_name, this_param_id = parse_this_param(b)
+							if this_param_name and not is_this_unit_in_stablerule(this_param_id) then
 								local this_unitid = this_params_in_conds[cond][a]
 
 								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
@@ -1676,11 +1677,11 @@ function code(alreadyrun_)
 		@mods(this) - Override reason: provide hook for do_subrule_this and also update_raycast units 
 			before doing any processing
 		@mods(omni text) - Override reason: when checking for the first round of firstwords, we need to adjust which spaces to check for pivot text to be an initial firstword
+		@mods(stable) - Override reason: provide hook for update_stable_state()
 	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	update_stable_state()
 	if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
 			update_raycast_units(true, true, true)
@@ -1691,6 +1692,7 @@ function code(alreadyrun_)
 			end
 		end
 	end
+	update_stable_state()
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
@@ -2068,6 +2070,8 @@ end
 function postrules(alreadyrun_)
 	--[[ 
 		@mods(this) - Override reason: add rule puff effects for "X is this"
+		@mods(stable) - Override reason: "X is not Y" and "X is X" directly modifies rules in the featureindex. We don't want that to happen for stablerules 
+				(look for instances of has_stable_tag() )
 	 ]]
 	local protects = {}
 	local newruleids = {}
@@ -2171,7 +2175,7 @@ function postrules(alreadyrun_)
 				for a,b in ipairs(featureindex[target]) do
 					local same = comparerules(newbaserule,b[1])
 					
-					if same then
+					if same and not has_stable_tag(b[4]) then
 						--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
 						local theseconds = b[2]
 						
@@ -2285,7 +2289,7 @@ function postrules(alreadyrun_)
 						local targetconds = rules[2]
 						local object = targetrule[3]
 						
-						if (targetrule[1] == target) and (targetrule[2] == "is") and (target ~= object) and ((getmat(object) ~= nil) or (object == "revert")) and (string.sub(object, 1, 5) ~= "group") then
+						if (targetrule[1] == target) and (targetrule[2] == "is") and (target ~= object) and ((getmat(object) ~= nil) or (object == "revert")) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
 							if (#newconds > 0) then
 								if (newconds[1] == "never") then
 									targetconds = {}

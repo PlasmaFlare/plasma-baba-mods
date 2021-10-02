@@ -1,5 +1,10 @@
 function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken_,subgroup_)
-	-- @mods(this) - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
+	--[[ 
+		@mods(this) - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
+		@mods(stable) - Override reason: provide a big filter on stableunits such that stableunits are only applied their stablerules and no other rules.
+			When we detect if a unit is a stableunit, we ensure that it has a special condition type, called "stable".
+			
+	 ]]
 	local result = true
 	
 	local orhandling = false
@@ -80,7 +85,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 		result = false
 	end
 
-	if not checking_stable and is_stableunit(unitid, x, y) then
+	if not GLOBAL_checking_stable and is_stableunit(unitid, x, y) then
 		local found_stablecond = false
 		if conds ~= nil then
 			for _,cond in ipairs(conds) do

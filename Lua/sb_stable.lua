@@ -16,7 +16,7 @@ local stablestate = {
 
     rules = {},
     --[[ 
-        ruleids: int -> {
+        ruleids: string -> {
             feature : featureindex item
             unit_count : int 
         }
@@ -79,7 +79,7 @@ local STABLE_LOGGING = false
 -- at least it doesn't override more functions. 
 local prev_undobuffer_len = 0 
 
-checking_stable = false
+GLOBAL_checking_stable = false -- set to true whenever we are finding "X is stable" rules. This is to indirectly tell testcond()
 
 function clear_stable_mod()
     stablestate = {
@@ -99,7 +99,7 @@ function clear_stable_mod()
         count = count + 1
     end
     for _, v in pairs(stable_empty_indicators) do
-        MF_cleanremove(v.indicator_id)
+        MF_cleanremove(v)
         count = count + 1
     end
     for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
@@ -151,8 +151,17 @@ local function get_ruleid(id_list, option)
                 ruleid = ruleid..unit.strings[UNITNAME]
             else
                 ruleid = ruleid..unit.strings[NAME]
-                if unit.strings[NAME] == "this" then
-                    ruleid = ruleid..tostring(unit.values[ID])
+                if is_name_text_this(unit.strings[NAME]) then
+                    ruleid = ruleid.."["..tostring(unit.values[ID]).."]"
+                    for _, ray_unitid in ipairs(get_raycast_units(unitid)) do
+                        if ray_unitid == 2 then
+                            local ray_tileid = get_raycast_tileid(unitid)
+                            ruleid = ruleid.." empty{"..ray_tileid.."}"
+                        else
+                            local id = get_stableunit_key(ray_unitid) -- This isn't actually meant to reference an object in stableunits. Its just a convenient method for getting a unique id 
+                            ruleid = ruleid..","..tostring(id)
+                        end
+                    end     
                 end
             end
         end
@@ -377,6 +386,15 @@ function is_this_unit_in_stablerule(this_unitid)
     return tonumber(this_unitid) and tonumber(this_unitid) <= STABLE_THIS_ID_BASE
 end 
 
+function has_stable_tag(tags)
+    for i, tag in ipairs(tags) do
+        if tag == "stable" then
+            return true
+        end
+    end
+    return false
+end
+
 local function get_stablefeatures_from_name(name)
     local stable_features = {}
     for _, feature in ipairs(featureindex[name]) do
@@ -433,6 +451,7 @@ local function get_stablefeatures_from_name(name)
             table.insert(newcond, {"stable", { ruleid }})
             dup_feature[2] = newcond
             
+            -- Insert "stable" as a tag to indicate this is a stable rule
             table.insert(dup_feature[4], "stable")
             
             
@@ -510,9 +529,9 @@ local function reload_indicators()
     stable_indicators = {}
     stable_empty_indicators = {}
 
-    checking_stable = true
+    GLOBAL_checking_stable = true
     local code_stableunits, code_stableempties = findallfeature(nil, "is", "stable")
-    checking_stable = false
+    GLOBAL_checking_stable = false
     for _, unitid in ipairs(code_stableunits) do
         on_add_stableunit(unitid)
     end
@@ -569,19 +588,16 @@ end
 
 --[[ Core logic ]]
 function update_stable_state()
-    if STABLE_LOGGING then
-        print("----update_stable_state")
-    end
     if on_undo then
         return
     end
 
-    checking_stable = true
+    GLOBAL_checking_stable = true
     local code_stablestate, code_stableempties = findallfeature(nil, "is", "stable")
     if hasfeature("level", "is", "stable", 1) then
         table.insert(code_stablestate, 1)
     end
-    checking_stable = false
+    GLOBAL_checking_stable = false
     
     local stable_rules = {}
     local code_stablestate_lookup = {}
@@ -784,11 +800,12 @@ table.insert(mod_hook_functions["rule_baserules"],
     function()
         -- adding all stablestate.rules into the featureindex
         for _, v in pairs(stablestate.rules) do
-            local feature = v.feature
+            -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
+            local feature = deep_copy_table(v.feature)
             addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
-            local option, conds = feature[1], feature[2]
-
+            
             if STABLE_LOGGING then
+                local option, conds = feature[1], feature[2]
                 print("adding stablerule: "..option[1].." "..option[2].." "..option[3])
             end
         end
@@ -871,15 +888,29 @@ function print_stable_state()
         end
     end
     print("===stablerules===")
-    -- for k,v in pairs(stablestate.rules) do
-    --     print(k.." = { featurecount = "..#v.features.." | unit_count = "..v.unit_count)
-    --     print("---")
-    --     for _, feature in ipairs(v.features) do
-    --         print(feature[1][1].." "..feature[1][2].." "..feature[1][3])
-    --     end
-    --     print("---")
-    --     print("}")
-    -- end
+    for k,v in pairs(stablestate.rules) do
+        print(k.." = { unit_count = "..v.unit_count)
+        print("---")
+        print(v.feature[1][1].." "..v.feature[1][2].." "..v.feature[1][3])
+
+        print("id layout:")
+        local rule_str = ""
+        for _,id in ipairs(v.feature[3]) do
+            local u = mmf.newObject(id[1])
+            rule_str = rule_str.." "..u.strings[NAME]
+        end
+        print(rule_str)
+
+
+        print("Conditions: ")
+        for _, cond in ipairs(v.feature[2]) do
+            local condtype = cond[1]
+            local params = cond[2]
+            print(condtype)
+        end
+        print("---")
+        print("}")
+    end
     
     print("------------------------")
 end
