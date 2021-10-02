@@ -1574,7 +1574,18 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		if (#conds > 0) then
 			local addedto = {}
 
+			-- @mods(stable) - remove when confident that stablerules not having ids won't hinder get_this_parms_in_conds
+			local isstable = false
+			for _, tag in ipairs(tags) do
+				if tag == "stable" then
+					isstable = true
+					break
+				end
+			end
 			local this_params_in_conds = get_this_parms_in_conds(conds, ids)
+			if isstable then
+				assert(#this_params_in_conds == 0, "for stablerule, #this_params_in_conds == "..tostring(#this_params_in_conds))
+			end
 			
 			for i,cond in ipairs(conds) do
 				local condname = cond[1]

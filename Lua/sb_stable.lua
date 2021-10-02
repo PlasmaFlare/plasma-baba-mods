@@ -156,7 +156,7 @@ local function get_ruleid(id_list, option)
                     for _, ray_unitid in ipairs(get_raycast_units(unitid)) do
                         if ray_unitid == 2 then
                             local ray_tileid = get_raycast_tileid(unitid)
-                            ruleid = ruleid.." empty{"..ray_tileid.."}"
+                            ruleid = ruleid.."-empty{"..ray_tileid.."}"
                         else
                             local id = get_stableunit_key(ray_unitid) -- This isn't actually meant to reference an object in stableunits. Its just a convenient method for getting a unique id 
                             ruleid = ruleid..","..tostring(id)
@@ -206,7 +206,14 @@ local function get_stablerule_display(feature)
 
     if (#conds > 0) then
         for a,cond in ipairs(conds) do
-            if cond[1] ~= "this" and cond[1] ~= "not this" then
+            local condtype = cond[1]
+
+            -- invertconds() can directly modify the feature's conds. But it tends to add new conds with
+            -- parenthesis around the condtype (EX: "(not near)", "(on)" ). So to show the original rule,
+            -- ignore the conds with parenthesis
+            local is_inverted_cond = string.find(condtype, "%(")
+
+            if not (condtype == "this" or condtype == "not this" or condtype == "never" or is_inverted_cond) then
                 local middlecond = true
                 
                 if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
@@ -215,7 +222,7 @@ local function get_stablerule_display(feature)
                 
                 if middlecond then
                     if (#custom == 0) then
-                        text = text .. cond[1] .. " "
+                        text = text .. condtype .. " "
                     else
                         text = text .. custom .. " "
                     end
@@ -270,7 +277,7 @@ local function get_stablerule_display(feature)
                     end
                 else
                     if (#custom == 0) then
-                        text = cond[1] .. " " .. text
+                        text = condtype .. " " .. text
                     else
                         text = custom .. " " .. text
                     end
@@ -450,6 +457,7 @@ local function get_stablefeatures_from_name(name)
 
             table.insert(newcond, {"stable", { ruleid }})
             dup_feature[2] = newcond
+            dup_feature[3] = {} -- @Note: taking a risk here and see if get_this_parms_in_conds() can respect stable rules with no ids to present.
             
             -- Insert "stable" as a tag to indicate this is a stable rule
             table.insert(dup_feature[4], "stable")
@@ -546,12 +554,12 @@ table.insert(mod_hook_functions["level_start"],
     function()
         clear_stable_mod()
         record_stable_undo()
+        update_stable_state() -- Only reason we update stable state here is because of a bug where the stable cursor doesn't show at level startup
     end
 )
 table.insert( mod_hook_functions["level_restart"],
     function()
         clear_stable_mod()
-        record_stable_undo()
     end
 )
 
@@ -806,7 +814,11 @@ table.insert(mod_hook_functions["rule_baserules"],
             
             if STABLE_LOGGING then
                 local option, conds = feature[1], feature[2]
-                print("adding stablerule: "..option[1].." "..option[2].." "..option[3])
+                local cond_str = ""
+                for _, cond in ipairs(conds) do
+                    cond_str = cond_str.." "..cond[1]
+                end
+                print("adding stablerule: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
             end
         end
     end
@@ -893,13 +905,13 @@ function print_stable_state()
         print("---")
         print(v.feature[1][1].." "..v.feature[1][2].." "..v.feature[1][3])
 
-        print("id layout:")
-        local rule_str = ""
-        for _,id in ipairs(v.feature[3]) do
-            local u = mmf.newObject(id[1])
-            rule_str = rule_str.." "..u.strings[NAME]
-        end
-        print(rule_str)
+        -- print("id layout:")
+        -- local rule_str = ""
+        -- for _,id in ipairs(v.feature[3]) do
+        --     local u = mmf.newObject(id[1])
+        --     rule_str = rule_str.." "..u.strings[NAME]
+        -- end
+        -- print(rule_str)
 
 
         print("Conditions: ")
