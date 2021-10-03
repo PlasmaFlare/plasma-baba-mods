@@ -42,6 +42,17 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.1** (10/2/21)
+  - [STABLE] Fixed "X is Y" not working as a stable rule
+  - [STABLE] Fixed case where if "baba is red" becomes a stablerule, forming "baba is not red" completely cancels out the stablerule
+  - [STABLE] Fixed lua error when exiting a level with "empty is stable"
+  - [STABLE] (I think) Fixed "THIS is stable" carrying over previous stablerules whenever THIS changes what it is pointing to
+  - [STABLE] Fixed stable indicator not appearing when starting a level with an objecct already stable
+  - [STABLE] Fixed stable rule hover text displaying differently when "X is Y" + "X is not Y" are stable rules
+  - [OMNI TEXT] Fixed common pivot text parsing jank cases, mainly because the systems meant to handle these cases was not enabled for pivot text LOL
+  - [OMNI TEXT] Fixed "too complex" situations with omni text not handling properly
+  - [TURNING TEXT] Fixed directional more firing twice
+  - [STABLE+THIS] Stable and THIS indicators are toggleable through "disable particle effects" options
 - **1.3.0** (9/29/21)
   - Updated for Beta 431D
   - STABLE mod!
