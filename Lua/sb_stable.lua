@@ -407,16 +407,16 @@ local function get_stablefeatures_from_name(name)
     for _, feature in ipairs(featureindex[name]) do
         local rule = feature[1]
         local tags = feature[4]
-        local is_stablerule = false
+        local copy_this_rule = true
         local stable_this_ids = {}
         for _, tag in ipairs(tags) do
-            if tag == "stable" then
-                is_stablerule = true
+            if tag == "stable" or tag == "mimic" then
+                copy_this_rule = false
                 break
             end
         end
         
-        if not is_stablerule and rule[1] == name and rule[3] ~= "stable" then
+        if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
             -- Copy the feature and add an additional condition for stable
             local ruleid = get_ruleid(feature[3], feature[1])
             assert(ruleid)
