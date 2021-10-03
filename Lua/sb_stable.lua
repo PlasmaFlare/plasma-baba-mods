@@ -984,6 +984,12 @@ function update_stable_indicator(unitid, indicator_id, tileid)
 
     indicator_unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
     indicator_unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+
+    if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
+        -- Just to hide it
+        indicator_unit.values[XPOS] = -20
+        indicator_unit.values[YPOS] = -20
+    end
 end
 
 local LETTER_HEIGHT = 24
@@ -1091,7 +1097,8 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
     end
 end
 
-table.insert(mod_hook_functions["effect_always"],
+-- Note: changed from "effect_always" to "always" since effect_always only activates when disable particle effects is off 
+table.insert(mod_hook_functions["always"],
     function()
         for su_key, v in pairs(stable_indicators) do
             update_stable_indicator(v.unitid, v.indicator_id)

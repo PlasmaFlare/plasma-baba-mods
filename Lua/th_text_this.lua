@@ -34,7 +34,8 @@ table.insert(mod_hook_functions["rule_baserules"],
     end
 )
 
-table.insert(mod_hook_functions["effect_always"],
+-- Note: changed from "effect_always" to "always" since effect_always only activates when disable particle effects is off 
+table.insert(mod_hook_functions["always"],
     function()
         update_all_cursors()
     end
@@ -229,6 +230,12 @@ function update_this_cursor(wordunit, cursorunit)
     end
     cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
     cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    
+    if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
+        -- Just to hide it
+        cursorunit.values[XPOS] = -20
+        cursorunit.values[YPOS] = -20
+    end
 end
 
 function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, include_this_units, mark_passed_tiles)
