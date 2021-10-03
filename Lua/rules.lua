@@ -2335,3 +2335,268 @@ function postrules(alreadyrun_)
 	return playrulesound
 end
 
+
+function subrules()
+	--@mods(stable) - Override reason, prevent copied rules from becoming a stablerule (by excluding the "stable" tag)
+	local mimicprotects = {}
+	
+	if (featureindex["all"] ~= nil) then
+		for k,rules in ipairs(featureindex["all"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local ids = rules[3]
+			local tags = rules[4]
+			
+			if (rule[3] == "all") then
+				if (rule[2] ~= "is") then
+					local nconds = {}
+					
+					if (featureindex["not all"] ~= nil) then
+						for a,prules in ipairs(featureindex["not all"]) do
+							local prule = prules[1]
+							local pconds = prules[2]
+							
+							if (prule[1] == rule[1]) and (prule[2] == rule[2]) and (prule[3] == "not all") then
+								local ipconds = invertconds(pconds)
+								
+								for c,d in ipairs(ipconds) do
+									table.insert(nconds, d)
+								end
+							end
+						end
+					end
+					
+					for i,mat in pairs(objectlist) do
+						if (findnoun(i) == false) then
+							local newrule = {rule[1],rule[2],i}
+							local newconds = {}
+							for a,b in ipairs(conds) do
+								table.insert(newconds, b)
+							end
+							for a,b in ipairs(nconds) do
+								table.insert(newconds, b)
+							end
+							addoption(newrule,newconds,ids,false,nil,tags)
+						end
+					end
+				end
+			end
+
+			if (rule[1] == "all") and (string.sub(rule[3], 1, 4) ~= "not ") then
+				local nconds = {}
+				
+				if (featureindex["not all"] ~= nil) then
+					for a,prules in ipairs(featureindex["not all"]) do
+						local prule = prules[1]
+						local pconds = prules[2]
+						
+						if (prule[1] == rule[1]) and (prule[2] == rule[2]) and (prule[3] == "not " .. rule[3]) then
+							local ipconds = invertconds(pconds)
+							
+							if crashy_ then
+								crashy = true
+							end
+							
+							for c,d in ipairs(ipconds) do
+								table.insert(nconds, d)
+							end
+						end
+					end
+				end
+				
+				for i,mat in pairs(objectlist) do
+					if (findnoun(i) == false) then
+						local newrule = {i,rule[2],rule[3]}
+						local newconds = {}
+						for a,b in ipairs(conds) do
+							table.insert(newconds, b)
+						end
+						for a,b in ipairs(nconds) do
+							table.insert(newconds, b)
+						end
+						addoption(newrule,newconds,ids,false,nil,tags)
+					end
+				end
+			end
+			
+			if (rule[1] == "all") and (string.sub(rule[3], 1, 4) == "not ") then
+				for i,mat in pairs(objectlist) do
+					if (findnoun(i) == false) then
+						local newrule = {i,rule[2],rule[3]}
+						local newconds = {}
+						for a,b in ipairs(conds) do
+							table.insert(newconds, b)
+						end
+						addoption(newrule,newconds,ids,false,nil,tags)
+					end
+				end
+			end
+		end
+	end
+	
+	if (featureindex["mimic"] ~= nil) then
+		for i,rules in ipairs(featureindex["mimic"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local tags = rules[4]
+			
+			--@mods(stable) - 
+			if (rule[2] == "mimic") then
+				local object = rule[1]
+				local target = rule[3]
+				
+				local isnot = false
+				
+				if (string.sub(target, 1, 4) == "not ") then
+					target = string.sub(target, 5)
+					isnot = true
+				end
+				
+				if isnot then
+					if (mimicprotects[object] == nil) then
+						mimicprotects[object] = {}
+					end
+					
+					table.insert(mimicprotects[object], {target, conds, rule[3]})
+				end
+			end
+		end
+	end
+	
+	local limiter = 0
+	local limit = 250
+	
+	if (featureindex["mimic"] ~= nil) then
+		for i,rules in ipairs(featureindex["mimic"]) do
+			local rule = rules[1]
+			local conds = rules[2]
+			local tags = rules[4]
+			
+			if (rule[2] == "mimic" ) then
+				local object = rule[1]
+				local target = rule[3]
+				local mprotects = mimicprotects[object] or {}
+				local extraconds = {}
+				
+				local valid = true
+				
+				if (string.sub(target, 1, 4) == "not ") then
+					valid = false
+				end
+				
+				for a,b in ipairs(mprotects) do
+					if (b[1] == target) then
+						local pconds = b[2]
+						
+						if (#pconds == 0) then
+							valid = false
+						else
+							local newconds = invertconds(pconds)
+							
+							for c,d in ipairs(newconds) do
+								table.insert(extraconds, d)
+							end
+						end
+					end
+				end
+				
+				local copythese = {}
+				
+				if valid then
+					if (getmat(object) ~= nil) and (getmat(target) ~= nil) then
+						if (featureindex[target] ~= nil) then
+							copythese = featureindex[target]
+						end
+					end
+				
+					for a,b in ipairs(copythese) do
+						local trule = b[1]
+						local tconds = b[2]
+						local ids = b[3]
+						local ttags = b[4]
+						
+						local valid = true
+						for c,d in ipairs(ttags) do
+							if (d == "mimic") then
+								valid = false
+							end
+						end
+						
+						if (trule[1] == target) and (trule[2] ~= "mimic") and valid then
+							local newconds = {}
+							local newtags = {}
+							local has_stable_cond = false
+							
+							for c,d in ipairs(tconds) do
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(conds) do
+								if d[1] == "stable" then
+									has_stable_cond = true
+								end
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(extraconds) do
+								table.insert(newconds, d)
+							end
+							
+							for c,d in ipairs(ttags) do
+								table.insert(newtags, d)
+							end
+							
+							for c,d in ipairs(tags) do
+								--@mods(stable) - do not make the new mimiced rule be a stablerule. This can happen if "X mimic Y" is a stablerule
+								if d ~= "stable" then
+									table.insert(newtags, d)
+								end
+							end
+							
+							table.insert(newtags, "mimic")
+							
+							local newword1 = object
+							local newword2 = trule[2]
+							local newword3 = trule[3]
+							
+							local newrule = {newword1, newword2, newword3}
+							
+							limiter = limiter + 1
+
+							if has_stable_cond then
+								addoption(newrule,newconds,ids,false,nil,newtags)
+							else
+								addoption(newrule,newconds,ids,true,nil,newtags)
+							end
+
+							if STABLE_LOGGING then
+								local conds_str = ""
+								for _, cond in ipairs(newconds) do
+									conds_str = conds_str.." "..cond[1]
+								end
+
+								print("adding mimiced rule: ", newword1, newword2, newword3)
+								print("conds:", conds_str)
+								local t = "'X mimic Y' tags:"
+								for _,tag in ipairs(tags) do
+									t = t.. " "..tag
+								end
+								t= t.." | mimiced rule tags:"
+								for _,tag in ipairs(newtags) do
+									t = t.. " "..tag
+								end
+								print(t)
+							end
+							
+							if (limiter > limit) then
+								MF_alert("Level destroyed - mimic happened too many times!")
+								destroylevel("toocomplex")
+								return
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end

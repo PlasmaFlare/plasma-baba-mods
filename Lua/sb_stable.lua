@@ -818,7 +818,7 @@ table.insert(mod_hook_functions["rule_baserules"],
                 for _, cond in ipairs(conds) do
                     cond_str = cond_str.." "..cond[1]
                 end
-                print("adding stablerule: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
+                print("inserting stablerule into featureindex: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
             end
         end
     end
