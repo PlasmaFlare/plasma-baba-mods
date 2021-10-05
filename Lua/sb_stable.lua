@@ -416,6 +416,9 @@ local function get_stablefeatures_from_name(name)
             end
         end
         
+        --[[ 
+            Note: one "special" rule that we haven't covered is "X is crash". But excluding this property from stablerules seems to prevent the infinite loop screen from happening when "X is stable" + "X feeling stable is not stable"
+         ]]
         if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
             -- Copy the feature and add an additional condition for stable
             local ruleid = get_ruleid(feature[3], feature[1])
@@ -1118,7 +1121,7 @@ table.insert(mod_hook_functions["always"],
         for su_key, _ in pairs(stablestate.units) do
             local unitid = MF_getfixed(su_key)
             local unit = mmf.newObject(unitid)
-            if unit.visible and mouse_x >= unit.x - half_tilesize and mouse_x < unit.x + half_tilesize and mouse_y >= unit.y - half_tilesize and mouse_y < unit.y + half_tilesize then
+            if unit and unit.visible and mouse_x >= unit.x - half_tilesize and mouse_x < unit.x + half_tilesize and mouse_y >= unit.y - half_tilesize and mouse_y < unit.y + half_tilesize then
                 table.insert(displayed_su_keys, su_key)
                 unit_x = unit.x
                 unit_y = unit.y

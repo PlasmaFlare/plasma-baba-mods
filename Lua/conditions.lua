@@ -1,8 +1,10 @@
 function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken_,subgroup_)
 	--[[ 
 		@mods(this) - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
-		@mods(stable) - Override reason: provide a big filter on stableunits such that stableunits are only applied their stablerules and no other rules.
-			When we detect if a unit is a stableunit, we ensure that it has a special condition type, called "stable".
+		@mods(stable) - Override reason: 
+			- provide a big filter on stableunits such that stableunits are only applied their stablerules and no other rules.
+				When we detect if a unit is a stableunit, we ensure that it has a special condition type, called "stable".
+			- handle "X feeling stable is Y" so that it explicitly looks at the featureindex instead of the object's stablerules
 			
 	 ]]
 	local result = true
@@ -3102,6 +3104,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							end
 							
 							local bcode = b .. "_" .. tostring(a)
+							local prev_GLOBAL_checking_stable = GLOBAL_checking_stable
 							
 							if (featureindex[name] ~= nil) then
 								for c,d in ipairs(featureindex[name]) do
@@ -3112,7 +3115,13 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 										if (pnot == false) then
 											if (drule[1] == name) and (drule[2] == "is") and (drule[3] == b) then
 												checkedconds[tostring(dconds)] = 1
-												
+
+												--@mods(stable) special case with "feeling stable". Need this global set to true to refer to
+												-- featureindex instead of the object's stablerules. Also, save the state of the global before setting to true
+												local prev_GLOBAL_checking_stable = GLOBAL_checking_stable
+												if b == "stable" then
+													GLOBAL_checking_stable = true
+												end
 												if (alreadyfound[bcode] == nil) and testcond(dconds,unitid,x,y,nil,limit,checkedconds) then
 													alreadyfound[bcode] = 1
 													allfound = allfound + 1
@@ -3127,6 +3136,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													local objtype = getactualdata_objlist(obj,"type")
 													
 													if (objtype == 2) then
+														if drule[3] == "stable" then
+															GLOBAL_checking_stable = true
+														end
+
 														if (drule[1] == name) and (drule[2] == "is") and (drule[3] ~= pname) then
 															checkedconds[tostring(dconds)] = 1
 															
@@ -3143,6 +3156,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									end
 								end
 							end
+							GLOBAL_checking_stable = prev_GLOBAL_checking_stable
 						end
 					else
 						result = false
@@ -3170,6 +3184,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							end
 							
 							local bcode = b .. "_" .. tostring(a)
+							local prev_GLOBAL_checking_stable = GLOBAL_checking_stable
 							
 							if (featureindex[name] ~= nil) and (failure == false) then
 								for c,d in ipairs(featureindex[name]) do
@@ -3181,10 +3196,16 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 											if (drule[1] == name) and (drule[2] == "is") and (drule[3] == b) then
 												checkedconds[tostring(dconds)] = 1
 												
+												local prev_GLOBAL_checking_stable = GLOBAL_checking_stable
+												if b == "stable" then
+													GLOBAL_checking_stable = true
+												end
 												if testcond(dconds,unitid,x,y,nil,limit,checkedconds) then
 													failure = true
 													break
 												end
+
+												GLOBAL_checking_stable = prev_GLOBAL_checking_stable
 											end
 										else
 											if (string.sub(drule[3], 1, 4) ~= "not ") then
@@ -3194,6 +3215,9 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													local objtype = getactualdata_objlist(obj,"type")
 													
 													if (objtype == 2) then
+														if drule[3] == "stable" then
+															GLOBAL_checking_stable = true
+														end
 														if (drule[1] == name) and (drule[2] == "is") and (drule[3] ~= pname) then
 															checkedconds[tostring(dconds)] = 1
 															
@@ -3209,6 +3233,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									end
 								end
 							end
+							GLOBAL_checking_stable = prev_GLOBAL_checking_stable
 						end
 					else
 						result = false
