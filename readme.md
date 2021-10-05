@@ -42,6 +42,9 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.2** (10/3/21)
+  - [STABLE] Stable will not copy over rules made from mimic (but can still copy "X mimic Y")
+  - [STABLE] Fixed "X feeling stable is Y" not working
 - **1.3.1** (10/2/21)
   - [STABLE] Fixed "X is Y" not working as a stable rule
   - [STABLE] Fixed case where if "baba is red" becomes a stablerule, forming "baba is not red" completely cancels out the stablerule
