@@ -61,6 +61,21 @@ function splice_initialize()
 end
 splice_initialize()
 
+function is_text_in_palette(textname)
+    if textname == nil then
+        return false
+    end
+
+    -- Due to weird legacy systems of object indexing, we have to check if the current
+    -- packed text name's unit reference (i.e "object034") refers to the actual text object
+    local realname = unitreference["text_"..textname]
+    if realname == nil then
+        return false
+    end
+    local dname = getactualdata_objlist(realname,"name")
+
+    return dname == "text_"..textname 
+end
 
 function delete_without_triggering_has(unitid)
     if unitid ~= 2 then
@@ -378,16 +393,18 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     local packed_text_name = ""
     for i=1,length do
         packed_text_name = get_pack_text(found_letters, dir)
-        if #found_letters > 1 and unitreference["text_"..packed_text_name] ~= nil then
-            -- Due to weird legacy systems of object indexing, we have to check if the current
-            -- packed text name's unit reference (i.e "object034") refers to the actual text object
-            local realname = unitreference["text_"..packed_text_name]
-            local dname = getactualdata_objlist(realname,"name")
-            if dname == "text_"..packed_text_name then
-                -- Commented out due to error when "X is all". This isn't the direct cause, but might cause other cases. But is there a need to add this to the objectlist
-                -- objectlist["text_"..packed_text_name] = 1
-                break
-            end
+        if #found_letters > 1 and is_text_in_palette(packed_text_name)then
+            -- Commented out due to error when "X is all". This isn't the direct cause, but might cause other cases. But is there a need to add this to the objectlist
+            -- objectlist["text_"..packed_text_name] = 1
+            break
+            -- -- Due to weird legacy systems of object indexing, we have to check if the current
+            -- -- packed text name's unit reference (i.e "object034") refers to the actual text object
+            -- local realname = unitreference["text_"..packed_text_name]
+            -- local dname = getactualdata_objlist(realname,"name")
+            -- if dname == "text_"..packed_text_name then
+                
+            --     break
+            -- end
         end
         
         if reverse then
