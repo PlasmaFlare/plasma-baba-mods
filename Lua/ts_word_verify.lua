@@ -13,20 +13,10 @@ local global_special_cut_mappings = {
     nudgeup =        "nudge",
     nudgeright =     "nudge",
     nudgedown =      "nudge",
+    ellipsis =       "ooo",
 }
 local global_special_pack_mappings = {
-    fallright =      "fall",
-    fallleft =       "fall",
-    fallup =         "fall",
-    falldown =       "fall",
-    lockedright =    "locked",
-    lockedleft =     "locked",
-    lockedup =       "locked",
-    lockeddown =     "locked",
-    nudgeleft =      "nudge",
-    nudgeup =        "nudge",
-    nudgeright =     "nudge",
-    nudgedown =      "nudge",
+    ooo =            "ellipsis",
 }
 local global_special_pack_directional_mappings = {
     fall = {
@@ -110,6 +100,9 @@ end
 
 function pack_word_verify_initialize()
     -- Normal pack mappings
+    for k,v in pairs(global_special_pack_mappings) do
+        special_pack_mappings[k] = v
+    end
     for turning_prop, _ in pairs(turning_word_names) do
         special_pack_mappings["turning"..turning_prop] = "turning_"..turning_prop
     end
