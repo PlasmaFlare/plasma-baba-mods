@@ -14,21 +14,6 @@ end
 reset_turning_text_mod_globals()
 
 
-turning_word_names = {
-    fall=true, 
-    nudge=true, 
-    locked=true, 
-    dir=true, 
-    you=true,
-    you2=true,
-    push=true,
-    pull=true,
-    swap=true,
-    stop=true,
-    shift=true,
-    more=true,
-    select=true,
-}
 for name,_ in pairs(turning_word_names) do
     register_directional_text("turning_"..name)
 end

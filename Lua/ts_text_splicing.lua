@@ -12,10 +12,6 @@ reset_splice_mod_globals()
 
 
 -- Local variables
-
-local editor_objlist_letter_indexes = {}
-local editor_objlist_multi_pairing_indexes = {}
-
 local cut_texts = {} -- a record of all texts that were destroyed via cut when we call handle_cut_text
 local pack_texts = {} -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
 local exclude_from_cut_blocking = {} -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
@@ -31,35 +27,6 @@ table.insert(mod_hook_functions["command_given"],
     end
 )
 
-function splice_initialize()
-    local multi_pair_texts = {"text_cut", "text_turning_dir", "text_turning_fall", "text_turning_locked", "text_turning_nudge"}
-    for _, name in ipairs(multi_pair_texts) do
-        editor_objlist_multi_pairing_indexes[name] = {}
-    end
-
-    -- Store indexes of letterunits in editor_objectlist so that we can reference them faster
-    for i, v in pairs(editor_objlist) do
-        if v.unittype == "text" and string.sub(v.name, 1, 5) == "text_" then
-            local textname = string.sub(v.name, 6)
-            if v.type == 5 and textname ~= "sharp" and textname ~= "flat" and not tonumber(textname) then
-                table.insert(editor_objlist_multi_pairing_indexes["text_cut"], i)
-            end
-            if textname == "right" or textname == "left" or textname == "up" or textname == "down" then
-                table.insert(editor_objlist_multi_pairing_indexes["text_turning_dir"], i)
-            end
-            if textname == "fallright" or textname == "fallleft" or textname == "fallup" or textname == "fall" then
-                table.insert(editor_objlist_multi_pairing_indexes["text_turning_fall"], i)
-            end
-            if textname == "lockedright" or textname == "lockedleft" or textname == "lockedup" or textname == "lockeddown" then
-                table.insert(editor_objlist_multi_pairing_indexes["text_turning_locked"], i)
-            end
-            if textname == "nudgeright" or textname == "nudgeleft" or textname == "nudgeup" or textname == "nudgedown" then
-                table.insert(editor_objlist_multi_pairing_indexes["text_turning_nudge"], i)
-            end
-        end
-    end     
-end
-splice_initialize()
 
 function is_text_in_palette(textname)
     if textname == nil then
@@ -97,28 +64,6 @@ function reset_splice_mod_vars_per_take()
     splice_mod_globals.record_packed_text = false
 end
 
-function add_letterobjects_if_added_cut(editor_currobjlist, data)
-    if editor_objlist_multi_pairing_indexes[data.name] then
-        for _, index in pairs(editor_objlist_multi_pairing_indexes[data.name]) do
-            if (#editor_currobjlist >= 150) then
-                return
-            end
-
-            local alreadyadded = false
-            local checkname = editor_objlist[index]
-            for i,v in ipairs(editor_currobjlist) do
-				if (v.name == checkname) then
-                    alreadyadded = true
-                    break
-				end
-            end
-            
-            if not alreadyadded then
-                editor_currobjlist_add(index,false,nil,nil,nil,false)
-            end
-        end
-    end
-end
 
 function add_moving_units_to_exclude_from_cut_blocking(moving_units)
     for i,data in ipairs(moving_units) do
@@ -397,14 +342,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
             -- Commented out due to error when "X is all". This isn't the direct cause, but might cause other cases. But is there a need to add this to the objectlist
             -- objectlist["text_"..packed_text_name] = 1
             break
-            -- -- Due to weird legacy systems of object indexing, we have to check if the current
-            -- -- packed text name's unit reference (i.e "object034") refers to the actual text object
-            -- local realname = unitreference["text_"..packed_text_name]
-            -- local dname = getactualdata_objlist(realname,"name")
-            -- if dname == "text_"..packed_text_name then
-                
-            --     break
-            -- end
         end
         
         if reverse then

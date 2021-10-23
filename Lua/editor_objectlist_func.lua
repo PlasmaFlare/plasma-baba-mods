@@ -6,7 +6,9 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 	local dopairs = true
 	local pairedwith = true
 	local newtilename = ""
-	local newname = ""
+
+	local data = editor_objlist[objid]
+	local newname = data.name or "error"
 	
 	if (build_ ~= nil) then
 		build = build_
@@ -19,11 +21,28 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 	if (pairedwith_ ~= nil) then
 		pairedwith = pairedwith_
 	end
-	
-	for i,v in ipairs(editor_currobjlist) do
-		if (v.id == objid) then
-			newtilename = v.object
-			valid = false
+
+	local checking = true
+	while checking and valid do
+		checking = false
+
+		for i,v in ipairs(editor_currobjlist) do
+			if (v.id == objid) then
+				newtilename = v.object
+				valid = false
+			end
+		
+			if (v.name == newname) then
+				checking = true
+				
+				if (tonumber(string.sub(v.name, -1)) ~= nil) then
+					local num = tonumber(string.sub(v.name, -1)) + 1
+					
+					newname = string.sub(newname, 1, string.len(newname)-1) .. tostring(num)
+				else
+					newname = newname .. "2"
+				end
+			end
 		end
 	end
 	
@@ -36,10 +55,8 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 		
 		local this = editor_currobjlist[id]
 		this.id = objid
-		
-		local data = editor_objlist[objid]
-		this.name = data.name
-		
+		this.name = newname
+
 		if (pairid_ ~= nil) then
 			this.pair = pairid_
 		end
@@ -88,13 +105,13 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 		this.object = tilename
 		
 		for i,v in pairs(tileslist) do
-			if (v.name == data.name) then
+			if (v.name == newname) then
 				local valid = true
 				
 				if (changes[i] ~= nil) then
 					local cdata = changes[i]
 					
-					if (cdata.name ~= nil) and (cdata.name ~= data.name) then
+					if (cdata.name ~= nil) and (cdata.name ~= newname) then
 						valid = false
 					end
 				end
@@ -152,7 +169,7 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 			customobjectsstring = gettablestring(c)
 		end
 		
-		local c_name = data.name
+		local c_name = newname
 		local c_image = data.sprite or data.name
 		local c_colour = colourstring
 		local c_tiling = data.tiling or -1
@@ -219,10 +236,9 @@ function editor_currobjlist_add(objid_,build_,dopairs_,gridpos_,pairid_,pairedwi
 			end
         end
         
-        add_letterobjects_if_added_cut(editor_currobjlist, data)
+        add_cut_or_pack_palette_groups(editor_currobjlist, data)
 		
 		newtilename = tilename
-		newname = data.name
 	else
 		MF_alert("ID already listed! " .. tostring(objid))
 	end

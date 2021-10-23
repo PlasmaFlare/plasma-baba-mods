@@ -70,7 +70,6 @@ editor_objlist["text_turning_fall"] =
 	layer = 20,
 	colour = {5, 1},
 	colour_active = {5, 3},
-	pairedwith = "text_fall",
 }
 editor_objlist["text_turning_nudge"] = 
 {
@@ -83,7 +82,6 @@ editor_objlist["text_turning_nudge"] =
 	layer = 20,
 	colour = {5, 1},
 	colour_active = {5, 3},
-	pairedwith = "text_nudge",
 }
 editor_objlist["text_turning_dir"] = 
 {
@@ -108,7 +106,6 @@ editor_objlist["text_turning_locked"] =
 	layer = 20,
 	colour = {4, 1},
 	colour_active = {4, 2},
-	pairedwith = "text_locked",
 }
 
 -- YOU
@@ -123,7 +120,6 @@ editor_objlist["text_youright"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you",
 }
 editor_objlist["text_youleft"] = 
 {
@@ -136,7 +132,6 @@ editor_objlist["text_youleft"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you",
 }
 editor_objlist["text_youup"] = 
 {
@@ -149,7 +144,6 @@ editor_objlist["text_youup"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you",
 }
 editor_objlist["text_youdown"] = 
 {
@@ -162,7 +156,6 @@ editor_objlist["text_youdown"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you",
 }
 editor_objlist["text_turning_you"] = 
 {
@@ -175,7 +168,6 @@ editor_objlist["text_turning_you"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you",
 }
 
 -- YOU2
@@ -190,7 +182,6 @@ editor_objlist["text_you2right"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you2",
 }
 editor_objlist["text_you2left"] = 
 {
@@ -203,7 +194,6 @@ editor_objlist["text_you2left"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you2",
 }
 editor_objlist["text_you2up"] = 
 {
@@ -216,7 +206,6 @@ editor_objlist["text_you2up"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you2",
 }
 editor_objlist["text_you2down"] = 
 {
@@ -229,7 +218,6 @@ editor_objlist["text_you2down"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you2",
 }
 editor_objlist["text_turning_you2"] = 
 {
@@ -242,7 +230,6 @@ editor_objlist["text_turning_you2"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_you2",
 }
 
 -- MORE
@@ -257,7 +244,6 @@ editor_objlist["text_moreright"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_more",
 }
 editor_objlist["text_moreleft"] = 
 {
@@ -270,7 +256,6 @@ editor_objlist["text_moreleft"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_more",
 }
 editor_objlist["text_moreup"] = 
 {
@@ -283,7 +268,6 @@ editor_objlist["text_moreup"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_more",
 }
 editor_objlist["text_moredown"] = 
 {
@@ -296,7 +280,6 @@ editor_objlist["text_moredown"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_more",
 }
 editor_objlist["text_turning_more"] = 
 {
@@ -309,7 +292,6 @@ editor_objlist["text_turning_more"] =
 	layer = 20,
 	colour = {4, 0},
 	colour_active = {4, 1},
-	pairedwith = "text_more",
 }
 
 -- PUSH
@@ -324,7 +306,6 @@ editor_objlist["text_pushright"] =
 	layer = 20,
 	colour = {6, 0},
 	colour_active = {6, 1},
-	pairedwith = "text_push",
 }
 editor_objlist["text_pushleft"] = 
 {
@@ -337,7 +318,6 @@ editor_objlist["text_pushleft"] =
 	layer = 20,
 	colour = {6, 0},
 	colour_active = {6, 1},
-	pairedwith = "text_push",
 }
 editor_objlist["text_pushup"] = 
 {
@@ -350,7 +330,6 @@ editor_objlist["text_pushup"] =
 	layer = 20,
 	colour = {6, 0},
 	colour_active = {6, 1},
-	pairedwith = "text_push",
 }
 editor_objlist["text_pushdown"] = 
 {
@@ -363,7 +342,6 @@ editor_objlist["text_pushdown"] =
 	layer = 20,
 	colour = {6, 0},
 	colour_active = {6, 1},
-	pairedwith = "text_push",
 }
 editor_objlist["text_turning_push"] = 
 {
@@ -376,7 +354,6 @@ editor_objlist["text_turning_push"] =
 	layer = 20,
 	colour = {6, 0},
 	colour_active = {6, 1},
-	pairedwith = "text_push",
 }
 
 -- PULL
@@ -391,7 +368,6 @@ editor_objlist["text_pullright"] =
 	layer = 20,
 	colour = {6, 1},
 	colour_active = {6, 2},
-	pairedwith = "text_pull",
 }
 editor_objlist["text_pullleft"] = 
 {
@@ -404,7 +380,6 @@ editor_objlist["text_pullleft"] =
 	layer = 20,
 	colour = {6, 1},
 	colour_active = {6, 2},
-	pairedwith = "text_pull",
 }
 editor_objlist["text_pullup"] = 
 {
@@ -417,7 +392,6 @@ editor_objlist["text_pullup"] =
 	layer = 20,
 	colour = {6, 1},
 	colour_active = {6, 2},
-	pairedwith = "text_pull",
 }
 editor_objlist["text_pulldown"] = 
 {
@@ -430,7 +404,6 @@ editor_objlist["text_pulldown"] =
 	layer = 20,
 	colour = {6, 1},
 	colour_active = {6, 2},
-	pairedwith = "text_pull",
 }
 editor_objlist["text_turning_pull"] = 
 {
@@ -443,7 +416,6 @@ editor_objlist["text_turning_pull"] =
 	layer = 20,
 	colour = {6, 1},
 	colour_active = {6, 2},
-	pairedwith = "text_pull",
 }
 
 -- SWAP
@@ -458,7 +430,6 @@ editor_objlist["text_swapright"] =
 	layer = 20,
 	colour = {3, 0},
 	colour_active = {3, 1},
-	pairedwith = "text_swap",
 }
 editor_objlist["text_swapleft"] = 
 {
@@ -471,7 +442,6 @@ editor_objlist["text_swapleft"] =
 	layer = 20,
 	colour = {3, 0},
 	colour_active = {3, 1},
-	pairedwith = "text_swap",
 }
 editor_objlist["text_swapup"] = 
 {
@@ -484,7 +454,6 @@ editor_objlist["text_swapup"] =
 	layer = 20,
 	colour = {3, 0},
 	colour_active = {3, 1},
-	pairedwith = "text_swap",
 }
 editor_objlist["text_swapdown"] = 
 {
@@ -497,7 +466,6 @@ editor_objlist["text_swapdown"] =
 	layer = 20,
 	colour = {3, 0},
 	colour_active = {3, 1},
-	pairedwith = "text_swap",
 }
 editor_objlist["text_turning_swap"] = 
 {
@@ -510,7 +478,6 @@ editor_objlist["text_turning_swap"] =
 	layer = 20,
 	colour = {3, 0},
 	colour_active = {3, 1},
-	pairedwith = "text_swap",
 }
 
 -- STOP
@@ -525,7 +492,6 @@ editor_objlist["text_stopright"] =
 	layer = 20,
 	colour = {5, 0},
 	colour_active = {5, 1},
-	pairedwith = "text_stop",
 }
 editor_objlist["text_stopleft"] = 
 {
@@ -538,7 +504,6 @@ editor_objlist["text_stopleft"] =
 	layer = 20,
 	colour = {5, 0},
 	colour_active = {5, 1},
-	pairedwith = "text_stop",
 }
 editor_objlist["text_stopup"] = 
 {
@@ -551,7 +516,6 @@ editor_objlist["text_stopup"] =
 	layer = 20,
 	colour = {5, 0},
 	colour_active = {5, 1},
-	pairedwith = "text_stop",
 }
 editor_objlist["text_stopdown"] = 
 {
@@ -564,7 +528,6 @@ editor_objlist["text_stopdown"] =
 	layer = 20,
 	colour = {5, 0},
 	colour_active = {5, 1},
-	pairedwith = "text_stop",
 }
 editor_objlist["text_turning_stop"] = 
 {
@@ -577,7 +540,6 @@ editor_objlist["text_turning_stop"] =
 	layer = 20,
 	colour = {5, 0},
 	colour_active = {5, 1},
-	pairedwith = "text_stop",
 }
 
 -- SHIFT
@@ -592,7 +554,6 @@ editor_objlist["text_shiftright"] =
 	layer = 20,
 	colour = {1, 2},
 	colour_active = {1, 3},
-	pairedwith = "text_shift",
 }
 editor_objlist["text_shiftleft"] = 
 {
@@ -605,7 +566,6 @@ editor_objlist["text_shiftleft"] =
 	layer = 20,
 	colour = {1, 2},
 	colour_active = {1, 3},
-	pairedwith = "text_shift",
 }
 editor_objlist["text_shiftup"] = 
 {
@@ -618,7 +578,6 @@ editor_objlist["text_shiftup"] =
 	layer = 20,
 	colour = {1, 2},
 	colour_active = {1, 3},
-	pairedwith = "text_shift",
 }
 editor_objlist["text_shiftdown"] = 
 {
@@ -631,7 +590,6 @@ editor_objlist["text_shiftdown"] =
 	layer = 20,
 	colour = {1, 2},
 	colour_active = {1, 3},
-	pairedwith = "text_shift",
 }
 editor_objlist["text_turning_shift"] = 
 {
@@ -644,7 +602,6 @@ editor_objlist["text_turning_shift"] =
 	layer = 20,
 	colour = {1, 2},
 	colour_active = {1, 3},
-	pairedwith = "text_shift",
 }
 
 -- SELECT
@@ -659,7 +616,6 @@ editor_objlist["text_selectright"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
-	pairedwith = "text_select",
 }
 editor_objlist["text_selectleft"] = 
 {
@@ -672,7 +628,6 @@ editor_objlist["text_selectleft"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
-	pairedwith = "text_select",
 }
 editor_objlist["text_selectup"] = 
 {
@@ -685,7 +640,6 @@ editor_objlist["text_selectup"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
-	pairedwith = "text_select",
 }
 editor_objlist["text_selectdown"] = 
 {
@@ -698,7 +652,6 @@ editor_objlist["text_selectdown"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
-	pairedwith = "text_select",
 }
 editor_objlist["text_turning_select"] = 
 {
@@ -711,7 +664,6 @@ editor_objlist["text_turning_select"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
-	pairedwith = "text_select",
 }
 
 formatobjlist()
