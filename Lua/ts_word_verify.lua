@@ -24,7 +24,9 @@ local function get_special_cut_mappings()
     end
     -- Turning text
     for turning_prop, _ in pairs(turning_word_names) do
-        cut_mappings["turning_"..turning_prop] = turning_prop
+        if turning_prop ~= "dir" then
+            cut_mappings["turning_"..turning_prop] = turning_prop
+        end
     end
     -- Omni text
     for branching_text, _ in pairs(branching_text_names) do
@@ -137,7 +139,7 @@ table.insert(mod_hook_functions["level_start"],
     Given a name of a text that will be cut, return the output text that will be produced. Normally this will be the text name
     itself. But special cases are defined in special_cut_mappings.
  ]]
-function get_cut_text(name, dir)
+function get_cut_text(name, text_dir, cut_direction)
     -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction
 
     local t = special_cut_mappings[name]
@@ -146,6 +148,15 @@ function get_cut_text(name, dir)
     -- THIS
     if is_name_text_this(name, false) then
         return "this"
+    end
+
+    -- Turning dir
+    if name == "turning_dir" then
+        if text_dir == 0 then return "right"
+        elseif text_dir == 1 then return "up"
+        elseif text_dir == 2 then return "left"
+        elseif text_dir == 3 then return "down"
+        end
     end
 
     for c in name:gmatch"." do

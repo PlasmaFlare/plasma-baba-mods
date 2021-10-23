@@ -25,6 +25,12 @@ function initialize_palette_groups()
         
     end
 
+    -- Turning dir case
+    table.insert(editor_objlist_pack_groups, {
+        "text_right", "text_up", "text_left", "text_down"
+    })
+    editor_objlist_pack_group_map["text_turning_dir"] = #editor_objlist_pack_groups
+
 
     local multi_pair_texts = {"text_cut"}
     for _, name in ipairs(multi_pair_texts) do

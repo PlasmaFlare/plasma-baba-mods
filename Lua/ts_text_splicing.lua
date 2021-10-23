@@ -118,7 +118,7 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
     return data
 end
 
-function handle_text_cutting(data, dir)
+function handle_text_cutting(data, cut_direction)
     assert(data.cut_text > 2)
 
     -- This is to prevent stacked cut objects cutting the same text
@@ -143,13 +143,13 @@ function handle_text_cutting(data, dir)
         end
     end
 
-    local dirvec = dirs[dir+1]
+    local dirvec = dirs[cut_direction+1]
     local ox = dirvec[1]
     local oy = dirvec[2]
 
-    local outstr = get_cut_text(bname, cut_text_unit.values[DIR])
+    local outstr = get_cut_text(bname, cut_text_unit.values[DIR], cut_direction)
     if outstr then
-        if dir == 1 or dir == 2 then
+        if cut_direction == 1 or cut_direction == 2 then
             outstr = outstr:reverse()
         end
 
@@ -188,7 +188,7 @@ function handle_text_cutting(data, dir)
 
             if valid then
                 -- objectlist[c] = 1 -- Commented out due to error when "X is all". But is there a need to add the lettertext to the objectlist
-                local newunitid = create("text_"..c, x + ox, y - oy, dir, x, y, nil, nil, leveldata)
+                local newunitid = create("text_"..c, x + ox, y - oy, cut_direction, x, y, nil, nil, leveldata)
 
                 exclude_from_cut_blocking[newunitid] = true
                 ox = ox + dirvec[1]
