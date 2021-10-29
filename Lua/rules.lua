@@ -1753,7 +1753,10 @@ function code(alreadyrun_)
 				addbaserule(v[1],v[2],v[3],v[4])
 			end
 			
-			formlettermap()
+			-- @mods(turning text) - weirdchamp thing to do. This tries to prevent the immensive lag spike when you have turning_dir and a rectangle of letters in one level
+			if not turning_text_mod_globals.tt_executing_code then
+				formlettermap()
+			end
 			
 			if (#codeunits > 0) then
 				for i,v in ipairs(codeunits) do
