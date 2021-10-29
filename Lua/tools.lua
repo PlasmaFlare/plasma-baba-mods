@@ -218,7 +218,21 @@ function writerules(parent,name,x_,y_)
 					if cond[1] == "this" or cond[1] == "not this" then
 					elseif middlecond then
 						if (#custom == 0) then
-							text = text .. cond[1] .. " "
+							local target = cond[1]
+							local isnot = string.sub(target, 1, 4)
+							local target_ = target
+							
+							if (isnot == "not ") then
+								target_ = string.sub(target, 5)
+							else
+								isnot = ""
+							end
+							
+							if (word_names[target_] ~= nil) then
+								target = isnot .. word_names[target_]
+							end
+							
+							text = text .. target .. " "
 						else
 							text = text .. custom .. " "
 						end
@@ -230,7 +244,21 @@ function writerules(parent,name,x_,y_)
 									if this_param_name then
 										text = text .. this_param_name.." "
 									elseif (#custom == 0) then
-										text = text .. d .. " "
+										local target = d
+										local isnot = string.sub(target, 1, 4)
+										local target_ = target
+										
+										if (isnot == "not ") then
+											target_ = string.sub(target, 5)
+										else
+											isnot = ""
+										end
+										
+										if (word_names[target_] ~= nil) then
+											target = isnot .. word_names[target_]
+										end
+										
+										text = text .. target .. " "
 									else
 										text = text .. custom .. " "
 									end
@@ -340,3 +368,4 @@ function findnoun(noun,list_)
 	
 	return false
 end
+

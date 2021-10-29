@@ -1383,24 +1383,6 @@ function check(unitid,x,y,dir,pulling_,reason)
 	local result = {}
 	local results = {}
 	local specials = {}
-	
-	arrow_prop_mod_globals.group_arrow_properties = false
-	local emptystop = hasfeature("empty","is","stop",2,x+ox,y+oy)
-	local emptypush = hasfeature("empty","is","push",2,x+ox,y+oy)
-	local emptypull = hasfeature("empty","is","pull",2,x+ox,y+oy)
-	local emptyswap = hasfeature("empty","is","swap",2,x+ox,y+oy)
-	local emptystill = cantmove("empty",2,dir_,x+ox,y+oy)
-	arrow_prop_mod_globals.group_arrow_properties = true
-	
-	-- @Turning Text(Push/pull/stop/swap)
-	emptystop, emptypush, emptypull = do_directional_collision(dirfeaturevalue, "empty", 2, emptystop, emptypush, emptypull, x,y,ox,oy, pulling, reason)
-	if dirfeaturevalue ~= nil and dirfeaturevalue >= 0 and dirfeaturevalue <= 3 then
-		local dirfeaturerotate = dirfeaturemap[rotate(dirfeaturevalue) + 1]
-		if not emptyswap then
-			emptyswap = hasfeature("empty","is","swap"..dirfeaturerotate,id,x+ox,y+oy)
-		end
-	end
-	
 	local unit = {}
 	local name = ""
 	
@@ -1610,6 +1592,23 @@ function check(unitid,x,y,dir,pulling_,reason)
 			end
 		end
 	elseif (phantom == nil) then
+		arrow_prop_mod_globals.group_arrow_properties = false
+		local emptystop = hasfeature("empty","is","stop",2,x+ox,y+oy)
+		local emptypush = hasfeature("empty","is","push",2,x+ox,y+oy)
+		local emptypull = hasfeature("empty","is","pull",2,x+ox,y+oy)
+		local emptyswap = hasfeature("empty","is","swap",2,x+ox,y+oy)
+		local emptystill = cantmove("empty",2,dir_,x+ox,y+oy)
+		arrow_prop_mod_globals.group_arrow_properties = true
+		
+		-- @Turning Text(Push/pull/stop/swap)
+		emptystop, emptypush, emptypull = do_directional_collision(dirfeaturevalue, "empty", 2, emptystop, emptypush, emptypull, x,y,ox,oy, pulling, reason)
+		if dirfeaturevalue ~= nil and dirfeaturevalue >= 0 and dirfeaturevalue <= 3 then
+			local dirfeaturerotate = dirfeaturemap[rotate(dirfeaturevalue) + 1]
+			if not emptyswap then
+				emptyswap = hasfeature("empty","is","swap"..dirfeaturerotate,id,x+ox,y+oy)
+			end
+		end
+		
 		local localresult = 0
 		local valid = true
 		local bname = "empty"

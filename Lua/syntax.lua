@@ -192,3 +192,4 @@ function command(key,player_)
 	
 	dolog(key)
 end
+

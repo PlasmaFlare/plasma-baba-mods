@@ -690,6 +690,83 @@ function block(small_)
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
 	
+	local isboom = getunitswitheffect("boom",false,delthese)
+	
+	for id,unit in ipairs(isboom) do
+		local ux,uy = unit.values[XPOS],unit.values[YPOS]
+		local sunk = false
+		local doeffect = true
+		
+		if (issafe(unit.fixed) == false) then
+			sunk = true
+		end
+		
+		local name = getname(unit)
+		local count = hasfeature_count(name,"is","boom",unit.fixed,ux,uy)
+		local dim = count - 1
+		
+		local locs = {}
+		if (dim <= 0) then
+			table.insert(locs, {0,0})
+		else
+			for g=-dim,dim do
+				for h=-dim,dim do
+					table.insert(locs, {g,h})
+				end
+			end
+		end
+		
+		for a,b in ipairs(locs) do
+			local g = b[1]
+			local h = b[2]
+			local x = ux + g
+			local y = uy + h
+			local tileid = x + y * roomsizex
+			
+			if (unitmap[tileid] ~= nil) and inbounds(x,y,1) then
+				local water = findallhere(x,y)
+				
+				if (#water > 0) then
+					for a,b in ipairs(water) do
+						if floating(b,unit.fixed,x,y) then
+							if (b ~= unit.fixed) then
+								local doboom = true
+								
+								for c,d in ipairs(delthese) do
+									if (d == b) then
+										doboom = false
+									elseif (d == unit.fixed) then
+										sunk = false
+									end
+								end
+								
+								if doboom and (issafe(b) == false) then
+									table.insert(delthese, b)
+									MF_particles("smoke",x,y,4,0,2,1,1)
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		if doeffect then
+			generaldata.values[SHAKE] = 6
+			local pmult,sound = checkeffecthistory("boom")
+			removalshort = sound
+			removalsound = 1
+			local c1,c2 = getcolour(unit.fixed)
+			MF_particles("smoke",ux,uy,15 * pmult,c1,c2,1,1)
+		end
+		
+		if sunk then
+			table.insert(delthese, unit.fixed)
+		end
+	end
+	
+	delthese,doremovalsound = handledels(delthese,doremovalsound)
+	
 	local isweak = getunitswitheffect("weak",false,delthese)
 	
 	for id,unit in ipairs(isweak) do

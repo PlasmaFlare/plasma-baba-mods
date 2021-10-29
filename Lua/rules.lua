@@ -2335,7 +2335,6 @@ function postrules(alreadyrun_)
 	return playrulesound
 end
 
-
 function subrules()
 	--@mods(stable) - Override reason, prevent copied rules from becoming a stablerule (by excluding the "stable" tag)
 	local mimicprotects = {}
@@ -2600,3 +2599,4 @@ function subrules()
 		end
 	end
 end
+
