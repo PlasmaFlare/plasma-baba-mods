@@ -42,6 +42,13 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.3** (10/29/21)
+  - Updated for beta 433
+  - [CUT/PACK] Added directional packing!
+  - [CUT/PACK] In the editor pallete, adding pack or adding a directional text with pack auto-adds corresponding texts to support directional packing
+  - [CUT/PACK] Made the editor auto-add numbers when adding CUT to palette
+  - [CUT/PACK] Added a few other edge cases for cut.
+  - [TURNING TEXT] Fixed a case where having turning dir + a bunch of letters will lag game
 - **1.3.2** (10/3/21)
   - [STABLE] Stable will not copy over rules made from mimic (but can still copy "X mimic Y")
   - [STABLE] Fixed "X feeling stable is Y" not working
