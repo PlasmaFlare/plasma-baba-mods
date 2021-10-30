@@ -71,3 +71,10 @@ arrow_property_display = {
 	selectleft="select (left)",
 	selectdown="select (down)",
 }
+
+table.insert(objlistdata.alltags, "plasma's mods")
+table.insert(objlistdata.alltags, "arrow properties")
+table.insert(objlistdata.alltags, "turning text")
+table.insert(objlistdata.alltags, "pivot text")
+table.insert(objlistdata.alltags, "omni text")
+table.insert(objlistdata.alltags, "filler text")

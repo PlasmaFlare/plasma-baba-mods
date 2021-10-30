@@ -25,7 +25,7 @@ for i, word in ipairs(new_words) do
         name = word,
         sprite_in_root = false,
         unittype = "text",
-        tags = {"text, abstract"},
+        tags = {"filler text", "plasma's mods", "text", "abstract"},
         tiling = -1,
         type = 11,
         layer = 20,
