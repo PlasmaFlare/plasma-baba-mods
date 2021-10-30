@@ -105,18 +105,29 @@ function parse_this_param_and_get_raycast_units(this_param)
 end
 
 -- @TODO: this could be useful for general purposes. Maybe move to a common lua file later?
--- This gets the unitid associated with 
+-- This gets the unitid of the target/noun text that is stored in the rule
 function get_target_unitid_from_rule(rule)
+    local tags = rule[4]
+    if has_stable_tag(tags) then
+        return nil
+    end
+
     local rulebase = rule[1]
     local ids = rule[3]
     return ids[1][1]
 end
 
 -- @TODO: this could be useful for general purposes. Maybe move to a common lua file later?
--- This gets the unitid associated with 
+-- This gets the unitid of the property text that is stored in the rule
 function get_property_unitid_from_rule(rule)
+    local tags = rule[4]
+    if has_stable_tag(tags) then
+        return nil
+    end
+    
     local rulebase = rule[1]
     local ids = rule[3]
+
     local i = #ids
     while i > 0 do
         local u = mmf.newObject(ids[i][1])

@@ -415,6 +415,9 @@ local function get_stablefeatures_from_name(name)
                 break
             end
         end
+        if is_name_text_this(rule[3]) then
+            copy_this_rule = false
+        end
         
         --[[ 
             Note: one "special" rule that we haven't covered is "X is crash". But excluding this property from stablerules seems to prevent the infinite loop screen from happening when "X is stable" + "X feeling stable is not stable"
