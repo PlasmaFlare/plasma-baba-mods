@@ -699,11 +699,13 @@ function block(small_)
 		
 		if (issafe(unit.fixed) == false) then
 			sunk = true
+		else
+			doremovalsound = true
 		end
 		
 		local name = getname(unit)
 		local count = hasfeature_count(name,"is","boom",unit.fixed,ux,uy)
-		local dim = count - 1
+		local dim = math.min(count - 1, math.max(roomsizex, roomsizey))
 		
 		local locs = {}
 		if (dim <= 0) then
@@ -727,21 +729,21 @@ function block(small_)
 				local water = findallhere(x,y)
 				
 				if (#water > 0) then
-					for a,b in ipairs(water) do
-						if floating(b,unit.fixed,x,y) then
-							if (b ~= unit.fixed) then
+					for e,f in ipairs(water) do
+						if floating(f,unit.fixed,x,y) then
+							if (f ~= unit.fixed) then
 								local doboom = true
 								
 								for c,d in ipairs(delthese) do
-									if (d == b) then
+									if (d == f) then
 										doboom = false
 									elseif (d == unit.fixed) then
 										sunk = false
 									end
 								end
 								
-								if doboom and (issafe(b) == false) then
-									table.insert(delthese, b)
+								if doboom and (issafe(f) == false) then
+									table.insert(delthese, f)
 									MF_particles("smoke",x,y,4,0,2,1,1)
 								end
 							end
@@ -1205,7 +1207,8 @@ function levelblock()
 	local unlocked = false
 	local things = {}
 	local donethings = {}
-	
+	local delthese = {}
+	local edelthese = {}
 	local emptythings = {}
 	
 	if (destroylevel_check == false) then
@@ -1261,6 +1264,7 @@ function levelblock()
 						local defeat = false
 						local bonus = false
 						local ending = false
+						local emptyboom = false
 						
 						for a,rules in ipairs(emptythings) do
 							local rule = rules[1]
@@ -1367,6 +1371,10 @@ function levelblock()
 									emptydone = true
 								end
 								
+								if (rule[3] == "boom") and testcond(conds,2,i,j) then
+									emptyboom = true
+								end
+								
 								if (keypair == "shut") and (hasfeature("level","is","shut",1,i,j) ~= nil) and floating_level(2,i,j) then
 									unlock = true
 								elseif (keypair == "open") and (hasfeature("level","is","open",1,i,j) ~= nil) and floating_level(2,i,j) then
@@ -1399,6 +1407,61 @@ function levelblock()
 									destroylevel()
 									return
 								end
+							end
+						end
+						
+						if emptyboom then
+							local count = hasfeature_count("empty","is","boom",2,i,j)
+							local dim = math.min(count - 1, math.max(roomsizex, roomsizey))
+		
+							local locs = {}
+							if (dim <= 0) then
+								table.insert(locs, {0,0})
+							else
+								for g=-dim,dim do
+									for h=-dim,dim do
+										table.insert(locs, {g,h})
+									end
+								end
+							end
+							
+							for a,b in ipairs(locs) do
+								local g = b[1]
+								local h = b[2]
+								local x = i + g
+								local y = j + h
+								local tileid = x + y * roomsizex
+								
+								if (unitmap[tileid] ~= nil) and inbounds(x,y,1) then
+									local water = findallhere(x,y)
+									
+									if (#water > 0) then
+										for e,f in ipairs(water) do
+											if floating(f,2,x,y) then
+												local doboom = true
+												
+												for c,d in ipairs(delthese) do
+													if (d == f) then
+														doboom = false
+													end
+												end
+												
+												if doboom and (issafe(f) == false) then
+													table.insert(delthese, f)
+													MF_particles("smoke",x,y,4,0,2,1,1)
+												end
+											end
+										end
+									end
+								end
+							end
+							
+							local pmult,sound = checkeffecthistory("boom")
+							MF_particles("smoke",i,j,2 * pmult,0,3,1,1)
+							setsoundname("removal",1)
+							
+							if (esafe == false) then
+								table.insert(edelthese, {i,j})
 							end
 						end
 						
@@ -1480,6 +1543,15 @@ function levelblock()
 		if emptydone then
 			local donenum = math.random(1,4)
 			MF_playsound("done" .. tostring(donenum))
+		end
+		
+		for a,b in ipairs(delthese) do
+			local bunit = mmf.newObject(b)
+			delete(b,bunit.values[XPOS],bunit.values[YPOS])
+		end
+		
+		for a,b in ipairs(edelthese) do
+			delete(2,b[1],b[2])
 		end
 		
 		if (#things > 0) then
@@ -1910,6 +1982,43 @@ function levelblock()
 								setsoundname("removal",3,sound)
 								local c1,c2 = getcolour(b)
 								MF_particles("destroy",bx,by,15 * pmult,c1,c2,1,1)
+								
+								delete(b)
+								deleted[b] = 1
+							end
+						end
+					elseif (action == "boom") then
+						local openthese = {}
+						
+						for a,unit in ipairs(units) do
+							local name = unit.strings[UNITNAME]
+							
+							if (unit.strings[UNITTYPE] == "text") then
+								name = "text"
+							end
+							
+							if floating_level(unit.fixed) then
+								if (lsafe == false) then
+									destroylevel()
+									return
+								end
+								
+								if (issafe(unit.fixed) == false) then
+									table.insert(openthese, unit.fixed)
+								end
+							end
+						end
+						
+						if (#openthese > 0) then
+							generaldata.values[SHAKE] = 3
+							
+							for a,b in ipairs(openthese) do
+								local bunit = mmf.newObject(b)
+								local bx,by = bunit.values[XPOS],bunit.values[YPOS]
+								
+								local pmult,sound = checkeffecthistory("boom")
+								setsoundname("removal",1,sound)
+								MF_particles("smoke",bx,by,15 * pmult,0,2,1,1)
 								
 								delete(b)
 								deleted[b] = 1

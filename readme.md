@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: Beta 433 on PC**
+**Current compatable Baba Is You version: Beta 433b on PC**
 
 This is a merged collection of all of my Baba mods I made so far. Download this if you want to use all of my mods at once rather than individually.
 
@@ -43,12 +43,12 @@ If you previously installed my modpack and it has updated since then, the safest
 
 # Changelog
 - **1.3.3** (10/29/21)
-  - Updated for beta 433
+  - Updated for beta 433b
   - [CUT/PACK] Added directional packing!
   - [CUT/PACK] In the editor pallete, adding pack or adding a directional text with pack auto-adds corresponding texts to support directional packing
   - [CUT/PACK] Made the editor auto-add numbers when adding CUT to palette
   - [CUT/PACK] Added a few other edge cases for cut.
-  - [TURNING TEXT] Fixed a case where having turning dir + a bunch of letters will lag game
+  - [TURNING TEXT] Fixed a case where having turning dir + a bunch of letters lagged the game
 - **1.3.2** (10/3/21)
   - [STABLE] Stable will not copy over rules made from mimic (but can still copy "X mimic Y")
   - [STABLE] Fixed "X feeling stable is Y" not working

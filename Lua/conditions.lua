@@ -938,6 +938,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					local tileid = (x + ox) + (y + oy) * roomsizex
 					local solid = 0
 					
+					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds)] ~= nil) then
+						result = false
+						dir = 4
+					end
+					
 					if (#params > 0) and (dir ~= 4) then
 						while (solid == 0) and inbounds(nx,ny,1) do
 							nx = nx + ox
@@ -945,19 +950,35 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							tileid = nx + ny * roomsizex
 							
-							if (unitmap[tileid] ~= nil) then
-								if (#unitmap[tileid] > 0) then
-									for a,b in ipairs(unitmap[tileid]) do
-										table.insert(targets, b)
+							if inbounds(nx,ny,1) then
+								if (unitmap[tileid] ~= nil) then
+									if (#unitmap[tileid] > 0) then
+										local detected = false
+										
+										for a,b in ipairs(unitmap[tileid]) do
+											local unit = mmf.newObject(b)
+											local name_ = getname(unit)
+											
+											if (hasfeature(name_,"is","hide",b,nx,ny,checkedconds) == nil) then
+												table.insert(targets, {b, name_})
+												detected = true
+											end
+										end
+										
+										if (detected == false) then
+											table.insert(targets, {2, "empty"})
+										end
+									else
+										table.insert(targets, {2, "empty"})
 									end
 								else
-									table.insert(targets, 2)
+									table.insert(targets, {2, "empty"})
 								end
+								
+								solid = simplecheck(nx,ny,true,checkedconds)
 							else
-								table.insert(targets, 2)
+								solid = 1
 							end
-							
-							solid = simplecheck(nx,ny,true,checkedconds)
 						end
 						
 						for a,b in ipairs(params) do
@@ -979,10 +1000,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							
 							if (unitid ~= 1) then
 								if ((pname ~= "empty") and (b ~= "level")) or ((b == "level") and (alreadyfound[1] ~= nil)) then
-									for c,d in ipairs(targets) do
+									for c,d_ in ipairs(targets) do
+										local d = d_[1]
+										
 										if (d ~= unitid) and (alreadyfound[d] == nil) and (d ~= 2) then
-											local unit = mmf.newObject(d)
-											local name_ = getname(unit)
+											local name_ = d_[2]
 											
 											if (pnot == false) then
 												if is_param_this then
@@ -1012,7 +1034,9 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 										end
 									end
 								elseif (pname == "empty") then
-									for c,d in ipairs(targets) do
+									for c,d_ in ipairs(targets) do
+										local d = d_[1]
+										
 										if (d == 2) then
 											if (pnot == false) then
 												if (alreadyfound[bcode] == nil) then
@@ -1055,8 +1079,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								end
 							end
 						end
-					else
+					elseif (#params == 0) then
 						print("no parameters given!")
+						result = false
+					else
 						result = false
 					end
 					
@@ -1087,26 +1113,47 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					local tileid = (x + ox) + (y + oy) * roomsizex
 					local solid = 0
 					
-					if (#params > 0) then
+					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds)] ~= nil) then
+						result = false
+						dir = -99
+					end
+					
+					if (#params > 0) and (dir ~= -99) then
 						while (solid == 0) and inbounds(nx,ny,1) do
 							nx = nx + ox
 							ny = ny + oy
 							
 							tileid = nx + ny * roomsizex
 							
-							if (unitmap[tileid] ~= nil) then
-								if (#unitmap[tileid] > 0) then
-									for a,b in ipairs(unitmap[tileid]) do
-										table.insert(targets, b)
+							if inbounds(nx,ny,1) then
+								if (unitmap[tileid] ~= nil) then
+									if (#unitmap[tileid] > 0) then
+										local detected = false
+										
+										for a,b in ipairs(unitmap[tileid]) do
+											local unit = mmf.newObject(b)
+											local name_ = getname(unit)
+											
+											if (hasfeature(name_,"is","hide",d,nx,ny,checkedconds) == nil) then
+												table.insert(targets, {b, name_})
+												detected = true
+											end
+										end
+										
+										if (detected == false) then
+											table.insert(targets, {2, "empty"})
+										end
+									else
+										table.insert(targets, {2, "empty"})
 									end
 								else
-									table.insert(targets, 2)
+									table.insert(targets, {2, "empty"})
 								end
+								
+								solid = simplecheck(nx,ny)
 							else
-								table.insert(targets, 2)
+								solid = 1
 							end
-							
-							solid = simplecheck(nx,ny)
 						end
 						
 						for a,b in ipairs(params) do
@@ -1129,10 +1176,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							if (unitid ~= 1) then
 								if ((pname ~= "empty") and (b ~= "level")) or ((b == "level") and (alreadyfound[1] ~= nil)) then
 									if (dir ~= 4) then
-										for c,d in ipairs(targets) do
+										for c,d_ in ipairs(targets) do
+											local d = d_[1]
+											
 											if (d ~= unitid) and (alreadyfound[d] == nil) and (d ~= 2) then
-												local unit = mmf.newObject(d)
-												local name_ = getname(unit)
+												local name_ = d_[2]
 												
 												if (pnot == false) then
 													if is_param_this then
@@ -1167,7 +1215,9 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									end
 								elseif (pname == "empty") then
 									if (dir ~= 4) then
-										for c,d in ipairs(targets) do
+										for c,d_ in ipairs(targets) do
+											local d = d_[1]
+											
 											if (d == 2) then
 												if (pnot == false) then
 													if (alreadyfound[bcode] == nil) then
@@ -1214,7 +1264,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								end
 							end
 						end
-					else
+					elseif (#params == 0) then
 						print("no parameters given!")
 						result = false
 					end
