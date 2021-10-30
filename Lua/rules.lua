@@ -1710,7 +1710,12 @@ function code(alreadyrun_)
 			end
 		end
 	end
-	update_stable_state()
+
+	-- if this_mod_globals.undoed_after_called then
+	if not alreadyrun then
+		update_stable_state()
+	end
+	-- end
 	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
@@ -1869,10 +1874,12 @@ function code(alreadyrun_)
 				updatecode = 0
 				
 				local newwordunits,newwordidentifier,wordrelatedunits = findwordunits()
+				local stable_state_updated = update_stable_state(alreadyrun)
 				
 				--MF_alert("ID comparison: " .. newwordidentifier .. " - " .. wordidentifier)
 				
-				if (newwordidentifier ~= wordidentifier) then
+				--@mods(stable) - handles the case where
+				if (newwordidentifier ~= wordidentifier) or (stable_state_updated) then
 					updatecode = 1
 					code(true)
 				else

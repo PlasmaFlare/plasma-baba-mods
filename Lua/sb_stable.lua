@@ -67,7 +67,7 @@ local STABLE_THIS_ID_EMPTY = -49
 local stableid = 1
 local turnid = 1
 local curr_stable_this_id = STABLE_THIS_ID_BASE
-local on_undo = false
+local on_stable_undo = false
 local stable_state_updated = false
 local stablerule_timer = 0 -- Used mainly for changing color on stablerule display
 local TIMER_PERIOD = 400 -- Used mainly for changing color on stablerule display
@@ -598,9 +598,16 @@ function stableunit_has_ruleid(unitid, ruleid, x, y)
 end
 
 --[[ Core logic ]]
-function update_stable_state()
-    if on_undo then
+function update_stable_state(alreadyrun)
+    if on_stable_undo then
+        if STABLE_LOGGING then
+            print("skipped update_stable_state() because on_stable_undo = true")
+        end
         return
+    end
+
+    if STABLE_LOGGING then
+        print("calling update_stable_state() with alreadyrun = "..tostring(alreadyrun))
     end
 
     GLOBAL_checking_stable = true
@@ -803,12 +810,19 @@ function update_stable_state()
     if new_stableunit_count > 0 or deleted_su_key_count > 0 then
         updatecode = 1
         stable_state_updated = true
+        return true
     end
+    return false
 end
 
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
+        add_stable_rules()
+    end
+)
+
+function add_stable_rules()
         -- adding all stablestate.rules into the featureindex
         for _, v in pairs(stablestate.rules) do
             -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
@@ -825,13 +839,12 @@ table.insert(mod_hook_functions["rule_baserules"],
             end
         end
     end
-)
 
 table.insert(mod_hook_functions["rule_update_after"],
     function()
-        if on_undo then
+        if on_stable_undo then
             reload_indicators()
-            on_undo = false
+            on_stable_undo = false
         end
     end
 )
@@ -863,7 +876,7 @@ table.insert(mod_hook_functions["undoed"],
         local undo_applied = apply_stable_undo()
         if undo_applied then
             updatecode = 1
-            on_undo = true
+            on_stable_undo = true
         end
         turnid = turnid - 1
 
