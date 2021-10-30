@@ -1150,7 +1150,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									table.insert(targets, {2, "empty"})
 								end
 								
-								solid = simplecheck(nx,ny)
+								solid = simplecheck(nx,ny,true,checkedconds)
 							else
 								solid = 1
 							end

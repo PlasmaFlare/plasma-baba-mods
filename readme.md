@@ -42,6 +42,11 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.4** (10/30/21)
+  - Updated for beta 433c
+  - Added custom level editor tags!
+  - [STABLE] Fixed an order of operations case where removing "Flag is stable" while also making "Flag is wall" does not transform flag until the next turn.
+  - [STABLE] Fixed indicator for stablerule "X near THIS is Y" not scaling according to level scaling. 
 - **1.3.3** (10/29/21)
   - Updated for beta 433b
   - [CUT/PACK] Added directional packing!

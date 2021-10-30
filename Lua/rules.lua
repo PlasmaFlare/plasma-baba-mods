@@ -1878,7 +1878,7 @@ function code(alreadyrun_)
 				
 				--MF_alert("ID comparison: " .. newwordidentifier .. " - " .. wordidentifier)
 				
-				--@mods(stable) - handles the case where
+				--@mods(stable) - handles the case where this run of code() caused the stablestate to update. In this case, rerun code()
 				if (newwordidentifier ~= wordidentifier) or (stable_state_updated) then
 					updatecode = 1
 					code(true)
