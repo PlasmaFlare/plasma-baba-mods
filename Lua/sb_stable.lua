@@ -1063,6 +1063,9 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
                 indicator.values[XPOS] = ray_unit.x
                 indicator.values[YPOS] = ray_unit.y
 
+                indicator.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+                indicator.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+
                 stable_this_indicators[ray_unit.values[ID]] = indicator_id
             end
         end
