@@ -999,14 +999,14 @@ function docode(firstwords)
 									notslot = wordid
 								end
 							else
-								if (stop == false) and (tiletype ~= 0) then
+								if (stop == false) and (tiletype ~= 0) and (tiletype ~= 11) then
 									notids = {}
 									notwidth = 0
 									notslot = 0
 								end
 							end
 							
-							if (prevtiletype ~= 4) and (wordid > existing_wordid) then
+							if (prevtiletype ~= 4 and prevtiletype ~= 11) and (wordid > existing_wordid) then
 								prevsafewordid = wordid - 1
 								prevsafewordtype = prevtiletype
 							end
@@ -1070,6 +1070,10 @@ function docode(firstwords)
 												local subsent_id = string.sub(sent_id, wordid - existing_wordid)
 												table.insert(firstwords, {sent[wordid - 1][3], dir, tilewidth, tilename, tiletype, sent, wordid-1, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
 											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 4) and (tiletype ~= 1) and (tiletype ~= 2) then
+												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
+												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
+												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
+											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 11) and ((tiletype == 1) or (tiletype == 7)) then
 												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
 												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})

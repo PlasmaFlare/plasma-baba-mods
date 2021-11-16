@@ -10,6 +10,7 @@ local function reset_arrow()
 		group_arrow_properties = true
 	}
 end
+reset_arrow()
 
 table.insert(mod_hook_functions["level_start"], 
     function()
@@ -22,16 +23,6 @@ table.insert(mod_hook_functions["level_end"],
     end
 )
 table.insert(mod_hook_functions["level_win"], 
-    function()
-        reset_arrow()
-    end
-)
-table.insert(mod_hook_functions["levelpack_end"], 
-    function()
-        reset_arrow()
-    end
-)
-table.insert(mod_hook_functions["levelpack_done"], 
     function()
         reset_arrow()
     end

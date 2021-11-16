@@ -79,9 +79,22 @@ local STABLE_LOGGING = false
 -- at least it doesn't override more functions. 
 local prev_undobuffer_len = 0 
 
+--[[ 
+    We need this for a specific glitch that prevents the "Level Saved!" text from displaying. It's because we are calling MF_letterclear("stablerules") in the "always" modhook.
+    Apparently, even though MF_letterclear is supposed to clear all displayed texts for a certain group (the "stablerules"), it also clears the "Level Saved!" text even
+    though "stablerules" is a custom group. So the (hacky) fix is to detect if we are currently playing a level, done by a combination of the mod hook "level_start" and in clear_stable_units
+    (whenever clearunits is called)
+
+    Emphasis on "hacky". Be wary if this fix causes something else to break.-- (10/31/21)
+ ]]
+local allow_stablerule_display = false
+
 GLOBAL_checking_stable = false -- set to true whenever we are finding "X is stable" rules. This is to indirectly tell testcond()
 
 function clear_stable_mod()
+    MF_letterclear("stablerules")
+    allow_stablerule_display = false
+
     stablestate = {
         units = {},
         rules = {},
@@ -561,6 +574,8 @@ table.insert(mod_hook_functions["level_start"],
         clear_stable_mod()
         record_stable_undo()
         update_stable_state() -- Only reason we update stable state here is because of a bug where the stable cursor doesn't show at level startup
+
+        allow_stablerule_display = true
     end
 )
 table.insert( mod_hook_functions["level_restart"],
@@ -1122,56 +1137,57 @@ end
 -- Note: changed from "effect_always" to "always" since effect_always only activates when disable particle effects is off 
 table.insert(mod_hook_functions["always"],
     function()
-        for su_key, v in pairs(stable_indicators) do
-            update_stable_indicator(v.unitid, v.indicator_id)
-        end
-        for tileid, indicator_id in pairs(stable_empty_indicators) do
-            update_stable_indicator(2, indicator_id, tileid)
-        end
-
-        local mouse_x, mouse_y = MF_mouse()
-        MF_letterclear("stablerules")
-        MF_letterclear("cursorpos")
-
-        local displayed_su_keys = {}
-        local half_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT] / 2
-        local unit_x = nil
-        local unit_y = nil
-        for su_key, _ in pairs(stablestate.units) do
-            local unitid = MF_getfixed(su_key)
-            local unit = mmf.newObject(unitid)
-            if unit and unit.visible and mouse_x >= unit.x - half_tilesize and mouse_x < unit.x + half_tilesize and mouse_y >= unit.y - half_tilesize and mouse_y < unit.y + half_tilesize then
-                table.insert(displayed_su_keys, su_key)
-                unit_x = unit.x
-                unit_y = unit.y
+        if allow_stablerule_display then
+            for su_key, v in pairs(stable_indicators) do
+                update_stable_indicator(v.unitid, v.indicator_id)
             end
-        end
-
-        local level_mouse_x = mouse_x - Xoffset
-        local level_mouse_y = mouse_y - Yoffset
-        local tile_scale = (f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT])
-        local grid_x = math.floor(level_mouse_x / tile_scale)
-        local grid_y = math.floor(level_mouse_y / tile_scale)
-
-        local tileid = grid_x + grid_y * roomsizex
-        local empty_tileid = nil
-        if stablestate.empties[tileid] then
-            unit_x = mouse_x - (level_mouse_x % tile_scale) + tile_scale / 2
-            unit_y = mouse_y - (level_mouse_y % tile_scale) + tile_scale / 2
-            empty_tileid = tileid
-        end
-
-        if #displayed_su_keys > 0 or empty_tileid then
-            write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid, stablerule_timer)
-        else
-            for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
-                MF_cleanremove(indicator_id)
-                stable_this_indicators[ray_unit_id] = nil
+            for tileid, indicator_id in pairs(stable_empty_indicators) do
+                update_stable_indicator(2, indicator_id, tileid)
             end
-        end
-        stablerule_timer = stablerule_timer + 1
-        if stablerule_timer >= TIMER_PERIOD then
-            stablerule_timer = 0
+
+            local mouse_x, mouse_y = MF_mouse()
+            MF_letterclear("stablerules")
+
+            local displayed_su_keys = {}
+            local half_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT] / 2
+            local unit_x = nil
+            local unit_y = nil
+            for su_key, _ in pairs(stablestate.units) do
+                local unitid = MF_getfixed(su_key)
+                local unit = mmf.newObject(unitid)
+                if unit and unit.visible and mouse_x >= unit.x - half_tilesize and mouse_x < unit.x + half_tilesize and mouse_y >= unit.y - half_tilesize and mouse_y < unit.y + half_tilesize then
+                    table.insert(displayed_su_keys, su_key)
+                    unit_x = unit.x
+                    unit_y = unit.y
+                end
+            end
+
+            local level_mouse_x = mouse_x - Xoffset
+            local level_mouse_y = mouse_y - Yoffset
+            local tile_scale = (f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT])
+            local grid_x = math.floor(level_mouse_x / tile_scale)
+            local grid_y = math.floor(level_mouse_y / tile_scale)
+
+            local tileid = grid_x + grid_y * roomsizex
+            local empty_tileid = nil
+            if stablestate.empties[tileid] then
+                unit_x = mouse_x - (level_mouse_x % tile_scale) + tile_scale / 2
+                unit_y = mouse_y - (level_mouse_y % tile_scale) + tile_scale / 2
+                empty_tileid = tileid
+            end
+
+            if #displayed_su_keys > 0 or empty_tileid then
+                write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid, stablerule_timer)
+            else
+                for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
+                    MF_cleanremove(indicator_id)
+                    stable_this_indicators[ray_unit_id] = nil
+                end
+            end
+            stablerule_timer = stablerule_timer + 1
+            if stablerule_timer >= TIMER_PERIOD then
+                stablerule_timer = 0
+            end
         end
     end
 )
