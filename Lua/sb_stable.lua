@@ -46,7 +46,12 @@ local stable_undo_stack = {}
         stablestate.units
         stablestate.rules
     }
+
+    One important note: when the level starts, we insert an initial entry to stable_undo_stack. This entry, which I'll call the "inital stablestate", SHOULD NOT BE DELETED.
+    The initial stablestate is needed as a baseline for determining when to add the next undo entry.
 ]]
+
+
 local stable_indicators = {}
 --[[ 
     stableunit key -> {
@@ -512,22 +517,30 @@ local function record_stable_undo()
 end
 
 local function apply_stable_undo()
+    if #stable_undo_stack == 1 then
+        -- The only entry is the initial stablestate. DO NOT DELETE IT
+        return false
+    end
+
     local top_entry = stable_undo_stack[#stable_undo_stack]
-    if top_entry.turnid == turnid then
-        table.remove(stable_undo_stack, #stable_undo_stack)
-        local next_entry = stable_undo_stack[#stable_undo_stack]
-        stablestate = deep_copy_table(next_entry.stablestate)
+    assert(top_entry, "Detected top_entry = nil. #stable_undo_stack = "..tostring(#stable_undo_stack).. " "..debug.traceback())
+    if top_entry then -- Note: a bad patch to an issue that is hard to reproduce. Why is top entry sometimes nil?
+        if top_entry.turnid == turnid then
+            table.remove(stable_undo_stack, #stable_undo_stack)
+            local next_entry = stable_undo_stack[#stable_undo_stack]
+            stablestate = deep_copy_table(next_entry.stablestate)
 
-        local c = 0
-        for su_key,v in pairs(stablestate.units) do
-            c = c + 1
-        end
-        
-        if STABLE_LOGGING then
-            print("applying stable undo. Num of units: "..tostring(c).. " | num remaining undo entries: "..tostring(#stable_undo_stack))
-        end
+            local c = 0
+            for su_key,v in pairs(stablestate.units) do
+                c = c + 1
+            end
+            
+            if STABLE_LOGGING then
+                print("applying stable undo. Num of units: "..tostring(c).. " | num remaining undo entries: "..tostring(#stable_undo_stack))
+            end
 
-        return true
+            return true
+        end
     end
     return false
 end
@@ -572,7 +585,7 @@ end
 table.insert(mod_hook_functions["level_start"],
     function()
         clear_stable_mod()
-        record_stable_undo()
+        record_stable_undo() -- Record stable undo on start because we need to use it for comparision. Each undo entry is added whenever the stablestate shows some difference.
         update_stable_state() -- Only reason we update stable state here is because of a bug where the stable cursor doesn't show at level startup
 
         allow_stablerule_display = true
@@ -896,7 +909,9 @@ table.insert(mod_hook_functions["undoed"],
             updatecode = 1
             on_stable_undo = true
         end
-        turnid = turnid - 1
+        if turnid > 1 then
+            turnid = turnid - 1
+        end
 
         if STABLE_LOGGING then
             print_stable_state()
