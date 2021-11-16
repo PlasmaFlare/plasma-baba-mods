@@ -578,8 +578,8 @@ function block(small_)
 			end
 		end
 
-		arrow_prop_mod_globals.group_arrow_properties = true
 	end
+	arrow_prop_mod_globals.group_arrow_properties = true
 
 	
 	local isplay = getunitswithverb("play",delthese)

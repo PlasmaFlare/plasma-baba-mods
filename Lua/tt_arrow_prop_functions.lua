@@ -455,7 +455,10 @@ end
 function do_directional_shift_moveblock()
 	local shifted = {}
 
+	arrow_prop_mod_globals.group_arrow_properties = false
 	local isshift = findallfeature(nil,"is","shift",true)
+	arrow_prop_mod_globals.group_arrow_properties = true
+	
 	for a,unitid in ipairs(isshift) do
 		if (unitid ~= 2) and (unitid ~= 1) then
 			local unit = mmf.newObject(unitid)
@@ -594,7 +597,7 @@ function do_directional_shift_resolve_stacked_shifts(moving_units)
 	return new_moving_units
 end
 
-function do_directional_shift_update_shift_state(data)
+function do_directional_shift_update_shift_state(data, updatemovecount)
 	local change_to_vertical_after = false
 	if data.dirshiftstate == 1 then
 		if data.horsmove <= 0 or data.horsdir == -1 then 
@@ -603,10 +606,12 @@ function do_directional_shift_update_shift_state(data)
 			data.dir = data.horsdir
 			-- updatedir(data.unitid, data.dir)
 			-- dir = data.dir
-			data.horsmove = data.horsmove - 1
+			if updatemovecount then
+				data.horsmove = data.horsmove - 1
+			end
 
 			if data.horsmove <= 0 then 
-				change_to_vertical_after = true
+				data.dirshiftstate = 2
 			end
 		end
 	end
@@ -617,7 +622,9 @@ function do_directional_shift_update_shift_state(data)
 			data.dir = data.vertdir
 			-- updatedir(data.unitid, data.dir)
 			-- dir = data.dir
-			data.vertmove = data.vertmove - 1
+			if updatemovecount then
+				data.vertmove = data.vertmove - 1
+			end
 
 			if data.vertmove <= 0 then 
 				data.dirshiftstate = 3

@@ -645,8 +645,10 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 
 						--@Turning Text(shift)
 						if enable_directional_shift and data.reason == "shift" and data.unitid ~= 2 then
+							-- if data.state == 0 then
+							do_directional_shift_update_shift_state(data, false)
+							-- end
 							dir = data.dir
-							do_directional_shift_update_shift_state(data)
 						end
 
 						if (state == 0) and (data.reason == "shift") and (data.unitid ~= 2) then
@@ -979,6 +981,10 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 
 				if solved then
 					data.moves = data.moves - 1
+
+					if enable_directional_shift and data.reason == "shift" and data.unitid ~= 2 then
+						do_directional_shift_update_shift_state(data, true)
+					end
 					
 					if (state > 0) then
 						data.state = 10
