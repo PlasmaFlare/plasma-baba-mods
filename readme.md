@@ -1,8 +1,8 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: Beta 433c on PC**
+**Current compatable Baba Is You version: 438C on PC**
 
-This is a merged collection of all of my Baba mods I made so far. Download this if you want to use all of my mods at once rather than individually.
+This is a merged collection of all of my Baba mods I made so far.y.
 
 **Note:** in the future I'll add more mods directly to this modpack rather than making a github page for each of them. But since the below mods are pretty big I'll keep the old github pages open in case anyone wants to download them seperately.
 
@@ -13,10 +13,6 @@ Total list of mods (Click on one to get a *stylized* description of each mod)
 - [THIS](docs/this.md)
 - [CUT and PACK](docs/textcraft.md)
 - [STABLE](docs/stable.md)
-
-Mods with seperate repositories (old and deprecated)
-- [Arrow Properties Plus/Turning Text](https://github.com/PlasmaFlare/Baba-Is-You-Arrow-Properties-Plus)
-- [Omni Connectors](https://github.com/PlasmaFlare/Baba-Is-You-Mod-Omni-Connectors)
 
 
 # Installation
@@ -42,6 +38,11 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.5** (11/17/21)
+  - Updated for the level editor release! (438C)
+  - [TURNING TEXT] Added directional **BOOM**!
+  - [TURNING TEXT] Fixed weird interactions with stacked directional shifts
+  - [FILLER TEXT] Fixed `baba is baba <filler> is you` not parsing correctly
 - **1.3.4** (10/30/21)
   - Updated for beta 433c
   - Added custom level editor tags!
