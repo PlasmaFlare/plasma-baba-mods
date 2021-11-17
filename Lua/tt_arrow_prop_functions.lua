@@ -649,3 +649,20 @@ function update_net_shift_data(dir, data)
 		data.vertmove = data.vertmove - value
 	end
 end
+
+function do_directional_boom(unit)
+	local ux,uy = unit.values[XPOS],unit.values[YPOS]
+	local name = getname(unit)
+	local iszero = true
+	local out_booms = {0,0,0,0}
+
+	for i=0,3 do
+		local dirfeature = dirfeaturemap[i + 1]
+		out_booms[i] = hasfeature_count(name,"is","boom"..dirfeature,unit.fixed,ux,uy)
+		if out_booms[i] > 0 then
+			iszero = false
+		end
+	end
+
+	return out_booms, iszero
+end

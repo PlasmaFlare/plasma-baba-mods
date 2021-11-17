@@ -59,6 +59,12 @@ table.insert(editor_objlist_order, "text_selectup")
 table.insert(editor_objlist_order, "text_selectleft")
 table.insert(editor_objlist_order, "text_turning_select")
 
+table.insert(editor_objlist_order, "text_boomdown")
+table.insert(editor_objlist_order, "text_boomright")
+table.insert(editor_objlist_order, "text_boomup")
+table.insert(editor_objlist_order, "text_boomleft")
+table.insert(editor_objlist_order, "text_turning_boom")
+
 table.insert(editor_objlist[editor_objlist_reference["text_fall"]].tags, "arrow properties")
 table.insert(editor_objlist[editor_objlist_reference["text_fallright"]].tags, "arrow properties")
 table.insert(editor_objlist[editor_objlist_reference["text_fallup"]].tags, "arrow properties")
@@ -677,6 +683,68 @@ editor_objlist["text_turning_select"] =
 	layer = 20,
 	colour = {2, 3},
 	colour_active = {2, 4},
+}
+
+-- BOOM
+editor_objlist["text_boomright"] = 
+{
+	name = "text_boomright",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"arrow properties", "plasma's mods", "text", "abstract", "text_quality"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {2, 1},
+	colour_active = {2, 2},
+}
+editor_objlist["text_boomleft"] = 
+{
+	name = "text_boomleft",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"arrow properties", "plasma's mods", "text", "abstract", "text_quality"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {2, 1},
+	colour_active = {2, 2},
+}
+editor_objlist["text_boomup"] = 
+{
+	name = "text_boomup",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"arrow properties", "plasma's mods", "text", "abstract", "text_quality"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {2, 1},
+	colour_active = {2, 2},
+}
+editor_objlist["text_boomdown"] = 
+{
+	name = "text_boomdown",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"arrow properties", "plasma's mods", "text", "abstract", "text_quality"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {2, 1},
+	colour_active = {2, 2},
+}
+editor_objlist["text_turning_boom"] = 
+{
+	name = "text_turning_boom",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"arrow properties", "turning text", "plasma's mods", "text", "abstract", "text_quality"},
+	tiling = 0,
+	type = 2,
+	layer = 20,
+	colour = {2, 1},
+	colour_active = {2, 2},
 }
 
 formatobjlist()

@@ -690,7 +690,10 @@ function block(small_)
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
 	
+	-- @mods(turning text)
+	arrow_prop_mod_globals.group_arrow_properties = true
 	local isboom = getunitswitheffect("boom",false,delthese)
+	arrow_prop_mod_globals.group_arrow_properties = false
 	
 	for id,unit in ipairs(isboom) do
 		local ux,uy = unit.values[XPOS],unit.values[YPOS]
@@ -703,19 +706,47 @@ function block(small_)
 			doremovalsound = true
 		end
 		
+		-- @mods(turning text)
+		arrow_prop_mod_globals.group_arrow_properties = false
 		local name = getname(unit)
 		local count = hasfeature_count(name,"is","boom",unit.fixed,ux,uy)
 		local dim = math.min(count - 1, math.max(roomsizex, roomsizey))
+		arrow_prop_mod_globals.group_arrow_properties = true
+
+		local dir_booms, dir_iszero = do_directional_boom(unit)
 		
 		local locs = {}
-		if (dim <= 0) then
-			table.insert(locs, {0,0})
-		else
-			for g=-dim,dim do
-				for h=-dim,dim do
-					table.insert(locs, {g,h})
+		if count > 0 then -- @mods(turning text) - need this since you can go into the for loop without "X is boom". It could have only directional booms
+			if (dim <= 0) then
+				table.insert(locs, {0,0})
+			else
+				for g=-dim,dim do
+					for h=-dim,dim do
+						table.insert(locs, {g,h})
+					end
 				end
 			end
+		end
+		
+		local baseradius = dim
+		if dim <= 0 then
+			baseradius = 0
+		end
+		-- left boom
+		for i=1,dir_booms[2] do
+			table.insert(locs, {-(baseradius+i),0})
+		end
+		-- right boom
+		for i=1,dir_booms[0] do
+			table.insert(locs, {(baseradius+i),0})
+		end
+		-- up boom
+		for i=1,dir_booms[1] do
+			table.insert(locs, {0,-(baseradius+i)})
+		end
+		-- down boom
+		for i=1,dir_booms[3] do
+			table.insert(locs, {0,(baseradius+i)})
 		end
 		
 		for a,b in ipairs(locs) do

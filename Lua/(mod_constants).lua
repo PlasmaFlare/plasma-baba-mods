@@ -15,6 +15,7 @@ arrow_properties = {
     more=true,
 	shift=true,
 	select=true,
+	boom=true,
 }
 
 turning_word_names = {
@@ -31,6 +32,7 @@ turning_word_names = {
     shift=true,
     more=true,
     select=true,
+    boom=true,
 }
 
 arrow_property_display = {
@@ -70,6 +72,10 @@ arrow_property_display = {
 	selectup="select (up)",
 	selectleft="select (left)",
 	selectdown="select (down)",
+	boomright="boom (right)",
+	boomup="boom (up)",
+	boomleft="boom (left)",
+	boomdown="boom (down)",
 }
 
 table.insert(objlistdata.alltags, "plasma's mods")
