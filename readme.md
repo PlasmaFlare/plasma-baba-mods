@@ -42,6 +42,11 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.5** (11/17/21)
+  - Updated for the level editor release!
+  - [TURNING TEXT] Added directional **BOOM**!
+  - [TURNING TEXT] Fixed weird interactions with stacked directional shifts
+  - [FILLER TEXT] Fixed `baba is baba <filler> is you` not parsing correctly
 - **1.3.4** (10/30/21)
   - Updated for beta 433c
   - Added custom level editor tags!

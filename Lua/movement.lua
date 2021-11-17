@@ -1174,7 +1174,7 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 			local dodge = false
 
 			local bx,by = 0,0
-			if (b ~= 2 and b ~= -1) then
+			if (b ~= 2) and (reason ~= "weak") then
 				local bunit = mmf.newObject(b)
 				bx,by = bunit.values[XPOS],bunit.values[YPOS]
 				
