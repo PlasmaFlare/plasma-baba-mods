@@ -38,6 +38,8 @@ If you previously installed my modpack and it has updated since then, the safest
 - Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
 
 # Changelog
+- **1.3.6** (11/17/21)
+  - Fixed "done" and "end" endings not working
 - **1.3.5** (11/17/21)
   - Updated for the level editor release! (438C)
   - [TURNING TEXT] Added directional **BOOM**!

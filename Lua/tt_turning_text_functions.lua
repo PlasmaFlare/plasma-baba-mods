@@ -35,18 +35,6 @@ table.insert( mod_hook_functions["level_end"],
         reset_turning_text_mod_globals()
     end
 )
-
-table.insert(mod_hook_functions["levelpack_end"], 
-    function()
-        reset_turning_text_mod_globals()
-    end
-)
-table.insert(mod_hook_functions["levelpack_done"], 
-    function()
-        reset_turning_text_mod_globals()
-    end
-)
-
 table.insert( mod_hook_functions["turn_end"], 
     function()
         local play_rule_sound = false
