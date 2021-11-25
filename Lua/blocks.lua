@@ -690,9 +690,8 @@ function block(small_)
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
 	
-	-- @mods(turning text)
-	arrow_prop_mod_globals.group_arrow_properties = true
 	local isboom = getunitswitheffect("boom",false,delthese)
+	-- @mods(turning text)
 	arrow_prop_mod_globals.group_arrow_properties = false
 	
 	for id,unit in ipairs(isboom) do
@@ -797,6 +796,7 @@ function block(small_)
 			table.insert(delthese, unit.fixed)
 		end
 	end
+	arrow_prop_mod_globals.group_arrow_properties = true
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
 	
@@ -861,6 +861,7 @@ function block(small_)
 	local isyou = getunitswitheffect("you",false,delthese)
 	local isyou2 = getunitswitheffect("you2",false,delthese)
 	local isyou3 = getunitswitheffect("3d",false,delthese)
+	print(#isyou, arrow_prop_mod_globals.group_arrow_properties)
 	
 	for i,v in ipairs(isyou2) do
 		table.insert(isyou, v)
