@@ -861,7 +861,6 @@ function block(small_)
 	local isyou = getunitswitheffect("you",false,delthese)
 	local isyou2 = getunitswitheffect("you2",false,delthese)
 	local isyou3 = getunitswitheffect("3d",false,delthese)
-	print(#isyou, arrow_prop_mod_globals.group_arrow_properties)
 	
 	for i,v in ipairs(isyou2) do
 		table.insert(isyou, v)

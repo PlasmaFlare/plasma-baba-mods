@@ -244,7 +244,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					if orhandling then
 						orresult = true
 					end
-				elseif condtype == "stable" then
+				elseif condtype == "stable" or condtype == "not stable" then -- @mods(stable): note we need to check for "not stable" as well because invertconds() can change condtype "stable" to "not stable". "stable" as a condtype technically doesn't make sense. It's more of a hacky way to prevent other non-stable rules from affecting stable objects
 					if #params == 1 then
 						valid = true
 						local cond_ruleid = params[1]
