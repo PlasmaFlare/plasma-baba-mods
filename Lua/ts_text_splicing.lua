@@ -197,6 +197,11 @@ function handle_text_cutting(data, cut_direction)
                 break
             end
         end
+
+        local cutterunit = mmf.newObject(data.cutterunitid)
+        if hasfeature(getname(cutterunit), "is", "weak") then
+            delete(data.cutterunitid)
+        end
         
         local pmult,sound = checkeffecthistory("cut")
         MF_particles("destroy",x,y,8 * pmult,0,3,1,1)

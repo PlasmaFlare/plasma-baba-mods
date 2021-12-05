@@ -800,6 +800,28 @@ function block(small_)
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
 	
+	local iscut = getunitswitheffect("cut",false,delthese)
+	
+	-- Note: because we do not want CUT to trigger HAS, we need to avoid calling delete(), which is done in handledels().
+	-- Fortunetly, handledels returns an empty table as the new delthese, meaning that each block of populating delthese and then
+	-- calling handledels() is self contained, if in an awkward and repetative way. Since handle_text_cutting() does its own
+	-- deletion without triggering HAS, it should be fine given that the above is true. 
+	for id,unit in ipairs(iscut) do
+		local x,y = unit.values[XPOS],unit.values[YPOS]
+		local texts = findtext(x,y)
+
+        for _, textunitid in ipairs(texts) do
+            if textunitid ~= unit.fixed then
+				local textunit = mmf.newObject(textunitid)
+				local cutdata = check_text_cutting(unit.fixed, textunitid, false)
+				if cutdata then
+                    local dir = textunit.values[DIR]
+                    handle_text_cutting(cutdata, dir)
+                end            
+            end
+        end
+    end
+	
 	local isweak = getunitswitheffect("weak",false,delthese)
 	
 	for id,unit in ipairs(isweak) do
@@ -988,28 +1010,6 @@ function block(small_)
 	end
 	
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
-
-	local iscut = getunitswitheffect("cut",false,delthese)
-	
-	-- Note: because we do not want CUT to trigger HAS, we need to avoid calling delete(), which is done in handledels().
-	-- Fortunetly, handledels returns an empty table as the new delthese, meaning that each block of populating delthese and then
-	-- calling handledels() is self contained, if in an awkward and repetative way. Since handle_text_cutting() does its own
-	-- deletion without triggering HAS, it should be fine given that the above is true. 
-	for id,unit in ipairs(iscut) do
-		local x,y = unit.values[XPOS],unit.values[YPOS]
-		local texts = findtext(x,y)
-
-        for _, textunitid in ipairs(texts) do
-            if textunitid ~= unit.fixed then
-				local textunit = mmf.newObject(textunitid)
-				local cutdata = check_text_cutting(unit.fixed, textunitid, false)
-				if cutdata then
-                    local dir = textunit.values[DIR]
-                    handle_text_cutting(cutdata, dir)
-                end            
-            end
-        end
-    end
 	
 	if (small == false) then
 		local ismake = getunitswithverb("make",delthese)
