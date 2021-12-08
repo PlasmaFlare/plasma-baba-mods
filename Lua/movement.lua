@@ -595,12 +595,14 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 					local unit = {}
 					local dir,name = 4,""
 					local x,y = data.xpos,data.ypos
+					local holder = 0
 					
 					if (data.unitid ~= 2) then
 						unit = mmf.newObject(data.unitid)
 						dir = unit.values[DIR]
 						name = getname(unit)
 						x,y = unit.values[XPOS],unit.values[YPOS]
+						holder = unit.holder or 0
 					else
 						dir = data.dir
 						name = "empty"
@@ -610,7 +612,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 					
 					--MF_alert(name .. " (" .. tostring(data.unitid) .. ") doing " .. data.reason .. ", take " .. tostring(take) .. ", state " .. tostring(state) .. ", moves " .. tostring(data.moves) .. ", dir " .. tostring(dir))
 					
-					if (x ~= -1) and (y ~= -1) then
+					if (x ~= -1) and (y ~= -1) and (holder == 0) then
 						local result = -1
 						solved = false
 						

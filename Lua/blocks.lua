@@ -326,7 +326,7 @@ function moveblock(onlystartblock_)
 									end
 								end
 								
-								addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init})
+								addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init,unit.originalname})
 								
 								for a,b in ipairs(delname) do
 									MF_alert("added undo for " .. b[1] .. " with ID " .. tostring(b[2]))
@@ -611,12 +611,13 @@ function block(small_)
 					local truefreq = string.sub(sound_freq, 1, #sound_freq-1)
 					tune = ptunes[sound_name][octave]
 					freq = pfreqs[truefreq]
+					-- MF_alert("True freq: " .. tostring(truefreq) .. ", " .. tostring(play_data.freqs[truefreq]))
 				else
 					tune = ptunes[sound_name][2]
 				end
 			end
 			
-			MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
+			-- MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
 			
 			MF_playsound_freq(tune,freq)
 			setsoundname("turn",11,nil)
@@ -627,6 +628,50 @@ function block(small_)
 					
 					MF_particles("music",unit.values[XPOS],unit.values[YPOS],1,0,3,3,1)
 				end
+			end
+		end
+	end
+	
+	if (generaldata.strings[WORLD] == "museum") then
+		local ishold = getunitswitheffect("hold",false,delthese)
+		local holders = {}
+		
+		for id,unit in ipairs(ishold) do
+			local x,y = unit.values[XPOS],unit.values[YPOS]
+			local tileid = x + y * roomsizex
+			holders[unit.values[ID]] = 1
+			
+			if (unitmap[tileid] ~= nil) then
+				local water = findallhere(x,y)
+				
+				if (#water > 0) then
+					for a,b in ipairs(water) do
+						if floating(b,unit.fixed,x,y) then
+							if (b ~= unit.fixed) then
+								local bunit = mmf.newObject(b)
+								addundo({"holder",bunit.values[ID],bunit.holder,unit.values[ID],},unitid)
+								bunit.holder = unit.values[ID]
+							end
+						end
+					end
+				end
+			end
+		end
+		
+		for i,unit in ipairs(units) do
+			if (unit.holder ~= nil) and (unit.holder ~= 0) then
+				if (holders[unit.holder] ~= nil) then
+					local unitid = getunitid(unit.holder)
+					local bunit = mmf.newObject(unitid)
+					local x,y = bunit.values[XPOS],bunit.values[YPOS]
+					
+					update(unit.fixed,x,y,unit.values[DIR])
+				else
+					addundo({"holder",unit.values[ID],unit.holder,0,},unitid)
+					unit.holder = 0
+				end
+			else
+				unit.holder = 0
 			end
 		end
 	end

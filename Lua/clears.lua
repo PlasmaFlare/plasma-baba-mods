@@ -37,7 +37,6 @@ function clearunits(restore_)
 	
 	visiontargets = {}
 	vision_rendered = {}
-	revertlist = {}
 	
 	generaldata.values[CURRID] = 1
 	updateundo = true

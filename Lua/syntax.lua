@@ -44,6 +44,7 @@ function addunit(id,undoing_,levelstart_)
 	end
 
 	on_add_stableunit(unit.fixed)
+	unit.originalname = unit.strings[UNITNAME]
 	
 	if (unitlists[name] == nil) then
 		unitlists[name] = {}
@@ -89,6 +90,7 @@ function addunit(id,undoing_,levelstart_)
 	unit.colours = {}
 	unit.currcolour = 0
 	unit.followed = -1
+	unit.holder = 0
 	unit.xpos = unit.values[XPOS]
 	unit.ypos = unit.values[YPOS]
 	
