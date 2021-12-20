@@ -2321,7 +2321,7 @@ function postrules(alreadyrun_)
 						local targetconds = rules[2]
 						local object = targetrule[3]
 						
-						if (targetrule[1] == target) and (targetrule[2] == "is") and (target ~= object) and ((getmat(object) ~= nil) or (object == "revert")) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
+						if (targetrule[1] == target) and (((targetrule[2] == "is") and (target ~= object)) or (targetrule[2] == "write")) and ((getmat(object) ~= nil) or (object == "revert") or (targetrule[2] == "write")) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
 							if (#newconds > 0) then
 								if (newconds[1] == "never") then
 									targetconds = {}
