@@ -1,7 +1,7 @@
 register_directional_text_prefix("this")
 
 this_mod_globals = {}
-function reset_this_mod_globals()
+local function reset_this_mod_globals()
     this_mod_globals = {
         active_this_property_text = {}, -- keep track of texts 
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
@@ -27,6 +27,8 @@ local function reset_this_mod_locals()
     cond_features_with_this_noun = {}
     deferred_rules_with_this = {}
 end
+
+local make_cursor, update_all_cursors
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
@@ -108,32 +110,7 @@ function this_mod_has_this_text()
     return false
 end
 
-function is_unit_valid_this_property(unitid, verb)
-    if unitid == 2 then return true end
-        
-    local unit = mmf.newObject(unitid)
-    if unit.strings[UNITTYPE] == "object" then
-        return true
-    end
-
-    if unit.strings[UNITTYPE] == "text" then
-        if verb == "is" then
-            if unit.values[TYPE] == 2 then
-                return true
-            elseif unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
-                return true
-            end
-        else
-            if unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
-                return true
-            end
-        end
-    end
-
-    return false
-end
-
--- This is exported since it is used in clears.lua
+-- This is used in {{mod_injections}}
 function reset_this_mod()
     local count = 0
     for _, cursor_unitid in pairs(text_to_cursor) do
@@ -152,6 +129,7 @@ function on_add_this_text(this_unitid)
         text_to_cursor[this_unitid] = cursorunit
     end
 end
+
 function on_delele_this_text(this_unitid)
     if text_to_cursor[this_unitid] then
         MF_cleanremove(text_to_cursor[this_unitid])
@@ -161,30 +139,7 @@ function on_delele_this_text(this_unitid)
     end
 end
 
-function make_cursor(unit)
-    local unitid2 = MF_create("customsprite")
-    local unit2 = mmf.newObject(unitid2)
-    
-    unit2.values[ONLINE] = 1
-
-    unit2.layer = 1
-    unit2.direction = 28
-    MF_loadsprite(unitid2,"this_cursor_0",28,true)
-    update_this_cursor(unit, unit2)
-
-    return unitid2
-end
-
-function update_all_cursors()
-    for this_unitid, cursor_unitid in pairs(text_to_cursor) do
-        local wordunit = mmf.newObject(this_unitid)
-        local cursorunit = mmf.newObject(cursor_unitid)
-
-        update_this_cursor(wordunit, cursorunit)
-    end
-end
-
-function update_this_cursor(wordunit, cursorunit)
+local function update_this_cursor(wordunit, cursorunit)
     local x = wordunit.values[XPOS]
     local y = wordunit.values[YPOS]
 
@@ -236,6 +191,59 @@ function update_this_cursor(wordunit, cursorunit)
         cursorunit.values[XPOS] = -20
         cursorunit.values[YPOS] = -20
     end
+end
+
+-- local
+function make_cursor(unit)
+    local unitid2 = MF_create("customsprite")
+    local unit2 = mmf.newObject(unitid2)
+    
+    unit2.values[ONLINE] = 1
+
+    unit2.layer = 1
+    unit2.direction = 28
+    MF_loadsprite(unitid2,"this_cursor_0",28,true)
+    update_this_cursor(unit, unit2)
+
+    return unitid2
+end
+
+-- local
+function update_all_cursors()
+    for this_unitid, cursor_unitid in pairs(text_to_cursor) do
+        local wordunit = mmf.newObject(this_unitid)
+        local cursorunit = mmf.newObject(cursor_unitid)
+
+        update_this_cursor(wordunit, cursorunit)
+    end
+end
+
+local function this_raycast(x, y, dir, checkemptyblock)
+    if dir >= 0 and dir <= 3 then 
+        local dir_vec = dirs[dir+1]
+        local dx = dir_vec[1]
+        local dy = dir_vec[2] * -1
+        local ox = x + dx
+        local oy = y + dy
+        while inbounds(ox,oy) do
+            local tileid = ox + oy * roomsizex
+
+            if unitmap[tileid] == nil then
+                if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
+                    return {ox, oy},true, false
+                elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
+                    return {ox, oy}, false, true
+                end
+            elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
+                return {ox, oy},false, false
+            end
+
+            ox = ox + dx
+            oy = oy + dy
+        end
+    end
+
+    return nil
 end
 
 function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, include_this_units, mark_passed_tiles)
@@ -391,18 +399,6 @@ function check_cond_rules_with_this_noun()
     end
 end
 
-function set_blocked_tile(tileid)
-    if tileid then
-        blocked_tiles[tileid] = true
-    end
-end
-
-function set_passed_tile(tileid)
-    if tileid then
-        explicit_passed_tiles[tileid] = true
-    end
-end
-
 function get_raycast_units(this_text_unitid, checkblocked)
     if is_this_unit_in_stablerule(this_text_unitid) then
         return get_stable_this_raycast_units(tonumber(this_text_unitid))
@@ -421,8 +417,40 @@ function get_raycast_units(this_text_unitid, checkblocked)
     return {}
 end
 
+function get_raycast_tileid(this_text_unitid)
+    if is_this_unit_in_stablerule(this_text_unitid) then
+        return get_stable_this_raycast_pos(tonumber(this_text_unitid))
+    end
+    return text_to_raycast_pos[this_text_unitid]
+end
+
+local function is_unit_valid_this_property(unitid, verb)
+    if unitid == 2 then return true end
+        
+    local unit = mmf.newObject(unitid)
+    if unit.strings[UNITTYPE] == "object" then
+        return true
+    end
+
+    if unit.strings[UNITTYPE] == "text" then
+        if verb == "is" then
+            if unit.values[TYPE] == 2 then
+                return true
+            elseif unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
+                return true
+            end
+        else
+            if unit.values[TYPE] == 0 and not is_name_text_this(unit.strings[NAME]) then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 -- Like get_raycast_units, but factors in this redirection
-function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
+local function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
     if not text_to_raycast_pos[this_text_unitid] then
         return {}, {}
     end
@@ -478,46 +506,7 @@ function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, 
     return out_raycast_units, all_redirected_this_units
 end
 
-function get_raycast_tileid(this_text_unitid)
-    if is_this_unit_in_stablerule(this_text_unitid) then
-        return get_stable_this_raycast_pos(tonumber(this_text_unitid))
-    end
-    return text_to_raycast_pos[this_text_unitid]
-end
-
-function this_raycast(x, y, dir, checkemptyblock)
-    if dir >= 0 and dir <= 3 then 
-        local dir_vec = dirs[dir+1]
-        local dx = dir_vec[1]
-        local dy = dir_vec[2] * -1
-        local ox = x + dx
-        local oy = y + dy
-        while inbounds(ox,oy) do
-            local tileid = ox + oy * roomsizex
-
-            if unitmap[tileid] == nil then
-                if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
-                    return {ox, oy},true, false
-                elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
-                    return {ox, oy}, false, true
-                end
-            elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
-                return {ox, oy},false, false
-            end
-
-            ox = ox + dx
-            oy = oy + dy
-        end
-    end
-
-    return nil
-end
-
-function defer_addoption_with_this(rule)
-    table.insert(deferred_rules_with_this, rule)
-end
-
-function process_this_rules(this_rules, filter_property_func, checkblocked, curr_phase)
+local function process_this_rules(this_rules, filter_property_func, checkblocked, curr_phase)
     local final_options = {}
     local this_noun_cond_options_list = {}
     local processed_this_units = {}
@@ -703,6 +692,16 @@ local function pass_filter(name)
 end
 local function other_filter(name)
     return name ~= "block" and name ~= "pass"
+end
+local function set_blocked_tile(tileid)
+    if tileid then
+        blocked_tiles[tileid] = true
+    end
+end
+local function set_passed_tile(tileid)
+    if tileid then
+        explicit_passed_tiles[tileid] = true
+    end
 end
 
 function do_subrule_this()

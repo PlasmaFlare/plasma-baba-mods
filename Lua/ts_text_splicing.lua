@@ -1,7 +1,7 @@
 -- Global variables
 
 splice_mod_globals = {}
-function reset_splice_mod_globals()
+local function reset_splice_mod_globals()
     splice_mod_globals = {
         -- This prevents packing via pulling
         calling_push_check_on_pull = false, 
@@ -27,6 +27,16 @@ table.insert(mod_hook_functions["command_given"],
     end
 )
 
+-- Note: commented out since delete() has a parameter to disable has. But maybe there's a reason we still need this
+-- local function delete_without_triggering_has(unitid)
+--     if unitid ~= 2 then
+--         local unit = mmf.newObject(unitid)
+--         -- All of this to delete the cut text without triggering HAS
+--         addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init},unitid)
+--         delunit(unit.fixed)
+--         MF_remove(unit.fixed)
+--     end
+-- end
 
 function is_text_in_palette(textname)
     if textname == nil then
@@ -44,16 +54,6 @@ function is_text_in_palette(textname)
     return dname == "text_"..textname 
 end
 
-function delete_without_triggering_has(unitid)
-    if unitid ~= 2 then
-        local unit = mmf.newObject(unitid)
-        -- All of this to delete the cut text without triggering HAS
-        addundo({"remove",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.values[ID],unit.strings[U_LEVELFILE],unit.strings[U_LEVELNAME],unit.values[VISUALLEVEL],unit.values[COMPLETED],unit.values[VISUALSTYLE],unit.flags[MAPLEVEL],unit.strings[COLOUR],unit.strings[CLEARCOLOUR],unit.followed,unit.back_init},unitid)
-        delunit(unit.fixed)
-        MF_remove(unit.fixed)
-    end
-end
-
 function reset_splice_mod_vars_per_take()
     exclude_from_cut_blocking = {}
     cut_texts = {}
@@ -63,7 +63,6 @@ function reset_splice_mod_vars_per_take()
     splice_mod_globals.calling_push_check_on_pull = false
     splice_mod_globals.record_packed_text = false
 end
-
 
 function add_moving_units_to_exclude_from_cut_blocking(moving_units)
     for i,data in ipairs(moving_units) do
@@ -202,7 +201,8 @@ function handle_text_cutting(data, cut_direction)
         MF_particles("destroy",x,y,8 * pmult,0,3,1,1)
         generaldata.values[SHAKE] = 3
 
-        delete_without_triggering_has(data.cut_text)
+        -- deleting without triggering has
+        delete(data.cut_text, nil, nil, true)
 
         cut_texts[data.cut_text] = true
         setsoundname("removal",1,sound)
@@ -225,6 +225,40 @@ function handle_level_cutting()
     exclude_from_cut_blocking = {}
 end
 
+local function text_packing_get_letter(unitid, x, y, dir, packer_pushed_against)
+    local unit = mmf.newObject(unitid)
+    local collisions, obstacle_list, specials = check(unitid, x, y, dir, false, "pack")
+    local letterunitid = nil
+    local valid = true
+    for _, obs in ipairs(collisions) do
+        if obs == 1 or obs == -1 then
+            valid = false
+            break
+        end
+        if (obs ~= 2 and obs ~= 0) then
+            local obsunit = mmf.newObject(obs)
+            if obsunit.strings[UNITTYPE] == "text" and obsunit.values[TYPE] == 5 then
+                if not letterunitid then
+                    letterunitid = obs
+                else
+                    valid = false
+                    break
+                end
+            else
+                valid = false
+                break
+            end
+        end
+    end
+    if not valid or not letterunitid then
+        return false
+    end
+    if processed_pack_texts[letterunitid] then
+        return false
+    end
+
+    return letterunitid
+end
 
 function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushed_against, packer_x, packer_y)
     if textunitid == 2 then
@@ -382,41 +416,6 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     return data
 end
 
-function text_packing_get_letter(unitid, x, y, dir, packer_pushed_against)
-    local unit = mmf.newObject(unitid)
-    local collisions, obstacle_list, specials = check(unitid, x, y, dir, false, "pack")
-    local letterunitid = nil
-    local valid = true
-    for _, obs in ipairs(collisions) do
-        if obs == 1 or obs == -1 then
-            valid = false
-            break
-        end
-        if (obs ~= 2 and obs ~= 0) then
-            local obsunit = mmf.newObject(obs)
-            if obsunit.strings[UNITTYPE] == "text" and obsunit.values[TYPE] == 5 then
-                if not letterunitid then
-                    letterunitid = obs
-                else
-                    valid = false
-                    break
-                end
-            else
-                valid = false
-                break
-            end
-        end
-    end
-    if not valid or not letterunitid then
-        return false
-    end
-    if processed_pack_texts[letterunitid] then
-        return false
-    end
-
-    return letterunitid
-end
-
 function handle_text_packing(unitid, dir, pack_entry)
     if pack_entry then
         local old_x = nil
@@ -436,7 +435,8 @@ function handle_text_packing(unitid, dir, pack_entry)
             local pmult,sound = checkeffecthistory("smoke")
             MF_particles("eat",u.values[XPOS],u.values[YPOS],5 * pmult,0,3,1,1)
 
-            delete_without_triggering_has(letterunit)
+            -- deleting without triggering has
+            delete(letterunit, nil, nil, true)
         end
         local newunitid = create("text_"..pack_entry.packed_text_name, pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2], dir, old_x, old_y, nil, nil, nil)
         local newunit = mmf.newObject(newunitid)

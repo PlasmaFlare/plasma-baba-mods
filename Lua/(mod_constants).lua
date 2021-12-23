@@ -35,6 +35,24 @@ turning_word_names = {
     boom=true,
 }
 
+branching_text_names = {
+    is = true,
+    has = true,
+    near = true,
+    make = true,
+    follow = true,
+    mimic = true,
+    play = true,
+    eat = true,
+    fear = true,
+    on = true,
+    without = true,
+    facing = true,
+    above = true,
+    below = true,
+    feeling = true
+}
+
 arrow_property_display = {
     youright="you (right)",
     youup="you (up)",
