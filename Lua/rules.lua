@@ -1696,31 +1696,13 @@ end
 
 function code(alreadyrun_)
 	--[[ 
-		@mods(this) - Override reason: provide hook for do_subrule_this and also update_raycast units 
-			before doing any processing
+		@mods(this) - Override reason: provide hook for do_subrule_this
 		@mods(omni text) - Override reason: when checking for the first round of firstwords, we need to adjust which spaces to check for pivot text to be an initial firstword
 		@mods(stable) - Override reason: provide hook for update_stable_state()
 	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
 
-	if this_mod_has_this_text() then
-		if this_mod_globals.undoed_after_called then
-			update_raycast_units(true, true, true)
-		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
-			update_raycast_units(true, true, true)
-			if updatecode == 0 then
-				check_cond_rules_with_this_noun()
-			end
-		end
-	end
-
-	-- if this_mod_globals.undoed_after_called then
-	if not alreadyrun then
-		update_stable_state()
-	end
-	-- end
-	
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
 		--MF_alert("code being updated!")

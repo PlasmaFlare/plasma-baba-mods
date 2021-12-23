@@ -94,6 +94,8 @@ local prev_undobuffer_len = 0
  ]]
 local allow_stablerule_display = false
 
+local print_stable_state, make_stable_indicator
+
 GLOBAL_checking_stable = false -- set to true whenever we are finding "X is stable" rules. This is to indirectly tell testcond()
 
 function clear_stable_mod()
@@ -153,6 +155,29 @@ local function get_stableunit_key(unitid)
     else
         return nil
     end
+end
+
+function on_add_stableunit(unitid)
+    local su_key = get_stableunit_key(unitid)
+    if su_key and su_key ~= LEVEL_SU_KEY and stablestate.units[su_key] and not stable_indicators[su_key] then
+        local stable_indicator_id = make_stable_indicator()
+        stable_indicators[su_key] = { 
+            indicator_id = stable_indicator_id,
+            unitid = unitid
+        }
+    end
+end
+
+local function on_delete_stableunit_key(su_key)
+    if su_key and su_key ~= LEVEL_SU_KEY and stable_indicators[su_key] then
+        MF_cleanremove(stable_indicators[su_key].indicator_id)
+        stable_indicators[su_key] = nil
+    end
+end
+
+function on_delete_stableunit(unitid)
+    local su_key = get_stableunit_key(unitid)
+    on_delete_stableunit_key(su_key)
 end
 
 local function get_ruleid(id_list, option)
@@ -545,7 +570,9 @@ local function apply_stable_undo()
     return false
 end
 
-local function make_stable_indicator()
+--[[ Stable Indicator management ]]
+-- local
+function make_stable_indicator()
     local indicator_id = MF_create("customsprite")
     local indicator = mmf.newObject(indicator_id)
 
@@ -556,6 +583,47 @@ local function make_stable_indicator()
     MF_loadsprite(indicator_id,"stable_indicator_0",27,true)
     MF_setcolour(indicator_id,3,3)
     return indicator_id
+end
+
+local function add_empty_stable_indicator(tileid)
+    assert(tileid)
+    assert(not stable_empty_indicators[tileid])
+    local stable_indicator_id = make_stable_indicator()
+    stable_empty_indicators[tileid] = stable_indicator_id
+end
+
+local function delete_empty_stable_indicator(tileid)
+    assert(tileid)
+    if stable_empty_indicators[tileid] then
+        MF_cleanremove(stable_empty_indicators[tileid])
+        stable_empty_indicators[tileid] = nil
+    end
+end
+
+local function update_stable_indicator(unitid, indicator_id, tileid)
+    local indicator_unit = mmf.newObject(indicator_id)
+
+    if unitid == 2 then
+        local nx = math.floor(tileid % roomsizex)
+        local ny = math.floor(tileid / roomsizex)
+        local indicator_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+        indicator_unit.values[XPOS] = nx * indicator_tilesize + Xoffset + (indicator_tilesize / 2)
+        indicator_unit.values[YPOS] = ny * indicator_tilesize + Yoffset + (indicator_tilesize / 2)
+    else
+        local unit = mmf.newObject(unitid)
+        indicator_unit.values[XPOS] = unit.x
+        indicator_unit.values[YPOS] = unit.y
+        indicator_unit.visible = unit.visible
+    end
+
+    indicator_unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    indicator_unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+
+    if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
+        -- Just to hide it
+        indicator_unit.values[XPOS] = -20
+        indicator_unit.values[YPOS] = -20
+    end
 end
 
 -- Inefficient function for reloading indicators after undp
@@ -846,30 +914,29 @@ function update_stable_state(alreadyrun)
     return false
 end
 
-
-table.insert(mod_hook_functions["rule_baserules"],
-    function()
-        add_stable_rules()
-    end
-)
-
-function add_stable_rules()
-        -- adding all stablestate.rules into the featureindex
-        for _, v in pairs(stablestate.rules) do
-            -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
-            local feature = deep_copy_table(v.feature)
-            addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
-            
-            if STABLE_LOGGING then
-                local option, conds = feature[1], feature[2]
-                local cond_str = ""
-                for _, cond in ipairs(conds) do
-                    cond_str = cond_str.." "..cond[1]
-                end
-                print("inserting stablerule into featureindex: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
+local function add_stable_rules()
+    -- adding all stablestate.rules into the featureindex
+    for _, v in pairs(stablestate.rules) do
+        -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
+        local feature = deep_copy_table(v.feature)
+        addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
+        
+        if STABLE_LOGGING then
+            local option, conds = feature[1], feature[2]
+            local cond_str = ""
+            for _, cond in ipairs(conds) do
+                cond_str = cond_str.." "..cond[1]
             end
+            print("inserting stablerule into featureindex: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
         end
     end
+end
+
+table.insert(mod_hook_functions["rule_baserules"],
+function()
+    add_stable_rules()
+end
+)
 
 table.insert(mod_hook_functions["rule_update_after"],
     function()
@@ -928,7 +995,6 @@ table.insert(mod_hook_functions["command_given"],
     end
 )
 
---@cleanup: debug function. Comment out on release
 table.insert(mod_hook_functions["turn_end"],
     function()
         if STABLE_LOGGING then
@@ -938,7 +1004,7 @@ table.insert(mod_hook_functions["turn_end"],
     end
 )
 
---@cleanup: debug function. Comment out on release
+-- local
 function print_stable_state()
     print("--------Stable State---------")
     print("===stableunits===")
@@ -974,71 +1040,6 @@ function print_stable_state()
     end
     
     print("------------------------")
-end
-
---[[ Stable Indicator management ]]
-function on_add_stableunit(unitid)
-    local su_key = get_stableunit_key(unitid)
-    if su_key and su_key ~= LEVEL_SU_KEY and stablestate.units[su_key] and not stable_indicators[su_key] then
-        local stable_indicator_id = make_stable_indicator()
-        stable_indicators[su_key] = { 
-            indicator_id = stable_indicator_id,
-            unitid = unitid
-        }
-    end
-end
-
-function on_delete_stableunit_key(su_key)
-    if su_key and su_key ~= LEVEL_SU_KEY and stable_indicators[su_key] then
-        MF_cleanremove(stable_indicators[su_key].indicator_id)
-        stable_indicators[su_key] = nil
-    end
-end
-
-function on_delete_stableunit(unitid)
-    local su_key = get_stableunit_key(unitid)
-    on_delete_stableunit_key(su_key)
-end
-
-function add_empty_stable_indicator(tileid)
-    assert(tileid)
-    assert(not stable_empty_indicators[tileid])
-    local stable_indicator_id = make_stable_indicator()
-    stable_empty_indicators[tileid] = stable_indicator_id
-end
-
-function delete_empty_stable_indicator(tileid)
-    assert(tileid)
-    if stable_empty_indicators[tileid] then
-        MF_cleanremove(stable_empty_indicators[tileid])
-        stable_empty_indicators[tileid] = nil
-    end
-end
-
-function update_stable_indicator(unitid, indicator_id, tileid)
-    local indicator_unit = mmf.newObject(indicator_id)
-
-    if unitid == 2 then
-        local nx = math.floor(tileid % roomsizex)
-        local ny = math.floor(tileid / roomsizex)
-        local indicator_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-        indicator_unit.values[XPOS] = nx * indicator_tilesize + Xoffset + (indicator_tilesize / 2)
-        indicator_unit.values[YPOS] = ny * indicator_tilesize + Yoffset + (indicator_tilesize / 2)
-    else
-        local unit = mmf.newObject(unitid)
-        indicator_unit.values[XPOS] = unit.x
-        indicator_unit.values[YPOS] = unit.y
-        indicator_unit.visible = unit.visible
-    end
-
-    indicator_unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-    indicator_unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-
-    if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
-        -- Just to hide it
-        indicator_unit.values[XPOS] = -20
-        indicator_unit.values[YPOS] = -20
-    end
 end
 
 local LETTER_HEIGHT = 24

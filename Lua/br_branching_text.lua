@@ -1,21 +1,3 @@
-branching_text_names = {
-    is = true,
-    has = true,
-    near = true,
-    make = true,
-    follow = true,
-    mimic = true,
-    play = true,
-    eat = true,
-    fear = true,
-    on = true,
-    without = true,
-    facing = true,
-    above = true,
-    below = true,
-    feeling = true
-}
-
 BRANCHING_TEXT_LOGGING = false
 
 function is_branching_text_defined(name)

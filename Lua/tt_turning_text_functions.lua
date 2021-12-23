@@ -1,17 +1,21 @@
-turning_text_mod_globals = {}
-function reset_turning_text_mod_globals()
-    turning_text_mod_globals = {
-        -- collects all turning text unit at the start of every turn. Also keeps track of their starting direction + if they have any directional rules applied to them
-        turning_units = {},
-        final_turning_unit_dir = {},
-        is_sound_played = false,
+-- collects all turning text unit at the start of every turn. Also keeps track of their starting direction + if they have any directional rules applied to them
+local turning_units = {}
+local is_sound_played = false
 
+turning_text_mod_globals = {}
+
+local function clear_turning_text_mod()
+    turning_units = {}
+    is_sound_played = false
+
+    turning_text_mod_globals = {
+        final_turning_unit_dir = {},
+        
         -- We keep this global to prevent calling update_raycast_units while we call code()
         -- when we process turning text in movecommand
         tt_executing_code = false,        
     }
 end
-reset_turning_text_mod_globals()
 
 
 for name,_ in pairs(turning_word_names) do
@@ -21,18 +25,18 @@ end
 
 table.insert( mod_hook_functions["level_start"],
     function()
-        reset_turning_text_mod_globals()
+        clear_turning_text_mod()
     end
 )
 table.insert( mod_hook_functions["level_restart"],
     function()
-        reset_turning_text_mod_globals()
+        clear_turning_text_mod()
     end
 )
 
 table.insert( mod_hook_functions["level_end"],
     function()
-        reset_turning_text_mod_globals()
+        clear_turning_text_mod()
     end
 )
 table.insert( mod_hook_functions["turn_end"], 
@@ -41,7 +45,7 @@ table.insert( mod_hook_functions["turn_end"],
         for i,unitid in ipairs(codeunits) do
             local unit = mmf.newObject(unitid)
             if (is_turning_text(unit.strings[NAME])) then
-                for i,b in ipairs(turning_text_mod_globals.turning_units) do
+                for i,b in ipairs(turning_units) do
                     local id,init_dir,prev_has_rule,prev_active = b[1],b[2],b[3],b[4]
                     if (unitid == id and unit.values[DIR] ~= init_dir) then
                         if (unit.active and prev_active) then
@@ -57,11 +61,11 @@ table.insert( mod_hook_functions["turn_end"],
                 end
             end
         end
-        if (play_rule_sound and not turning_text_mod_globals.is_sound_played) then
+        if (play_rule_sound and not is_sound_played) then
             local pmult,sound = checkeffecthistory("rule")
             local rulename = "rule" .. tostring(math.random(1,5)) .. sound
             MF_playsound(rulename)
-            turning_text_mod_globals.is_sound_played = true
+            is_sound_played = true
         end
     end
 )
@@ -69,9 +73,9 @@ table.insert( mod_hook_functions["turn_end"],
 
 table.insert( mod_hook_functions["command_given"],
     function()
-        turning_text_mod_globals.turning_units = {}
+        turning_units = {}
         turning_text_mod_globals.final_turning_unit_dir = {}
-        turning_text_mod_globals.is_sound_played = false
+        is_sound_played = false
 
         for i,unitid in ipairs(codeunits) do
             local unit = mmf.newObject(unitid)
@@ -86,7 +90,7 @@ table.insert( mod_hook_functions["command_given"],
 
                 local has_dir_rule = (ur > 0) or (uu > 0) or (ul > 0) or (ud > 0)
                 
-                table.insert(turning_text_mod_globals.turning_units, {unitid, unit.values[DIR], has_dir_rule, unit.active})
+                table.insert(turning_units, {unitid, unit.values[DIR], has_dir_rule, unit.active})
             end
         end
     end
@@ -96,7 +100,7 @@ function is_turning_text(name)
     return string.len(name) > 8 and string.sub(name, 1,8) == "turning_" and turning_word_names[string.sub(name, 9)]
 end
 
-function parse_turning_text(name)
+local function parse_turning_text(name)
     local is_turning_text = false
     local word = nil
     if string.len(name) > 8 and string.sub(name, 1,8) == "turning_" then
@@ -109,7 +113,7 @@ function parse_turning_text(name)
 end
 
 -- mainly copied from statusblock(). Given a set of right/up/left/down rules applied, figure out the resulting dir
-function eval_dir_rule(currdir, ur,uu,ul,ud)
+local function eval_dir_rule(currdir, ur,uu,ul,ud)
     local fdir = nil
 
     if (ur > 0) or (uu > 0) or (ul > 0) or (ud > 0) then
@@ -194,7 +198,7 @@ end
 -- This is made more complicated since I want to support "text is turning_dir" remaining the same while pushing the 
 -- sentence and instant updating of turning text after moving
 function finalize_turning_text_dir()
-    for i,v in ipairs(turning_text_mod_globals.turning_units) do
+    for i,v in ipairs(turning_units) do
         local unitid, init_dir, pre_has_dir_rule = v[1],v[2],v[3]
         local unit = mmf.newObject(unitid)
 
@@ -232,7 +236,7 @@ function finalize_turning_text_dir()
     code() --Question: instead of calling code yet again, why not just populate a local table with turning dir information? Its not like the set of normal rules is gonna change during this time.
     -- Answer: you need testcond to work with turning dir
     
-    for i,v in ipairs(turning_text_mod_globals.turning_units) do
+    for i,v in ipairs(turning_units) do
         local unitid, init_dir, pre_has_dir_rule = v[1],v[2],v[3]
         local unit = mmf.newObject(unitid)
         local unitname = getname(unit)
