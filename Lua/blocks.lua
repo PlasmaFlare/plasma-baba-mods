@@ -1279,7 +1279,10 @@ function block(small_)
 end
 
 function levelblock()
-	-- @mods(text splicing) - Override reason: provide hook for handling level cutting. Levelblock is mainly for handling "X on level" interactions.
+	--[[ 
+		@mods(text splicing) - Override reason: provide hook for handling level cutting. Levelblock is mainly for handling "X on level" interactions.
+		@mods(guard) - Override reason: handle level guarding
+	]]
 	local unlocked = false
 	local things = {}
 	local donethings = {}
@@ -1480,8 +1483,11 @@ function levelblock()
 								if testcond(conds,2,i,j) and floating_level(2,i,j) then
 									local pmult,sound = checkeffecthistory("eat")
 									setsoundname("removal",1,sound)
-									destroylevel()
-									return
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 							end
 						end
@@ -1657,8 +1663,11 @@ function levelblock()
 									if (d == "level") and (#unitlists["level"] > 0) and (lsafe == false) then
 										local pmult,sound = checkeffecthistory("eat")
 										setsoundname("removal",1,sound)
-										destroylevel()
-										return
+										local is_guarded = ack_endangered_unit(1)
+										if not is_guarded then
+											destroylevel()
+											return
+										end
 									end
 									
 									for a,unitid in ipairs(unitlists[d]) do
@@ -1695,8 +1704,11 @@ function levelblock()
 						if (#dothese > 0) and (lsafe == false) then
 							local pmult,sound = checkeffecthistory("eat")
 							setsoundname("removal",1,sound)
-							destroylevel()
-							return
+							local is_guarded = ack_endangered_unit(1)
+							if not is_guarded then
+								destroylevel()
+								return
+							end
 						end
 					end
 						
@@ -1729,21 +1741,30 @@ function levelblock()
 									if (#allyous > 0) then
 										for c,d in ipairs(allyous) do
 											if (issafe(1) == false) and floating_level(d) then
-												destroylevel()
-												return
+												local is_guarded = ack_endangered_unit(1)
+												if not is_guarded then
+													destroylevel()
+													return
+												end
 											end
 										end
 									end
 								elseif testcond(b[2],1) and (lsafe == false) then
-									destroylevel()
-									return
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 							end
 						end
 						
 						if ((#findallfeature("empty","is","defeat") > 0) or (#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
-							destroylevel()
-							return
+							local is_guarded = ack_endangered_unit(1)
+							if not is_guarded then
+								destroylevel()
+								return
+							end
 						end
 						
 						local canwin = false
@@ -1850,8 +1871,11 @@ function levelblock()
 										end
 									end
 								elseif testcond(b[2],1) and (lsafe == false) then
-									destroylevel()
-									return
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 							end
 						end
@@ -1863,7 +1887,11 @@ function levelblock()
 							end
 							
 							if floating_level(unit.fixed) and (lsafe == false) then
-								destroylevel()
+								local is_guarded = ack_endangered_unit(1)
+								if not is_guarded then
+									destroylevel()
+									return
+								end
 							end
 						end
 					elseif (action == "hot") then
@@ -1908,14 +1936,21 @@ function levelblock()
 								end
 								
 								if doit then
-									destroylevel()
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 							end
 						end
 						
 						if (#findallfeature("empty","is","hot") > 0) and floating_level(2) and (lsafe == false) then
-							destroylevel()
-							return
+							local is_guarded = ack_endangered_unit(1)
+							if not is_guarded then
+								destroylevel()
+								return
+							end
 						end
 					elseif (action == "open") then
 						local shuts = findfeature(nil,"is","shut")
@@ -1944,8 +1979,11 @@ function levelblock()
 								
 								if doit then
 									if (lsafe == false) then
-										destroylevel()
-										return
+										local is_guarded = ack_endangered_unit(1)
+										if not is_guarded then
+											destroylevel()
+											return
+										end
 									end
 								end
 							end
@@ -1968,8 +2006,11 @@ function levelblock()
 						end
 						
 						if (#findallfeature("empty","is","shut") > 0) and floating_level(2) and (lsafe == false) then
-							destroylevel()
-							return
+							local is_guarded = ack_endangered_unit(1)
+							if not is_guarded then
+								destroylevel()
+								return
+							end
 						end
 					elseif (action == "shut") then
 						local opens = findfeature(nil,"is","open")
@@ -1998,8 +2039,11 @@ function levelblock()
 								
 								if doit then
 									if (lsafe == false) then
-										destroylevel()
-										return
+										local is_guarded = ack_endangered_unit(1)
+										if not is_guarded then
+											destroylevel()
+											return
+										end
 									end
 								end
 							end
@@ -2022,8 +2066,11 @@ function levelblock()
 						end
 						
 						if (#findallfeature("empty","is","open") > 0) and floating_level(2) and (lsafe == false) then
-							destroylevel()
-							return
+							local is_guarded = ack_endangered_unit(1)
+							if not is_guarded then
+								destroylevel()
+								return
+							end
 						end
 					elseif (action == "sink") then
 						local openthese = {}
@@ -2037,8 +2084,11 @@ function levelblock()
 							
 							if floating_level(unit.fixed) then
 								if (lsafe == false) then
-									destroylevel()
-									return
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 								
 								if (issafe(unit.fixed) == false) then
@@ -2075,8 +2125,11 @@ function levelblock()
 							
 							if floating_level(unit.fixed) then
 								if (lsafe == false) then
-									destroylevel()
-									return
+									local is_guarded = ack_endangered_unit(1)
+									if not is_guarded then
+										destroylevel()
+										return
+									end
 								end
 								
 								if (issafe(unit.fixed) == false) then
@@ -2628,5 +2681,7 @@ function levelblock()
 		destroylevel("toocomplex")
 		return
 	end
+
+	guard_checkpoint("levelblock")
 end
 

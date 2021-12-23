@@ -6,6 +6,11 @@
 
  ]]
 
+--[[ 
+    @mods(this) - Provide hook for updating raycast units
+    @mods(stable) - Provide hook for updating stable state
+    @mods(guard) - Injection reaon: provide a guard checkpoint
+]]
 local old_code = code
 function code(alreadyrun_, ...)
     local alreadyrun = alreadyrun_ or false
@@ -24,11 +29,13 @@ function code(alreadyrun_, ...)
 		update_stable_state()
 	end
 
-    return old_code(alreadyrun_, ...)
+    local ret = table.pack(old_code(alreadyrun_, ...))
+    guard_checkpoint("code")
+    return table.unpack(ret)
 end
 
 
--- @mods - Injection reason: provide hook for clearing mod globals/locals
+-- @mods(this), @mods(stable) - Injection reason: provide hook for clearing mod globals/locals
 local old_clearunits = clearunits
 
 function clearunits(...)
@@ -53,6 +60,7 @@ function addunit(id, ...)
 	end
 
 	on_add_stableunit(unit.fixed)
+    ack_unit_update_for_guard(unitid)
 end
 
 -- @mods(stable), @mods(this) - Injection reason: provide hook for when a unit gets deleted. This is to clear that unit from each mod's internal tables
@@ -61,6 +69,7 @@ function delunit(unitid)
     local ret = old_delunit(unitid)
     on_delete_stableunit(unitid)
     on_delele_this_text(unitid)
+    ack_unit_update_for_guard(unitid)
 
     return ret
 end
@@ -77,4 +86,13 @@ function findnoun(noun, ...)
         return old_findnoun(noun, ...)
     end
 end
-    
+
+--[[ 
+    @mods(guard) - Injection reaon: provide a guard checkpoint after every handledels call
+]]
+local old_handledels = handledels
+function handledels(delthese, ...)
+    local ret = table.pack(old_handledels(delthese, ...))
+    guard_checkpoint("handledels")
+    return table.unpack(ret)
+end

@@ -198,7 +198,9 @@ function on_delete_stableunit(unitid)
     on_delete_stableunit_key(su_key)
 end
 
-local function get_ruleid(id_list, option)
+-- @mods(guard) - GUARD mod uses this to serialize entries from featureindex to support chain guarding.
+-- Perhaps this can be moved to (mod_utils)? Only problem is get_stableunit_key is locally defined
+function get_ruleid(id_list, option)
     local ruleid = ""
     
     for i, id in ipairs(id_list) do
