@@ -1,3 +1,5 @@
+local utils = plasma_utils
+
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
@@ -399,8 +401,8 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 		-- Oh no! A too complex!
 		return nil
 	end
-	assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
-	assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants).." "..debug.traceback())
+	utils.debug_assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	utils.debug_assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
 
 	if found_branch_on_last_word and #merged_sentences > 0 then
 		sentences = {}
@@ -580,20 +582,7 @@ function docode(firstwords)
 			local unique_id = tostring(tileid_id) .. "_" .. existing_id
 
 			if name_is_branching_text(unit.strings[NAME], true, false) then
-				--@TODO(sent id)
-				-- existing_id = convert_sent_id(existing_id, false)
-				local normal_sent_id = ""
-				for c in existing_id:gmatch"." do
-					local asciicode = string.byte(c)
-					local index = 0
-					if asciicode >= 65 and asciicode <= 90 then
-						index = asciicode - 65
-					elseif asciicode >= 97 and asciicode <= 122 then
-						index = asciicode - 97
-					end
-					normal_sent_id = normal_sent_id..tostring(index)
-				end
-				existing_id = normal_sent_id
+				existing_id = convert_to_old_sent_id(existing_id)
 				unique_id = tostring(tileid_id) .. "_" .. existing_id
 			end
 			
@@ -634,20 +623,7 @@ function docode(firstwords)
 				end
 	
 				if name_is_branching_text(unit.strings[NAME], true, false) then
-					--@TODO(sent id)
-					-- existing_id = convert_sent_id(existing_id, false)
-					local normal_sent_id = ""
-					for c in existing_id:gmatch"." do
-						local asciicode = string.byte(c)
-						local index = 0
-						if asciicode >= 65 and asciicode <= 90 then
-							index = asciicode - 65
-						elseif asciicode >= 97 and asciicode <= 122 then
-							index = asciicode - 97
-						end
-						normal_sent_id = normal_sent_id..tostring(index)
-					end
-					existing_id = normal_sent_id
+					existing_id = convert_to_old_sent_id(existing_id)
 					unique_id = tostring(tileid_id) .. "_" .. existing_id
 				end
 
@@ -739,7 +715,7 @@ function docode(firstwords)
 							sentences[i] = {}
 						end
 					end
-					assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
+					utils.debug_assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
 				else
 					sentences[1] = existing
 					maxlen = 3
@@ -1595,7 +1571,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 			end
 			local this_params_in_conds = get_this_parms_in_conds(conds, ids)
 			if isstable then
-				assert(#this_params_in_conds == 0, "for stablerule, #this_params_in_conds == "..tostring(#this_params_in_conds))
+				utils.debug_assert(#this_params_in_conds == 0, "for stablerule, #this_params_in_conds == "..tostring(#this_params_in_conds))
 			end
 			
 			for i,cond in ipairs(conds) do

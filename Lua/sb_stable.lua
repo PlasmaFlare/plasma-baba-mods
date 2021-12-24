@@ -1,3 +1,21 @@
+table.insert(editor_objlist_order, "text_stable")
+
+editor_objlist["text_stable"] = 
+{
+	name = "text_stable",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {3, 2},
+    colour_active = {3, 3},
+}
+
+formatobjlist()
+
+local utils = plasma_utils
 --[[ 
     Some semantics/definitions:
     - su_key: stableunit key - equal to unit.values[ID]. An ID for identifying units to apply "stable" to. We use unit.values[ID] since it is persistent across undos
@@ -468,7 +486,7 @@ local function get_stablefeatures_from_name(name)
         if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
             -- Copy the feature and add an additional condition for stable
             local ruleid = get_ruleid(feature[3], feature[1])
-            assert(ruleid)
+            utils.debug_assert(ruleid)
             local dup_feature = deep_copy_table(feature)
             local rule_display = get_stablerule_display(dup_feature)
 
@@ -548,7 +566,7 @@ local function apply_stable_undo()
     end
 
     local top_entry = stable_undo_stack[#stable_undo_stack]
-    assert(top_entry, "Detected top_entry = nil. #stable_undo_stack = "..tostring(#stable_undo_stack).. " "..debug.traceback())
+    utils.debug_assert(top_entry, "Detected top_entry = nil. #stable_undo_stack = "..tostring(#stable_undo_stack))
     if top_entry then -- Note: a bad patch to an issue that is hard to reproduce. Why is top entry sometimes nil?
         if top_entry.turnid == turnid then
             table.remove(stable_undo_stack, #stable_undo_stack)
@@ -586,14 +604,14 @@ function make_stable_indicator()
 end
 
 local function add_empty_stable_indicator(tileid)
-    assert(tileid)
-    assert(not stable_empty_indicators[tileid])
+    utils.debug_assert(tileid)
+    utils.debug_assert(not stable_empty_indicators[tileid])
     local stable_indicator_id = make_stable_indicator()
     stable_empty_indicators[tileid] = stable_indicator_id
 end
 
 local function delete_empty_stable_indicator(tileid)
-    assert(tileid)
+    utils.debug_assert(tileid)
     if stable_empty_indicators[tileid] then
         MF_cleanremove(stable_empty_indicators[tileid])
         stable_empty_indicators[tileid] = nil
@@ -1063,7 +1081,7 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
     if empty_tileid then
         local level_x = empty_tileid % roomsizex
         local level_y = empty_tileid / roomsizex
-        assert(stablestate.empties[empty_tileid], "Stable empty at ("..tostring(level_x)..","..tostring(level_y)..") is not in stablestate")
+        utils.debug_assert(stablestate.empties[empty_tileid], "Stable empty at ("..tostring(level_x)..","..tostring(level_y)..") is not in stablestate")
 
         for i,ruleid in ipairs(stablestate.empties[empty_tileid].ruleids) do
             ruleids[ruleid] = true

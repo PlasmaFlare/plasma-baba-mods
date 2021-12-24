@@ -1,5 +1,5 @@
 --[[ 
-    Which functions to smiley inject:
+    Which functions to inject:
     Definetly - clearunits(), findnoun(), delunit()
     Maybe - all functions in features.lua, getunitswitheffect("select",true), addunit()
     Partially - code()
@@ -20,11 +20,9 @@ function code(alreadyrun_, ...)
 		end
 	end
 
-	-- if this_mod_globals.undoed_after_called then
 	if not alreadyrun then
 		update_stable_state()
 	end
-	-- end
 
     return old_code(alreadyrun_, ...)
 end

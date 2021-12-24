@@ -1,3 +1,35 @@
+table.insert(editor_objlist_order, "text_cut")
+
+editor_objlist["text_cut"] = 
+{
+	name = "text_cut",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {5, 2},
+    colour_active = {5, 4},
+}
+table.insert(editor_objlist_order, "text_pack")
+
+editor_objlist["text_pack"] = 
+{
+	name = "text_pack",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {2, 2},
+    colour_active = {2, 3},
+}
+
+formatobjlist()
+
+local utils = plasma_utils
 -- Global variables
 
 splice_mod_globals = {}
@@ -16,6 +48,7 @@ local cut_texts = {} -- a record of all texts that were destroyed via cut when w
 local pack_texts = {} -- Keeps track of which texts have already been packed. This is used to prevent letter duplication via packing
 local exclude_from_cut_blocking = {} -- list of unit ids that are excluded from checking its solidity when creating the letter units after a cut
 -- flag for indicating inside check() and therefore inside check_text_packing() if we are calling check() when we are handling pull.
+local utils = plasma_utils
 
 
 -- Mod hook inserts
@@ -118,7 +151,7 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
 end
 
 function handle_text_cutting(data, cut_direction)
-    assert(data.cut_text > 2)
+    utils.debug_assert(data.cut_text > 2)
 
     -- This is to prevent stacked cut objects cutting the same text
     if cut_texts[data.cut_text] then

@@ -54,7 +54,8 @@ branching_text_names = {
     facing = true,
     above = true,
     below = true,
-    feeling = true
+    feeling = true,
+    ["and"] = true
 }
 
 arrow_property_display = {
@@ -107,6 +108,7 @@ table.insert(objlistdata.alltags, "pivot text")
 table.insert(objlistdata.alltags, "omni text")
 table.insert(objlistdata.alltags, "filler text")
 
+-- Note: 10 is the baba font letter width + spacing between letters (8 + 2)
 local function write_modpack_version()
     local x = screenw-(#modpack_name * 10) - 20
     local y = f_tilesize * 1.5

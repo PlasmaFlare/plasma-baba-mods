@@ -33,8 +33,6 @@ local function get_special_cut_mappings()
         cut_mappings[br_prefix..branching_text] = branching_text
         cut_mappings[pivot_prefix..branching_text] = branching_text
     end
-    cut_mappings[br_prefix.."and"] = "and"
-    cut_mappings[pivot_prefix.."and"] = "and"
 
     return cut_mappings
 end
@@ -51,8 +49,6 @@ local function get_special_pack_mappings()
         pack_mappings["omni"..branching_text] = br_prefix..branching_text
         pack_mappings["pivot"..branching_text] = pivot_prefix..branching_text
     end
-    pack_mappings["omniand"] = br_prefix.."and"
-    pack_mappings["pivotand"] = pivot_prefix.."and"
 
     return pack_mappings
 end
@@ -121,7 +117,7 @@ local directional_packs_without_normal_variants = {
     beside=true,
 }
 
-function initialize_word_verify()
+local function initialize_word_verify()
     valid_characters = get_valid_characters()
     special_cut_mappings = get_special_cut_mappings()
     special_pack_mappings = get_special_pack_mappings()
