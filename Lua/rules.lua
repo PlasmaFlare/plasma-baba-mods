@@ -1854,8 +1854,8 @@ function code(alreadyrun_)
 					print("<<<<<<<<<<<<<end>")
 				end
 				subrules()
-				grouprules()
 				do_subrule_this()
+				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
 				
