@@ -133,7 +133,7 @@ function get_property_unitid_from_rule(rule)
         local u = mmf.newObject(ids[i][1])
         if u and u.strings[NAME] == "group" then
             if not ids[i+2] or not ids[i+2][1] then
-                error("Provided a group rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].." "..debug.traceback())
+                error("Provided a group rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\" "..debug.traceback())
             end
             return ids[i+2][1]
         end
@@ -142,7 +142,7 @@ function get_property_unitid_from_rule(rule)
     if i == 0 then
         i = i + 3
         if not ids[i] or not ids[i][1] then
-            error("Provided a rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].." "..debug.traceback())
+            error("Provided a rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\" "..debug.traceback())
         end
         return ids[i][1]
     end

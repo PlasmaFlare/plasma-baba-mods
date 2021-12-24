@@ -51,6 +51,8 @@ local function get_special_pack_mappings()
         pack_mappings["omni"..branching_text] = br_prefix..branching_text
         pack_mappings["pivot"..branching_text] = pivot_prefix..branching_text
     end
+    pack_mappings["omniand"] = br_prefix.."and"
+    pack_mappings["pivotand"] = pivot_prefix.."and"
 
     return pack_mappings
 end
