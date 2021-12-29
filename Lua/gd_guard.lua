@@ -16,14 +16,16 @@ editor_objlist["text_guard"] =
 formatobjlist()
 
 local guard_relation_map = {} -- <guardee name> -> list of unitids to destroy if a unit named <guardee name> is about to be destroyed
-local processed_destroyed_units = {} -- list of unitids 
-local units_to_guard_destroy = {}
-local units_to_save = {}
-local update_guards = false
+local processed_destroyed_units = {} -- list of objects which we already handled delete()-ing of, whether normally or through guards
+local units_to_guard_destroy = {} -- list of objects that we marked for guard destroys on handle_guard_dels()
+local units_to_save = {} -- list of objects that we marked to set deleted[unitid] = nil on
+local update_guards = false -- when set to true during a turn, guard_checkpoint() calls recalculate_guards().
+
+local enable_guard_chaining = false
 
 local utils = plasma_utils
 
-local GUARD_LOGGING = false
+local GUARD_LOGGING = true
 
 local function clear_guard_mod()
     guard_relation_map = {}
@@ -33,66 +35,8 @@ local function clear_guard_mod()
     update_guards = false
 end
 
-local function make_object(unitid, x, y)
-    if unitid == 2 then
-        return 200 + x + y * roomsizex -- JAAAAAAANK
-    elseif unitid == 1 then
-        return 1
-    else
-        return unitid
-    end
-end
-
-local function parse_object(object)
-    utils.debug_assert(object)
-    if object >= 200 then
-        local tileid = object - 200
-        local x = tileid % roomsizex
-        local y = math.floor(tileid / roomsizex)
-        return 2, x, y
-    elseif object == 1 then
-        return 1
-    else
-        local unit = mmf.newObject(object)
-        utils.debug_assert(unit)
-        return object, unit.values[XPOS], unit.values[YPOS]
-    end
-end
-
-local function unitstring(object)
-    local unitid, x, y = parse_object(object)
-    if unitid == 1 then
-        return "(Level)"
-    elseif unitid == 2 then
-        return string.format("(Empty at %d,%d)", x, y)
-    else
-        local unit = mmf.newObject(unitid)
-        return string.format("(%s with id %d at %d,%d)", unit.strings[NAME], unit.values[ID], unit.values[XPOS], unit.values[YPOS])
-    end
-end
-
 local function is_unit_guarded(name)
     return guard_relation_map[name] ~= nil
-end
-
-local function duptable(table)
-    local newtable = {}
-    for k, v in pairs(table) do
-        newtable[k] = v
-    end
-    return newtable
-end
-
-local function get_deleted_unitid_key(object)
-    local unitid, x, y = parse_object(object)
-    local deleted_unitid = unitid
-    if unitid == 1 then
-        return nil
-    elseif unitid == 2 then
-        -- JANK WARNING!!! This formula is apparently how the game determines the key for marking an empty to be "deleted".
-        deleted_unitid = 200 + x + y * roomsizex
-    end
-    return deleted_unitid
 end
 
 local function serialize_guard_feature(feature)
@@ -128,6 +72,7 @@ table.insert(mod_hook_functions["rule_update_after"],
     end
 )
 
+-- A special list of functions to forcibly ignore guard logic, due to special cases
 local funcs_to_ignore_guard_units = {
     [destroylevel_do] = true,
     [createall] = true,
@@ -136,7 +81,7 @@ local funcs_to_ignore_guard_units = {
 -- Called on delete(). Returns true if the about-to-be-deleted unit is guarded. 
 -- Used for proceeding with the regular delete() logic if the unit isn't guarded.
 function handle_guard_delete_call(unitid, x, y, caller_func)
-    local object = make_object(unitid, x, y)
+    local object = utils.make_object(unitid, x, y)
     -- Neat trick to figure out calling function. Can't use debug.getinfo(2).name since it returns nil.
     if funcs_to_ignore_guard_units[caller_func] then
         processed_destroyed_units[object] = true
@@ -146,17 +91,17 @@ function handle_guard_delete_call(unitid, x, y, caller_func)
     local is_guarded = ack_endangered_unit(object)
     if is_guarded then
         if GUARD_LOGGING then
-            print("Marking a guarded unit in danger: "..unitstring(object))
+            print("Marking a guarded unit in danger: "..utils.unitstring(object))
         end
         return true
     elseif processed_destroyed_units[object] then
         if GUARD_LOGGING then
-            print("handle_guard_delete_call: Already destroyed "..unitstring(object))
+            print("handle_guard_delete_call: Already destroyed "..utils.unitstring(object))
         end
         return true
     else
         if GUARD_LOGGING then
-            print("Normal destroy "..unitstring(object))
+            print("Normal destroy "..utils.unitstring(object))
         end
         processed_destroyed_units[object] = true
         return false
@@ -168,7 +113,7 @@ function ack_unit_update_for_guard(unitid)
 end
 
 function ack_endangered_unit(object)
-    local unitid, x, y = parse_object(object)
+    local unitid, x, y = utils.parse_object(object)
     local unitname = nil
     if unitid == 1 then
         unitname = "level"
@@ -182,7 +127,7 @@ function ack_endangered_unit(object)
         for unitid, _ in pairs(guard_relation_map[unitname]) do
             units_to_guard_destroy[unitid] = true
             if GUARD_LOGGING then
-                print("Marking unit to destroy: ", unitstring(unitid))
+                print("Marking unit to destroy: ", utils.unitstring(unitid))
             end 
         end
         units_to_save[object] = true
@@ -192,28 +137,25 @@ function ack_endangered_unit(object)
     end
 end
 
+-- Destroys all marked objects from units_to_guard_destroy, if not already deleted
 local function handle_guard_dels()
     for saved_object, _ in pairs(units_to_save) do
-        local unitid, x, y = parse_object(saved_object)
+        local unitid, x, y = utils.parse_object(saved_object)
         if unitid ~= 1 then
-            local deleted_unitid = unitid
-            if unitid == 2 then
-                -- JANK WARNING!!! This formula is apparently how the game determines the key for marking an empty to be "deleted".
-                guard_deleted_unitid = 200 + x + y * roomsizex
-            end
+            local deleted_unitid = utils.get_deleted_unitid_key(saved_object)
             deleted[deleted_unitid] = nil
         end
     end
     for guard, _ in pairs(units_to_guard_destroy) do
         if not processed_destroyed_units[guard] then
-            local unitid, x, y = parse_object(guard)
+            local unitid, x, y = utils.parse_object(guard)
             if unitid == 1 then
                 if not issafe(unitid) then
                     destroylevel()
                 end
             else
                 if GUARD_LOGGING then
-                    print("- Destroying unit: ", unitstring(guard))
+                    print("- Destroying unit: ", utils.unitstring(guard))
                 end
 
                 local unit = mmf.newObject(unitid)
@@ -225,7 +167,7 @@ local function handle_guard_dels()
                 end
         
                 if not issafe(unitid) then
-                    local deleted_unitid = get_deleted_unitid_key(guard)
+                    local deleted_unitid = utils.get_deleted_unitid_key(guard)
                     deleted[deleted_unitid] = nil
                     delete(unitid, x, y, nil, nil, true)
                 end
@@ -234,7 +176,7 @@ local function handle_guard_dels()
             processed_destroyed_units[guard] = true
         else
             if GUARD_LOGGING then
-                print("- Already destroyed unit: ", unitstring(guard))
+                print("- Already destroyed unit: ", utils.unitstring(guard))
             end
         end
     end
@@ -243,6 +185,7 @@ local function handle_guard_dels()
     units_to_guard_destroy = {}
 end
 
+-- Recalculates guard_relation_map, accounting guard chaining into its logic
 local function recalculate_guards()
     if GUARD_LOGGING then
         print("- Recalculating guards")
@@ -252,6 +195,7 @@ local function recalculate_guards()
     local features_by_guardee = {} -- <guardee name> -> list of features with rhs equal to <guardee name>
     local names_to_resolve = {} -- set of unique guardee names found from scanning featureindex
     
+    -- Populate features_by_guardee
     if featureindex["guard"] ~= nil then
         for _, feature in ipairs(featureindex["guard"]) do
             local guardee_name = feature[1][3]
@@ -265,6 +209,7 @@ local function recalculate_guards()
         end
     end
 
+    -- @TODO: This big for loop is probably the slowest part of the guard mod. Maybe we can optimize by applying
     for curr_name, _ in pairs(names_to_resolve) do
         local stack = {}
         local guard_features = features_by_guardee[curr_name]
@@ -304,6 +249,8 @@ local function recalculate_guards()
             
             local add_guard_units = false
             local added_to_stack = false
+
+            if enable_guard_chaining then
             local guard_features = features_by_guardee[curr_guard_name]
             if guard_features then
                 for _, feature in ipairs(guard_features) do
@@ -323,9 +270,10 @@ local function recalculate_guards()
                         if found_branch then
                             table.insert(stack, {
                                 feature = feature,
-                                visited = duptable(entry.visited)
+                                    visited = utils.deep_copy_table(entry.visited)
                             })
                             added_to_stack = true
+                            end
                         end
                     end
                 end
@@ -339,7 +287,7 @@ local function recalculate_guards()
                 local typedata = {curr_guard_name, conds}
                 for _, unitid in ipairs(findall(typedata, false, false)) do
                     found_guard = true
-                    local object = make_object(unitid)
+                    local object = utils.make_object(unitid)
                     guard_units[object] = true
                 end
 
@@ -349,7 +297,7 @@ local function recalculate_guards()
 
                         local x = tileid % roomsizex
                         local y = math.floor(tileid / roomsizex)
-                        local empty_object = make_object(2, x, y)
+                        local empty_object = utils.make_object(2, x, y)
                         guard_units[empty_object] = true
                     end
                 end
@@ -358,7 +306,7 @@ local function recalculate_guards()
                     if testcond(conds, 1) then
                         found_guard = true
 
-                        local level_object = make_object(1)
+                        local level_object = utils.make_object(1)
                         guard_units[level_object] = true
                     end
                 end
@@ -370,7 +318,7 @@ local function recalculate_guards()
 
             if GUARD_LOGGING then
                 for unitid, _ in pairs(guard_units) do
-                    print("- "..curr_name.." -> "..unitstring(unitid))
+                    print("- "..curr_name.." -> "..utils.unitstring(unitid))
                 end
             end
         end

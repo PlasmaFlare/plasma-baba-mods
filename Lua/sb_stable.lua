@@ -148,17 +148,6 @@ function clear_stable_mod()
     stable_empty_indicators = {}
 end
 
-local function deep_copy_table(table)
-    local copy = {}
-    for k,v in pairs(table) do
-        if type(v) == "table" then
-            v = deep_copy_table(v)
-        end
-        copy[k] = v
-    end
-
-    return copy
-end
 
 local function get_stableunit_key(unitid)
     if unitid == 2 then
@@ -489,7 +478,7 @@ local function get_stablefeatures_from_name(name)
             -- Copy the feature and add an additional condition for stable
             local ruleid = get_ruleid(feature[3], feature[1])
             utils.debug_assert(ruleid)
-            local dup_feature = deep_copy_table(feature)
+            local dup_feature = utils.deep_copy_table(feature)
             local rule_display = get_stablerule_display(dup_feature)
 
             local newcond = {}
@@ -553,7 +542,7 @@ local function record_stable_undo()
 
     table.insert(stable_undo_stack, {
         turnid = turnid,
-        stablestate = deep_copy_table(stablestate)
+        stablestate = utils.deep_copy_table(stablestate)
     })
 
     if STABLE_LOGGING then
@@ -573,7 +562,7 @@ local function apply_stable_undo()
         if top_entry.turnid == turnid then
             table.remove(stable_undo_stack, #stable_undo_stack)
             local next_entry = stable_undo_stack[#stable_undo_stack]
-            stablestate = deep_copy_table(next_entry.stablestate)
+            stablestate = utils.deep_copy_table(next_entry.stablestate)
 
             local c = 0
             for su_key,v in pairs(stablestate.units) do
@@ -938,7 +927,7 @@ local function add_stable_rules()
     -- adding all stablestate.rules into the featureindex
     for _, v in pairs(stablestate.rules) do
         -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
-        local feature = deep_copy_table(v.feature)
+        local feature = utils.deep_copy_table(v.feature)
         addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
         
         if STABLE_LOGGING then
