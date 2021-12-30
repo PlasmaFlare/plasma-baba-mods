@@ -18,14 +18,19 @@ formatobjlist()
 local guard_relation_map = {} -- <guardee name> -> list of unitids to destroy if a unit named <guardee name> is about to be destroyed
 local processed_destroyed_units = {} -- list of objects which we already handled delete()-ing of, whether normally or through guards
 local units_to_guard_destroy = {} -- list of objects that we marked for guard destroys on handle_guard_dels()
-local units_to_save = {} -- list of objects that we marked to set deleted[unitid] = nil on
+local units_to_save = {} -- list of objects that we marked to set deleted[unitid] = nil on between guard checkpoints
 local update_guards = false -- when set to true during a turn, guard_checkpoint() calls recalculate_guards().
 
-local enable_guard_chaining = false
+-- List of objects that were saved by a guard unit during a turn. Saved units cannot be normal destroyed until the end of the turn.
+-- This implements what I call the "pin cushion effect", where a guard unit would take the blow for all direct hits.
+-- Note: Saved units can still be destroyed from guarding other units
+local all_saved_units = {}
+
+local enable_guard_chaining = true
 
 local utils = plasma_utils
 
-local GUARD_LOGGING = true
+local GUARD_LOGGING = false
 
 local function clear_guard_mod()
     guard_relation_map = {}
@@ -57,6 +62,7 @@ table.insert(mod_hook_functions["command_given"],
             print("---")
         end
         guard_checkpoint("command_given")
+        all_saved_units = {}
     end
 )
 
@@ -91,7 +97,7 @@ function handle_guard_delete_call(unitid, x, y, caller_func)
     local is_guarded = ack_endangered_unit(object)
     if is_guarded then
         if GUARD_LOGGING then
-            print("Marking a guarded unit in danger: "..utils.unitstring(object))
+            print("Endangered unit is guarded: "..utils.unitstring(object))
         end
         return true
     elseif processed_destroyed_units[object] then
@@ -113,6 +119,12 @@ function ack_unit_update_for_guard(unitid)
 end
 
 function ack_endangered_unit(object)
+    if all_saved_units[object] then
+        if GUARD_LOGGING then
+            print("Endangered unit is already saved: ", utils.unitstring(object))
+        end 
+        return true
+    end
     local unitid, x, y = utils.parse_object(object)
     local unitname = nil
     if unitid == 1 then
@@ -127,7 +139,7 @@ function ack_endangered_unit(object)
         for unitid, _ in pairs(guard_relation_map[unitname]) do
             units_to_guard_destroy[unitid] = true
             if GUARD_LOGGING then
-                print("Marking unit to destroy: ", utils.unitstring(unitid))
+                print("Marking guard unit to destroy: ", utils.unitstring(unitid))
             end 
         end
         units_to_save[object] = true
@@ -145,6 +157,8 @@ local function handle_guard_dels()
             local deleted_unitid = utils.get_deleted_unitid_key(saved_object)
             deleted[deleted_unitid] = nil
         end
+
+        all_saved_units[saved_object] = true
     end
     for guard, _ in pairs(units_to_guard_destroy) do
         if not processed_destroyed_units[guard] then
@@ -209,7 +223,8 @@ local function recalculate_guards()
         end
     end
 
-    -- @TODO: This big for loop is probably the slowest part of the guard mod. Maybe we can optimize by applying
+    -- @TODO: This big for loop is probably the slowest part of the guard mod. Maybe we can optimize by applying dynamic programming
+    -- with our knowledge on the behavior of guard chains
     for curr_name, _ in pairs(names_to_resolve) do
         local stack = {}
         local guard_features = features_by_guardee[curr_name]
