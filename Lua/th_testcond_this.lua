@@ -104,22 +104,49 @@ function parse_this_param_and_get_raycast_units(this_param)
     return this_param_name, out, tileid, count, this_unitid
 end
 
--- @TODO: this could be useful for general purposes. Maybe move to a common lua file later?
--- This gets the unitid of the target/noun text that is stored in the rule
-function get_target_unitid_from_rule(rule)
-    local tags = rule[4]
-    if has_stable_tag(tags) then
-        return nil
+local function get_singlular_unitid_from_rule(idgroup, include_letters)
+    if include_letters then
+        if #idgroup > 1 then -- If this is true, then the word from by ids[1] is actually formed by letters
+            return idgroup
+        else
+            return idgroup[1]
+        end
+    else
+        if #idgroup > 1 then
+            return nil
+        else
+            return idgroup[1]
+        end
     end
-
-    local rulebase = rule[1]
-    local ids = rule[3]
-    return ids[1][1]
 end
 
 -- @TODO: this could be useful for general purposes. Maybe move to a common lua file later?
--- This gets the unitid of the property text that is stored in the rule
-function get_property_unitid_from_rule(rule)
+--[[ 
+    This gets the unitid of the target/noun text that is stored in the rule.
+    If the target word is formed by letters:
+        - if include_letters == true then return a table of letter unitids
+        - otherwise, return nil
+]]
+function get_target_unitid_from_rule(rule, include_letters)
+    local tags = rule[4]
+    if has_stable_tag(tags) then --@mods(stable)
+        return nil
+    end
+    
+    local rulebase = rule[1]
+    local ids = rule[3]
+
+    return get_singlular_unitid_from_rule(ids[1])
+end
+
+-- @TODO: this could be useful for general purposes. Maybe move to a common lua file later?
+--[[ 
+    This gets the unitid of the property text that is stored in the rule.
+    If the property word is formed by letters:
+        - if include_letters == true then return a table of letter unitids
+        - otherwise, return nil
+]]
+function get_property_unitid_from_rule(rule, include_letters)
     local tags = rule[4]
     if has_stable_tag(tags) then
         return nil
@@ -132,19 +159,17 @@ function get_property_unitid_from_rule(rule)
     while i > 0 do
         local u = mmf.newObject(ids[i][1])
         if u and u.strings[NAME] == "group" then
-            if not ids[i+2] or not ids[i+2][1] then
-                error("Provided a group rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\" "..debug.traceback())
-            end
-            return ids[i+2][1]
+            plasma_utils.debug_assert(ids[i+2] and ids[i+2], "Provided a group rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\"")
+            
+            return get_singlular_unitid_from_rule(ids[i+2])
         end
         i = i - 1
     end
     if i == 0 then
         i = i + 3
-        if not ids[i] or not ids[i][1] then
-            error("Provided a rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\" "..debug.traceback())
-        end
-        return ids[i][1]
+        plasma_utils.debug_assert(ids[i] and ids[i][1], "Provided a rule whose ids weren't formatted correctly to find the text property's unitid. Rule: \""..rulebase[1].." "..rulebase[2].." "..rulebase[3].."\" ")
+        
+        return get_singlular_unitid_from_rule(ids[i])
     end
 end
 

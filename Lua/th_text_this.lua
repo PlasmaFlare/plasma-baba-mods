@@ -577,40 +577,42 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
             end
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
-            local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
-            for _, unitid in ipairs(raycast_units) do
-                local rulename = ""
-                local ray_unit = mmf.newObject(unitid)
-                if unitid == 2 then
-                    rulename = "empty"
-                else
-                    rulename = ray_unit.strings[NAME]
-                    if is_turning_text(rulename) then
-                        rulename = get_turning_text_interpretation(unitid)
-                    end
-                end
-
-                if filter_property_func(rulename) then
-                    if unitid ~= "empty" then
-                        if ray_unit.strings[UNITTYPE] == "text" then
-                            this_mod_globals.active_this_property_text[unitid] = true
+            if this_text_unitid then
+                local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
+                for _, unitid in ipairs(raycast_units) do
+                    local rulename = ""
+                    local ray_unit = mmf.newObject(unitid)
+                    if unitid == 2 then
+                        rulename = "empty"
+                    else
+                        rulename = ray_unit.strings[NAME]
+                        if is_turning_text(rulename) then
+                            rulename = get_turning_text_interpretation(unitid)
                         end
                     end
 
-                    if prop_isnot then
-                        rulename = "not "..rulename
+                    if filter_property_func(rulename) then
+                        if unitid ~= "empty" then
+                            if ray_unit.strings[UNITTYPE] == "text" then
+                                this_mod_globals.active_this_property_text[unitid] = true
+                            end
+                        end
+
+                        if prop_isnot then
+                            rulename = "not "..rulename
+                        end
+                        
+                        local newrule = {rule[1],rule[2],rulename}
+                        local newconds = {}
+                        for a,b in ipairs(conds) do
+                            table.insert(newconds, b)
+                        end
+                        table.insert(property_options, {rule = newrule, conds = newconds, newrule = nil, showrule = nil})
                     end
-                    
-                    local newrule = {rule[1],rule[2],rulename}
-                    local newconds = {}
-                    for a,b in ipairs(conds) do
-                        table.insert(newconds, b)
-                    end
-                    table.insert(property_options, {rule = newrule, conds = newconds, newrule = nil, showrule = nil})
                 end
-            end
-            for _, unitid in ipairs(redirected_this_units) do
-                table.insert(all_redirected_this_units, unitid)
+                for _, unitid in ipairs(redirected_this_units) do
+                    table.insert(all_redirected_this_units, unitid)
+                end
             end
         end
 
@@ -620,60 +622,62 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
             target_options = property_options
         elseif #property_options > 0 then
             local this_text_unitid = get_target_unitid_from_rule(rules)
-            local this_unit_as_param_id = convert_this_unit_to_param_id(this_text_unitid)
-            if target_isnot then
-                for i,mat in pairs(objectlist) do
-                    if (findnoun(i) == false) then
+            if this_text_unitid then
+                local this_unit_as_param_id = convert_this_unit_to_param_id(this_text_unitid)
+                if target_isnot then
+                    for i,mat in pairs(objectlist) do
+                        if (findnoun(i) == false) then
+                            for _, option in ipairs(property_options) do
+                                local newrule = {i, option.rule[2], option.rule[3]}
+                                local newconds = {}
+                                table.insert(newconds, {"not this", {this_unit_as_param_id} })
+                                for a,b in ipairs(conds) do
+                                    table.insert(newconds, b)
+                                end
+                                table.insert(target_options, {rule = newrule, conds = newconds, notrule = true, showrule = false})
+                            end
+                        end
+                    end
+                    
+                    -- Rule display in pause menu
+                    if #target_options > 0 and filter_property_func(property) then
+                        table.insert(visualfeatures, {rule, conds, ids, tags})
+                    end
+                else
+                    local ray_tileid = get_raycast_tileid(this_text_unitid)
+                    for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
+                        local ray_name = ""
+                        if ray_unitid == 2 then
+                            ray_name = "empty"
+                        else
+                            local ray_unit = mmf.newObject(ray_unitid)
+                            ray_name = ray_unit.strings[NAME]
+                            if ray_unit.strings[UNITTYPE] == "text" then
+                                ray_name = "text"
+                            end
+                        end
+
                         for _, option in ipairs(property_options) do
-                            local newrule = {i, option.rule[2], option.rule[3]}
+                            local newrule = {ray_name, option.rule[2], option.rule[3]}
                             local newconds = {}
-                            table.insert(newconds, {"not this", {this_unit_as_param_id} })
-                            for a,b in ipairs(conds) do
+                            table.insert(newconds, {"this", {this_unit_as_param_id} })
+                            for a,b in ipairs(option.conds) do
                                 table.insert(newconds, b)
                             end
-                            table.insert(target_options, {rule = newrule, conds = newconds, notrule = true, showrule = false})
-                        end
-                    end
-                end
-                
-                -- Rule display in pause menu
-                if #target_options > 0 and filter_property_func(property) then
-                    table.insert(visualfeatures, {rule, conds, ids, tags})
-                end
-            else
-                local ray_tileid = get_raycast_tileid(this_text_unitid)
-                for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
-                    local ray_name = ""
-                    if ray_unitid == 2 then
-                        ray_name = "empty"
-                    else
-                        local ray_unit = mmf.newObject(ray_unitid)
-                        ray_name = ray_unit.strings[NAME]
-                        if ray_unit.strings[UNITTYPE] == "text" then
-                            ray_name = "text"
-                        end
-                    end
 
-                    for _, option in ipairs(property_options) do
-                        local newrule = {ray_name, option.rule[2], option.rule[3]}
-                        local newconds = {}
-                        table.insert(newconds, {"this", {this_unit_as_param_id} })
-                        for a,b in ipairs(option.conds) do
-                            table.insert(newconds, b)
-                        end
+                            table.insert(target_options, {rule = newrule, conds = newconds, notrule = false, showrule = true})
 
-                        table.insert(target_options, {rule = newrule, conds = newconds, notrule = false, showrule = true})
-
-                        -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
-                        -- description for why we do this.
-                        if curr_phase == "block" or curr_phase == "pass" or curr_phase == "ray-block" or curr_phase == "ray-pass" and #conds > 0 then
-                            table.insert(this_noun_cond_options_list, {
-                                this_unitid = this_text_unitid,
-                                ray_tileid = ray_tileid,
-                                ray_unitid = ray_unitid,
-                                conds = conds,
-                                last_testcond_result = nil
-                            })
+                            -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
+                            -- description for why we do this.
+                            if curr_phase == "block" or curr_phase == "pass" or curr_phase == "ray-block" or curr_phase == "ray-pass" and #conds > 0 then
+                                table.insert(this_noun_cond_options_list, {
+                                    this_unitid = this_text_unitid,
+                                    ray_tileid = ray_tileid,
+                                    ray_unitid = ray_unitid,
+                                    conds = conds,
+                                    last_testcond_result = nil
+                                })
+                            end
                         end
                     end
                 end
