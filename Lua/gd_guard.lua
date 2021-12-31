@@ -51,7 +51,9 @@ end
 table.insert(mod_hook_functions["level_start"],
     function()
         clear_guard_mod()
-        update_guards = true
+        enable_guard_chaining = not get_toggle_setting("disable_guard_chain")
+
+        update_guards = true -- On start, set up guard_relation_map
         guard_checkpoint("level_start")
     end
 )
@@ -266,28 +268,28 @@ local function recalculate_guards()
             local added_to_stack = false
 
             if enable_guard_chaining then
-            local guard_features = features_by_guardee[curr_guard_name]
-            if guard_features then
-                for _, feature in ipairs(guard_features) do
-                    if entry.visited[serialize_guard_feature(feature)] then
-                        add_guard_units = true
-                    else
-                        local guard_name = feature[1][1]
-                        local conds = feature[2]
-                        local typedata = {guard_name, conds}
+                local guard_features = features_by_guardee[curr_guard_name]
+                if guard_features then
+                    for _, feature in ipairs(guard_features) do
+                        if entry.visited[serialize_guard_feature(feature)] then
+                            add_guard_units = true
+                        else
+                            local guard_name = feature[1][1]
+                            local conds = feature[2]
+                            local typedata = {guard_name, conds}
 
-                        local found_branch = #findall(typedata, false, true) > 0
-                        if guard_name == "level" then
-                            found_branch = found_branch or testcond(conds, 1)
-                        elseif guard_name == "empty" then
-                            found_branch = found_branch or #findempty(conds, true) > 0
-                        end
-                        if found_branch then
-                            table.insert(stack, {
-                                feature = feature,
+                            local found_branch = #findall(typedata, false, true) > 0
+                            if guard_name == "level" then
+                                found_branch = found_branch or testcond(conds, 1)
+                            elseif guard_name == "empty" then
+                                found_branch = found_branch or #findempty(conds, true) > 0
+                            end
+                            if found_branch then
+                                table.insert(stack, {
+                                    feature = feature,
                                     visited = utils.deep_copy_table(entry.visited)
-                            })
-                            added_to_stack = true
+                                })
+                                added_to_stack = true
                             end
                         end
                     end

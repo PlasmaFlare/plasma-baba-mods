@@ -43,7 +43,7 @@ utils = {
             return string.format("(Empty at %d,%d)", x, y)
         else
             local unit = mmf.newObject(unitid)
-            return string.format("(%s with id %d at %d,%d)", unit.strings[NAME], unit.values[ID], unit.values[XPOS], unit.values[YPOS])
+            return string.format("(%s with id %d at %d,%d | unitid %s)", unit.strings[NAME], unit.values[ID], unit.values[XPOS], unit.values[YPOS], tostring(unitid))
         end
     end,
 

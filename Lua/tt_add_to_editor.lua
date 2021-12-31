@@ -1,5 +1,3 @@
-enable_directional_shift = true
-
 table.insert(editor_objlist_order, "text_turning_fall")
 table.insert(editor_objlist_order, "text_turning_nudge")
 table.insert(editor_objlist_order, "text_turning_dir")

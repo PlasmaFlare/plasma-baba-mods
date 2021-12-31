@@ -1,6 +1,4 @@
-local modpack_version = "1.4.0"
-local modpack_name = string.format("Plasmaflare's Mods V%s", modpack_version)
-local modpack_name_with_color = string.format("$1,4Plasma$3,4flare$0,3's Mods V%s", modpack_version)
+plasma_modpack_version = "1.4.0"
 
 br_prefix = "branching_"
 br_prefix_len = string.len(br_prefix)
@@ -101,22 +99,17 @@ arrow_property_display = {
 	boomdown="boom (down)",
 }
 
+baba_font_consts = {
+    letter_w = 8,
+    letter_h = 24,
+    letter_spacing = 2,
+    total_letter_w = 10,
+    button_w = 24,
+}
+
 table.insert(objlistdata.alltags, "plasma's mods")
 table.insert(objlistdata.alltags, "arrow properties")
 table.insert(objlistdata.alltags, "turning text")
 table.insert(objlistdata.alltags, "pivot text")
 table.insert(objlistdata.alltags, "omni text")
 table.insert(objlistdata.alltags, "filler text")
-
--- Note: 10 is the baba font letter width + spacing between letters (8 + 2)
-local function write_modpack_version()
-    local x = screenw-(#modpack_name * 10) - 20
-    local y = f_tilesize * 1.5
-    writetext(modpack_name_with_color, -1, x, y, "level")
-end
-local old_level_func = menufuncs.level.enter
-menufuncs.level.enter = function(...)
-    old_level_func(...)
-    write_modpack_version()
-end
-write_modpack_version()
