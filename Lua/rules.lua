@@ -1,5 +1,3 @@
-local utils = plasma_utils
-
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
@@ -401,8 +399,8 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 		-- Oh no! A too complex!
 		return nil
 	end
-	utils.debug_assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
-	utils.debug_assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	plasma_utils.debug_assert(#merged_sentences == merged_totalvariants, "#merged_sentences: "..tostring(#merged_sentences).. " != merged_totalvariants:"..tostring(merged_totalvariants))
+	plasma_utils.debug_assert(#merged_sentence_ids == merged_totalvariants, "#merged_sentence_ids: "..tostring(#merged_sentence_ids).. " != merged_totalvariants:"..tostring(merged_totalvariants))
 
 	if found_branch_on_last_word and #merged_sentences > 0 then
 		sentences = {}
@@ -715,7 +713,7 @@ function docode(firstwords)
 							sentences[i] = {}
 						end
 					end
-					utils.debug_assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
+					plasma_utils.debug_assert(#sentences == variations, "#sentences: "..tostring(#sentences).." != totalvariations: "..tostring(variations))
 				else
 					sentences[1] = existing
 					maxlen = 3
@@ -1571,7 +1569,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 			end
 			local this_params_in_conds = get_this_parms_in_conds(conds, ids)
 			if isstable then
-				utils.debug_assert(#this_params_in_conds == 0, "for stablerule, #this_params_in_conds == "..tostring(#this_params_in_conds))
+				plasma_utils.debug_assert(#this_params_in_conds == 0, "for stablerule, #this_params_in_conds == "..tostring(#this_params_in_conds))
 			end
 			
 			for i,cond in ipairs(conds) do
@@ -2162,28 +2160,37 @@ function postrules(alreadyrun_)
 				local target = rule[1]
 				local verb = rule[2]
 				
-				for a,b in ipairs(featureindex[target]) do
-					local same = comparerules(newbaserule,b[1])
-					
-					if same and not has_stable_tag(b[4]) then
-						--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
-						local theseconds = b[2]
+				local targetlists = {}
+				table.insert(targetlists, target)
+				
+				if (verb == "is") and (neweffect == "text") and (featureindex["write"] ~= nil) then
+					table.insert(targetlists, "write")
+				end
+				
+				for e,g in ipairs(targetlists) do
+					for a,b in ipairs(featureindex[g]) do
+						local same = comparerules(newbaserule,b[1])
 						
-						if (#newconds > 0) then
-							if (newconds[1] ~= "never") then
-								for c,d in ipairs(newconds) do
-									table.insert(theseconds, d)
+						if (same or ((g == "write") and (target == b[1][1]) and (b[1][2] == "write"))) and not has_stable_tag(b[4]) then
+							--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
+							local theseconds = b[2]
+							
+							if (#newconds > 0) then
+								if (newconds[1] ~= "never") then
+									for c,d in ipairs(newconds) do
+										table.insert(theseconds, d)
+									end
+								else
+									theseconds = {"never",{}}
 								end
-							else
-								theseconds = {"never",{}}
 							end
+							
+							if crashy then
+								addoption({rule[1],"is","crash"},theseconds,ids,false,nil,rules[4])
+							end
+							
+							b[2] = theseconds
 						end
-						
-						if crashy then
-							addoption({rule[1],"is","crash"},theseconds,ids,false,nil,rules[4])
-						end
-						
-						b[2] = theseconds
 					end
 				end
 			end
@@ -2279,7 +2286,7 @@ function postrules(alreadyrun_)
 						local targetconds = rules[2]
 						local object = targetrule[3]
 						
-						if (targetrule[1] == target) and (((targetrule[2] == "is") and (target ~= object)) or (targetrule[2] == "write")) and ((getmat(object) ~= nil) or (object == "revert") or (targetrule[2] == "write")) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
+						if (targetrule[1] == target) and (((targetrule[2] == "is") and (target ~= object)) or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and ((getmat(object) ~= nil) or (object == "revert") or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
 							if (#newconds > 0) then
 								if (newconds[1] == "never") then
 									targetconds = {}
