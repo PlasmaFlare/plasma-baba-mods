@@ -16,6 +16,7 @@ local function clear_turning_text_mod()
         tt_executing_code = false,        
     }
 end
+clear_turning_text_mod()
 
 
 for name,_ in pairs(turning_word_names) do
