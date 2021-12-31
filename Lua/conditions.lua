@@ -92,7 +92,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 		if conds ~= nil then
 			for _,cond in ipairs(conds) do
 				local condtype = cond[1]
-				if condtype == "stable" then
+				if condtype == "stable" or condtype == "not stable" then
 					found_stablecond = true
 					break
 				end

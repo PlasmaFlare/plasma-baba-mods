@@ -158,11 +158,23 @@ local function get_stableunit_key(unitid)
     end
 
     local unit = mmf.newObject(unitid)
-    if unit and not unit.flags[CONVERTED] and not unit.flags[DEAD] then -- need the second condition since apparently, the converted unit still exists for a time before being deleted
+
+    --[[ 
+        Before, there used to be another condition: "not unit.flags[CONVERTED]", we removed this because "X is stable and flag" would make two flags
+        from both normal and stablerule "X is flag" firing after we mark the unit as CONVERTED from one of the rules. 
+        However, I forgot what was the original reason for needing that condition in the first place. The only comment I have is found below.
+        It might actually refer to the DEAD condition and we accidently forgot to update the comment.
+    ]]
+    if unit and not unit.flags[CONVERTED] and not unit.flags[DEAD] then
         return unit.values[ID]
     else
         return nil
     end
+    -- if unit and not unit.flags[CONVERTED] and not unit.flags[DEAD] then -- need the second condition since apparently, the converted unit still exists for a time before being deleted
+    --     return unit.values[ID]
+    -- else
+    --     return nil
+    -- end
 end
 
 function on_add_stableunit(unitid)
@@ -680,10 +692,10 @@ table.insert( mod_hook_functions["level_restart"],
 function is_stableunit(unitid, x, y)
     if unitid == 2 then
         local tileid = x + y * roomsizex
-        return stablestate.empties[tileid]
+        return stablestate.empties[tileid] ~= nil
     else
         local key = get_stableunit_key(unitid)
-        return key and stablestate.units[key]
+        return key ~= nil and stablestate.units[key] ~= nil
     end    
 end
 
