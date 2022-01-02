@@ -1,10 +1,8 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: 438C on PC**
+**Current compatable Baba Is You versions: 451D on PC**
 
-This is a merged collection of all of my Baba mods I made so far.y.
-
-**Note:** in the future I'll add more mods directly to this modpack rather than making a github page for each of them. But since the below mods are pretty big I'll keep the old github pages open in case anyone wants to download them seperately.
+This is a merged collection of all of my Baba mods I made so far.
 
 Total list of mods (Click on one to get a *stylized* description of each mod)
 - [Arrow Properties Plus/Turning Text](docs/arrow_properties_plus.md)
@@ -13,12 +11,14 @@ Total list of mods (Click on one to get a *stylized* description of each mod)
 - [THIS](docs/this.md)
 - [CUT and PACK](docs/textcraft.md)
 - [STABLE](docs/stable.md)
+- [GUARD](docs/guard.md)
 
 
 # Installation
 ### A few notes before installing
 - **This modpack is not guaranteed to be compatable with mods created by other people.**
-- If you are switching from using one of my mods to this modpack, you'll have to uninstall the single mod first. **Backup your worlds if you do this.** Normally, deleting all lua files from my mod will achieve this. 
+- Please note the supported Baba version number when downloading the modpack. Feel free to use this modpack in earlier or later versions of Baba Is You. However, it isn't guaranteed that it will be completely compatable without bugs. So if the game updates and you encounter a bug with my modpack, sometimes it could be because of the update.
+  - If you need this modpack for an older baba verison, I have also been maintaining older versions of my modpack here: https://github.com/PlasmaFlare/plasma-baba-mods/releases
 
 ### Brief installation instructions
 To install, copy both Lua and Sprites folder into the levelpack you want to include the mod. Make sure the world_data.txt in the levelpack folder has `mods=1` set underneath the `[General]` section.
@@ -32,12 +32,26 @@ If you previously installed my modpack and it has updated since then, the safest
   3) Copy all lua files in the release into the levelpack's `Lua` folder
   4) Copy all png files in the release into the levelpack's `Sprites` folder
 
+# Accessing Modpack Settings
+Since version 1.4.0, I've added a GUI menu for editing modpack settings per level. More info [here](docs/modpack_settings.md).
 
-----
-## Known Bugs that might be too complex to fix
-- Omni "play" does not work with letters (A#, Cb, etc) unless normal "play" text is in the palette.
+# Where to report bugs
+Feel free to submit an issue to this Github repository to report bugs.
+
+If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.4.0** (1/1/22)
+  - Updated for 451D
+  - GUARD mod!
+  - Added a modpack settings GUI menu! (Fancy!)
+  - [THIS] Fixed THIS + group not working (again)
+  - [THIS] Fixed a lua error from forming `T H I S is X`
+    - Note: I cannot think of what should happen when you form "this" with letters, so I'm leaving it to do nothing for now.
+  - [THIS + STABLE] Fixed inf loop case with `THIS is stable and pass`
+  - [OMNI TEXT + CUT/PACK] Fixed not being able to pack "OMNIAND" and "PIVOTAND"
+  - [CUT/PACK] "cut" objects that are also "weak" will be destroyed if that object cuts something
+  - [STABLE] fixed weird case where "text is not push" + "text on baba is stable" caused text to be pushable when a text becomes stable
 - **1.3.7** (11/25/21)
   - Fixed regression bug that caused directional you to not win
 - **1.3.6** (11/17/21)
