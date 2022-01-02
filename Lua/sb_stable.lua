@@ -300,7 +300,7 @@ local function get_stablerule_display(feature)
                                     text = text .. this_param_name.." "
 
                                     local names = {}
-                                    local raycast_units = get_raycast_units(this_unitid)
+                                    local raycast_units = get_raycast_units(this_unitid, true, true)
                                     for _, ray_unitid in ipairs(raycast_units) do
                                         if ray_unitid == 2 then
                                             names["empty"] = true
@@ -381,7 +381,7 @@ local function get_stablerule_display(feature)
 end
 
 local function register_this_text_in_stablerule(this_unitid)
-    local raycast_units = get_raycast_units(this_unitid, true)
+    local raycast_units = get_raycast_units(this_unitid, true, true)
     local raycast_tileid = get_raycast_tileid(this_unitid)
 
     -- @NOTE: if THIS mod changes get_raycast_units() to output values[ID] instead of unitid, then delete this block

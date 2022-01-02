@@ -92,7 +92,7 @@ function parse_this_param_and_get_raycast_units(this_param)
         return false, nil, nil, 0, nil
     end
     
-    local raycast_units = get_raycast_units(this_unitid, true)            
+    local raycast_units = get_raycast_units(this_unitid, true, true)            
     local tileid = get_raycast_tileid(this_unitid)
     local out = {}
     local count = 0

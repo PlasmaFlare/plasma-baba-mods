@@ -58,7 +58,6 @@ local text_to_raycast_pos = {}
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
-local deferred_rules_with_this = {}
 local on_level_start = false
 
 local function reset_this_mod_locals()
@@ -68,7 +67,6 @@ local function reset_this_mod_locals()
     blocked_tiles = {}
     explicit_passed_tiles = {}
     cond_features_with_this_noun = {}
-    deferred_rules_with_this = {}
 end
 
 local make_cursor, update_all_cursors
@@ -119,7 +117,6 @@ table.insert( mod_hook_functions["command_given"],
 table.insert(mod_hook_functions["rule_update"],
     function(is_this_a_repeated_update)
         this_mod_globals.active_this_property_text = {}
-        deferred_rules_with_this = {}
         cond_features_with_this_noun = {}
     end
 )
@@ -179,6 +176,17 @@ function on_delele_this_text(this_unitid)
         text_to_cursor[this_unitid] = nil
         text_to_raycast_units[this_unitid] = nil
         text_to_raycast_pos[this_unitid] = nil
+    end
+end
+
+local function set_blocked_tile(tileid)
+    if tileid then
+        blocked_tiles[tileid] = true
+    end
+end
+local function set_passed_tile(tileid)
+    if tileid then
+        explicit_passed_tiles[tileid] = true
     end
 end
 
@@ -442,17 +450,24 @@ function check_cond_rules_with_this_noun()
     end
 end
 
-function get_raycast_units(this_text_unitid, checkblocked)
+function get_raycast_units(this_text_unitid, checkblocked, checkpass)
     if is_this_unit_in_stablerule(this_text_unitid) then
         return get_stable_this_raycast_units(tonumber(this_text_unitid))
     end
 
     local raycast_units = text_to_raycast_units[this_text_unitid]
     if raycast_units ~= nil and #raycast_units > 0 then
-        if checkblocked then
+        if checkblocked or checkpass then
             local tileid = text_to_raycast_pos[this_text_unitid]
-            if blocked_tiles[tileid] then
-                return {}
+            if checkblocked then
+                if blocked_tiles[tileid] then
+                    return {}
+                end
+            end
+            if checkpass then
+                if explicit_passed_tiles[tileid] then
+                    return {}
+                end
             end
         end
         return raycast_units
@@ -493,7 +508,7 @@ local function is_unit_valid_this_property(unitid, verb)
 end
 
 -- Like get_raycast_units, but factors in this redirection
-local function get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
+local function get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
     if not text_to_raycast_pos[this_text_unitid] then
         return {}, {}
     end
@@ -513,6 +528,8 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, curr_p
         
         if checkblocked and blocked_tiles[curr_raycast_tileid] then
             -- do nothing if blocked
+        elseif checkpass and explicit_passed_tiles[curr_raycast_tileid] then
+            -- do nothing if the tile is explicitly passed
         elseif visited_tileids[curr_raycast_tileid] then
 
         elseif curr_raycast_tileid then
@@ -549,7 +566,7 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, curr_p
     return out_raycast_units, all_redirected_this_units
 end
 
-local function process_this_rules(this_rules, filter_property_func, checkblocked, curr_phase)
+local function process_this_rules(this_rules, filter_property_func, checkblocked, checkpass, curr_phase)
     local final_options = {}
     local this_noun_cond_options_list = {}
     local processed_this_units = {}
@@ -578,7 +595,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
-                local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, curr_phase, verb)
+                local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
                 for _, unitid in ipairs(raycast_units) do
                     local rulename = ""
                     local ray_unit = mmf.newObject(unitid)
@@ -645,7 +662,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     end
                 else
                     local ray_tileid = get_raycast_tileid(this_text_unitid)
-                    for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked)) do
+                    for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass)) do
                         local ray_name = ""
                         if ray_unitid == 2 then
                             ray_name = "empty"
@@ -740,16 +757,6 @@ end
 local function other_filter(name)
     return name ~= "block" and name ~= "pass"
 end
-local function set_blocked_tile(tileid)
-    if tileid then
-        blocked_tiles[tileid] = true
-    end
-end
-local function set_passed_tile(tileid)
-    if tileid then
-        explicit_passed_tiles[tileid] = true
-    end
-end
 
 function do_subrule_this()
     blocked_tiles = {}
@@ -763,21 +770,21 @@ function do_subrule_this()
     local all_processed_this_units = {}
 
     if (featureindex["this"] ~= nil) then
-        deferred_rules_with_this = featureindex["this"]
+        local deferred_rules_with_this = featureindex["this"]
         update_raycast_units(true, true, false)
-        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, "block")
+        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block")
         for unit, _ in pairs(processed_block_this_units) do
             all_processed_this_units[unit] = true
         end
 
         update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, "pass")
+        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass")
         for unit, _ in pairs(processed_pass_this_units) do
             all_processed_this_units[unit] = true
         end
         
         update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, "ray-block")
+        local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
         
         for unit, _ in pairs(processed_block_this_units2) do
             all_processed_this_units[unit] = true
@@ -785,21 +792,18 @@ function do_subrule_this()
         end
 
         update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, "ray-pass")
+        local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
         for unit, _ in pairs(processed_pass_this_units2) do
             all_processed_this_units[unit] = true
             processed_pass_this_units[unit] = true
         end
-
-        update_raycast_units(true, true, false, all_processed_this_units)
-        process_this_rules(deferred_rules_with_this, other_filter, true, "other")
 
         for this_unitid, _ in pairs(processed_block_this_units) do
             local tileid = get_raycast_tileid(this_unitid)
             local x = math.floor(tileid % roomsizex)
             local y = math.floor(tileid / roomsizex)
 
-            for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
+            for _, ray_unitid in ipairs(get_raycast_units(this_unitid, false, false)) do
                 local has_block = false
                 local has_not_block = false
                 if ray_unitid == 2 then
@@ -821,11 +825,12 @@ function do_subrule_this()
                 end
             end
         end
+
         for this_unitid, _ in pairs(processed_pass_this_units) do
             local tileid = get_raycast_tileid(this_unitid)
             local x = math.floor(tileid % roomsizex)
             local y = math.floor(tileid / roomsizex)
-            for _, ray_unitid in ipairs(get_raycast_units(this_unitid)) do
+            for _, ray_unitid in ipairs(get_raycast_units(this_unitid, false, false)) do
                 local ray_unit_name = ""
                 local has_pass = false
                 local has_not_pass = false
@@ -850,5 +855,8 @@ function do_subrule_this()
                 end
             end
         end
+
+        update_raycast_units(true, true, false, all_processed_this_units)
+        process_this_rules(deferred_rules_with_this, other_filter, true, true, "other")
     end
 end

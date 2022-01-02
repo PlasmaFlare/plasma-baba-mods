@@ -4320,7 +4320,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 						local this_text_unitid = parse_this_unit_from_param_id(params[1])
                         
 						local pass = false
-						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
+						-- @TODO: @mods(this) deciding on when to check block and/or pass when calling get_raycast_units() is currently janky. It depends on 
+						-- whether or not do_subrule_this() is being called and weird update order shennanigans somehow makes this all work out
+						-- in the end. Clean this up when we revisit THIS mod.
+						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true, false)) do
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
 								if get_raycast_tileid(this_text_unitid) == tileid then
@@ -4347,7 +4350,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
                         local this_text_unitid = parse_this_unit_from_param_id(params[1])
                         
 						local pass = true
-						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true)) do
+						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true, false)) do
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
 								if get_raycast_tileid(this_text_unitid) == tileid then
