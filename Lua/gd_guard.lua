@@ -349,8 +349,8 @@ function guard_checkpoint(calling_func)
     end
     handle_guard_dels()
     
+    recalculate_guards()
     if update_guards then
-        recalculate_guards()
         update_guards = false
     end
 end
