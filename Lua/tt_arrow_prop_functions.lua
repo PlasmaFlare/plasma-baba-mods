@@ -1,4 +1,4 @@
-enable_directional_shift = true
+enable_directional_shift = not get_toggle_setting("disable_dir_shift")
 
 for name,display in pairs(arrow_property_display) do
 	word_names[name] = display

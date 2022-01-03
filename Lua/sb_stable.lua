@@ -111,7 +111,7 @@ local prev_undobuffer_len = 0
     Emphasis on "hacky". Be wary if this fix causes something else to break.-- (10/31/21)
  ]]
 local allow_stablerule_display = false
-local enable_stablerule_display_setting = true
+local enable_stablerule_display_setting = not get_toggle_setting("disable_stable_display")
 
 local print_stable_state, make_stable_indicator
 

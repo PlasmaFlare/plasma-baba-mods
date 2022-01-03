@@ -26,7 +26,7 @@ local update_guards = false -- when set to true during a turn, guard_checkpoint(
 -- Note: Saved units can still be destroyed from guarding other units
 local all_saved_units = {}
 
-local enable_guard_chaining = true
+local enable_guard_chaining = not get_toggle_setting("disable_guard_chain") 
 
 local utils = plasma_utils
 
