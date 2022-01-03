@@ -41,11 +41,9 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
-- **1.4.1** (1/2/22)
-  - [GUARD] Quick hotfix: Conditional guarding doesn't work. Note that the fix might make levels with a lot of guard sentences more laggy.
-- **1.4.0** (1/1/22)
+- **1.3.8** (1/2/22)
   - Updated for 451D
-  - GUARD mod!
+  - WIP GUARD mod (Some features of it might not work with other mods)
   - Added a modpack settings GUI menu! (Fancy!)
   - [THIS] Fixed THIS + group not working (again)
   - [THIS] Fixed a lua error from forming `T H I S is X`
