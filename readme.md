@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You versions: 451D on PC**
+**Current compatable Baba Is You versions: 453 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,7 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.3.9** (1/7/22)
 - **1.3.8** (1/2/22)
   - Updated for 451D
   - WIP GUARD mod (Some features of it might not work with other mods)
