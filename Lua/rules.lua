@@ -734,7 +734,6 @@ function docode(firstwords)
 					return
 				end
 
-				local filler_text_found_in_parsing = {}
 				local finals_with_dangling_ands = {} -- list of indexes in finals with dangling branching ands
 				
 				--[[
@@ -811,14 +810,6 @@ function docode(firstwords)
 							thissent = thissent .. tilename .. "," .. tostring(wordid) .. "  "
 							
 							for a,b in ipairs(s[3]) do
-								local unit = mmf.newObject(b)
-								-- @filler text
-								if unit.values[TYPE] == 11 then
-									if not filler_text_found_in_parsing[i] then
-										filler_text_found_in_parsing[i] = {}
-									end
-									table.insert(filler_text_found_in_parsing[i], b)
-								end
 								table.insert(tileids, b)
 							end
 							
@@ -835,7 +826,7 @@ function docode(firstwords)
 							]]--
 							
 							-- @filler text
-							if (tiletype == 11) then
+							if (tiletype == pf_filler_text_type) then
 								stop = false
 							else
 							if (tiletype ~= 5) then
@@ -973,14 +964,14 @@ function docode(firstwords)
 									notslot = wordid
 								end
 							else
-								if (stop == false) and (tiletype ~= 0) and (tiletype ~= 11) then
+								if (stop == false) and (tiletype ~= 0) and (tiletype ~= pf_filler_text_type) then
 									notids = {}
 									notwidth = 0
 									notslot = 0
 								end
 							end
 							
-							if (prevtiletype ~= 4 and prevtiletype ~= 11) and (wordid > existing_wordid) then
+							if (prevtiletype ~= 4 and prevtiletype ~= pf_filler_text_type) and (wordid > existing_wordid) then
 								prevsafewordid = wordid - 1
 								prevsafewordtype = prevtiletype
 							end
@@ -1047,7 +1038,7 @@ function docode(firstwords)
 												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
 												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
-											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == 11) and ((tiletype == 1) or (tiletype == 7)) then
+											elseif (prevsafewordtype == 0) and (prevsafewordid > 0) and (prevtiletype == pf_filler_text_type) and ((tiletype == 1) or (tiletype == 7)) then
 												-- MF_alert(tostring(prevsafewordid) .. ", " .. sent[prevsafewordid][1] .. " -> D, " .. unique_id .. ", " .. sent_id)
 												local subsent_id = string.sub(sent_id, (prevsafewordid - existing_wordid)+1)
 												table.insert(firstwords, {sent[prevsafewordid][3], dir, tilewidth, tilename, tiletype, sent, prevsafewordid, subsent_id, br_and_text_with_split_parsing, br_sentence_metadata[i], curr_calc_sent_id})
@@ -1233,7 +1224,7 @@ function docode(firstwords)
 								
 								if (wtype == 1) or (wtype == 3) or (wtype == 7) then
 									wcategory = 1
-								elseif (wtype ~= 4) and (wtype ~= 6) and (wtype ~= 11) then
+								elseif (wtype ~= 4) and (wtype ~= 6) and (wtype ~= pf_filler_text_type) then
 									wcategory = 0
 								else
 									table.insert(extraids_ifvalid, {prefix .. wname, wtype, wid})
@@ -1357,7 +1348,7 @@ function docode(firstwords)
 									else
 										prefix = "not "
 									end
-								else
+								elseif (wtype ~= pf_filler_text_type) then
 									prefix = ""
 								end
 								
@@ -1424,12 +1415,6 @@ function docode(firstwords)
 										
 										for g,h in ipairs(condids) do
 											ids = copytable(ids, h)
-										end
-
-										if filler_text_found_in_parsing[i] then
-											for _, unitid in ipairs(filler_text_found_in_parsing[i]) do
-												table.insert(filler_mod_globals.active_filler_text, unitid)
-											end
 										end
 
 										if is_dangling_and then
@@ -2213,21 +2198,6 @@ function postrules(alreadyrun_)
             playrulesound = true
 		end
 	end
-	for _, unitid in ipairs(filler_mod_globals.active_filler_text) do
-        local unit = mmf.newObject(unitid)
-        setcolour(unitid,"active")
-        newruleids[unitid] = 1
-        if (ruleids[unitid] == nil) and (#undobuffer > 1) and (alreadyrun == false) and (generaldata5.values[LEVEL_DISABLERULEEFFECT] == 0) then
-            if (ruleeffectlimiter[unitid] == nil) then
-                local x,y = unit.values[XPOS],unit.values[YPOS]
-                local c1,c2 = getcolour(unitid,"active")
-                MF_particles_for_unit("bling",x,y,5,c1,c2,1,1,unitid)
-                ruleeffectlimiter[unitid] = 1
-            end
-            
-            playrulesound = true
-        end
-    end
 	
 	if (#protects > 0) then
 		for i,v in ipairs(protects) do
