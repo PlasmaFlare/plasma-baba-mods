@@ -230,9 +230,21 @@ function handle_text_cutting(data, cut_direction)
             end
         end
 
-        local cutterunit = mmf.newObject(data.cutterunitid)
-        if hasfeature(getname(cutterunit), "is", "weak") then
-            delete(data.cutterunitid)
+        local cutterunit_name = ""
+        if data.cutterunitid == 1 then
+            cutterunit_name = "level"
+        elseif data.cutterunitid == 2 then
+            cutterunit_name = "empty"
+        else
+            local cutterunit = mmf.newObject(data.cutterunitid)
+            cutterunit_name = getname(cutterunit)
+        end
+        if hasfeature(cutterunit_name, "is", "weak") then
+            if cutterunit_name == "level" then
+                destroylevel()
+            else
+                delete(data.cutterunitid)
+            end
         end
         
         local pmult,sound = checkeffecthistory("cut")
@@ -251,7 +263,7 @@ function handle_level_cutting()
     exclude_from_cut_blocking = {}
     local cut_textunits = {} 
     for a,unitid in ipairs(codeunits) do
-        local data = check_text_cutting(nil, unitid, false, false, nil, nil, true)
+        local data = check_text_cutting(1, unitid, false, false, nil, nil, true)
         if data then
             table.insert(cut_textunits, data)
         end
