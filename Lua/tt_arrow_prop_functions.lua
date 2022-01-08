@@ -387,15 +387,19 @@ function do_directional_shift_level_parsing(moving_units, been_seen, mapdir)
 	local leveldir = mapdir
 	
 	if levelshift ~= nil then
-		for i,v in ipairs(levelshift) do
+		for i,feature in ipairs(levelshift) do
 			local leveldir = mapdir
-			for a,unit in ipairs(units) do
-				local x,y = unit.values[XPOS],unit.values[YPOS]
-				
-				if floating_level(unit.fixed) then
+			local valid = false
+						
+			if testcond(feature[2],1) then
+				for a,unit in ipairs(units) do
+					local x,y = unit.values[XPOS],unit.values[YPOS]
 					
-					if (isstill_or_locked(unit.fixed,x,y,leveldir) == false) and (issleep(unit.fixed,x,y) == false) then
-						table.insert(shifts_to_apply, {unit.fixed, leveldir})
+					if floating_level(unit.fixed) then
+						
+						if (isstill_or_locked(unit.fixed,x,y,leveldir) == false) and (issleep(unit.fixed,x,y) == false) then
+							table.insert(shifts_to_apply, {unit.fixed, leveldir})
+						end
 					end
 				end
 			end
@@ -474,6 +478,13 @@ function do_directional_shift_moveblock()
 					if floating(unitid,f,x,y) and (issleep(unitid,x,y) == false) then
 						local newunit = mmf.newObject(f)
 						local name = newunit.strings[UNITNAME]
+
+						-- @TODO: this small section was added by hempuli on supporting reverse. But it doesnt do anything right now...
+						-- Keep watch if hempuli decides to update this
+						if (featureindex["reverse"] ~= nil) then
+							local turndir = unit.values[DIR]
+							turndir = reversecheck(newunit.fixed,unit.values[DIR],x,y)
+						end
 						
 						if (newunit.flags[DEAD] == false) then
 							if shifted[newunit] == nil then
