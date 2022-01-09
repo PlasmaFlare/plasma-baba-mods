@@ -53,6 +53,7 @@ local units_to_guard_destroy = {} -- list of objects that we marked for guard de
 local units_to_save = {} -- list of objects that we marked to set deleted[unitid] = nil on between guard checkpoints
 local update_guards = false -- when set to true during a turn, guard_checkpoint() calls recalculate_guards().
 local too_complex_guard = false
+local guard_update_criteria = {}
 
 -- List of objects that were saved by a guard unit during a turn. Saved units cannot be normal destroyed until the end of the turn.
 -- This implements what I call the "pin cushion effect", where a guard unit would take the blow for all direct hits.
@@ -63,14 +64,16 @@ local enable_guard_chaining = not get_toggle_setting("disable_guard_chain")
 
 local utils = plasma_utils
 
-local GUARD_LOGGING = true
-local GUARD_ALG_LOGGING = true
+local GUARD_LOGGING = false
+local GUARD_ALG_LOGGING = false
+local GUARD_CHECK_LOGGING = true
 
 local function clear_guard_mod()
     guard_relation_map = {}
     processed_destroyed_units = {}
     units_to_guard_destroy = {}
     units_to_save = {}
+    guard_update_criteria = {}
     update_guards = false
     too_complex_guard = false
 end
@@ -84,11 +87,7 @@ local function add_guard_units(name)
 end
 
 local function serialize_guard_feature(feature)
-    -- print(serialized)
     return utils.serialize_feature(feature)
-    -- local test = get_ruleid(feature[3], feature[1])
-    -- print(test)
-    -- return test
 end
 
 table.insert(mod_hook_functions["level_start"],
@@ -106,7 +105,7 @@ table.insert(mod_hook_functions["command_given"],
         if GUARD_LOGGING then
             print("---")
         end
-        clear_guard_mod()
+        -- clear_guard_mod()
         guard_checkpoint("command_given")
         all_saved_units = {}
     end
@@ -119,6 +118,11 @@ table.insert(mod_hook_functions["turn_end"],
 )
 
 table.insert(mod_hook_functions["rule_update_after"],
+    function()
+        update_guards = true
+    end
+)
+table.insert(mod_hook_functions["undoed_after"],
     function()
         update_guards = true
     end
@@ -298,6 +302,81 @@ local function print_scc(scc)
     end
 
     return string.format("{%s}", table.concat(v, " | "))
+end
+
+local function evaluate_typedata_for_update_criteria(typedata)
+    local name = typedata[1]
+    local conds = typedata[2]
+
+    local s = get_table_value(guard_update_criteria, "create")
+    s[name] = true
+    s = get_table_value(guard_update_criteria, "remove")
+    s[name] = true
+
+    local has_valid_conds = true
+    for _, cond in ipairs(conds) do
+        local condtype = cond[1]
+        local params = cond[2]
+
+        if not COND_CATEGORIES.ignore[condtype] then
+            has_valid_conds = true
+
+            if COND_CATEGORIES.onturnstart[condtype] then
+                guard_update_criteria["onturnstart"] = true
+            elseif COND_CATEGORIES.features[condtype] then
+                guard_update_criteria["features"] = true
+            elseif COND_CATEGORIES.existence[condtype] then
+                local data = COND_CATEGORIES.existence[condtype]
+                if type(data) == "table" and data.check == "condparam" then
+                    local check_name = params[1]
+                    local s = get_table_value(guard_update_criteria, "create")
+                    s[check_name] = true
+                    s = get_table_value(guard_update_criteria, "remove")
+                    s[check_name] = true  
+                end
+            elseif COND_CATEGORIES.update[condtype] then
+                local data = COND_CATEGORIES.existence[condtype]
+                if type(data) == "table" and data.check == "target" then
+                    local s = get_table_value(guard_update_criteria, "update")
+                    s[name] = true
+                end
+            elseif #params > 0 then
+                local create_criteria = get_table_value(guard_update_criteria, "create")
+                local remove_criteria = get_table_value(guard_update_criteria, "remove")
+                local update_criteria = get_table_value(guard_update_criteria, "update")
+
+                -- create_criteria[name] = true
+                -- remove_criteria[name] = true
+                update_criteria[name] = true
+
+                for _, param in ipairs(params) do
+                    create_criteria[param] = true
+                    remove_criteria[param] = true
+                    update_criteria[param] = true
+                end
+            else
+                guard_update_criteria["always"] = true
+            end
+        end
+    end
+end
+
+function check_undo_data_for_updating_guards(line)
+    if update_guards then
+        return
+    end
+    
+    local style = line[1]
+    if style == "create" or style == "remove" or style == "update" then
+        local changed_name = line[2]
+        if guard_update_criteria[style] and guard_update_criteria[style][changed_name] then
+            update_guards = true
+        end
+    end
+
+    if GUARD_CHECK_LOGGING and update_guards then
+        print(">>> setting update_guards to true from "..style)
+    end
 end
 
 -- Recalculates guard_relation_map, accounting guard chaining into its logic
@@ -634,6 +713,7 @@ local function recalculate_guards_v2()
         print("- Recalculating guards")
     end
     guard_relation_map = {}
+    guard_update_criteria = {}
 
     --[[ 
         Recalculating guards is divided into two phases:
@@ -666,6 +746,8 @@ local function recalculate_guards_v2()
                         check_guard_typedata = true
                     else
                         local guardee_typedata = {guardee_name, {}}
+                        evaluate_typedata_for_update_criteria(guardee_typedata)
+
                         if found_units_for_typedata(guardee_typedata) then
                             check_guard_typedata = true
                             
@@ -690,6 +772,7 @@ local function recalculate_guards_v2()
                     if check_guard_typedata then
                         local typedata = make_typedata(feature)
                         local typedata_hash = utils.serialize_typedata(typedata)
+                        evaluate_typedata_for_update_criteria(typedata)
                         
                         local found_units = found_units_for_typedata(typedata)
                         if found_units then
@@ -880,18 +963,26 @@ end
 -- The main entrypoint for guard logic. This gets called from: start and end of turn, after code(), after handledels(), and after levelblock()
 function guard_checkpoint(calling_func)
     if not too_complex_guard then
-        if GUARD_LOGGING then
+        if GUARD_CHECK_LOGGING then
             print(string.format("> guard_checkpoint from %s", calling_func))
         end
         handle_guard_dels()
 
-        -- if calling_func == "command_given" or calling_func == "level_start" then
-        --     recalculate_guards_v2()
-        -- end
-        recalculate_guards_v2()
+        if guard_update_criteria["always"] then
+            if GUARD_CHECK_LOGGING then
+                print(">>> setting update_guards to true from always")
+            end
+            update_guards = true
+        elseif (calling_func == "command_given" and guard_update_criteria["onturnstart"]) then
+            if GUARD_CHECK_LOGGING then
+                print(">>> setting update_guards to true from onturnstart")
+            end
+            update_guards = true
+        end
         
         -- recalculate_guards()
         if update_guards then
+            recalculate_guards_v2()
             update_guards = false
         end
     end

@@ -60,7 +60,7 @@ function addunit(id, ...)
 	end
 
 	on_add_stableunit(unit.fixed)
-    ack_unit_update_for_guard(unitid)
+    -- ack_unit_update_for_guard(unitid)
 end
 
 -- @mods(stable), @mods(this) - Injection reason: provide hook for when a unit gets deleted. This is to clear that unit from each mod's internal tables
@@ -69,7 +69,7 @@ function delunit(unitid)
     local ret = old_delunit(unitid)
     on_delete_stableunit(unitid)
     on_delele_this_text(unitid)
-    ack_unit_update_for_guard(unitid)
+    -- ack_unit_update_for_guard(unitid)
 
     return ret
 end
@@ -94,5 +94,12 @@ local old_handledels = handledels
 function handledels(delthese, ...)
     local ret = table.pack(old_handledels(delthese, ...))
     guard_checkpoint("handledels")
+    return table.unpack(ret)
+end
+
+local old_addundo = addundo
+function addundo(line,...)
+    local ret = table.pack(old_addundo(line, ...))
+    check_undo_data_for_updating_guards(line)
     return table.unpack(ret)
 end
