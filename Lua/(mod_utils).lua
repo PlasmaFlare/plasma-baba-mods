@@ -103,7 +103,7 @@ utils = {
             tokens[#tokens + 1] = word
             tokens[#tokens + 1] = " "
         end
-        tokens[#tokens + 1] = "|"
+        tokens[#tokens + 1] = ":"
 
         if #feature[2] > 0 then
             local conds = utils.deep_copy_table(feature[2])
@@ -125,12 +125,12 @@ utils = {
     serialize_typedata = function(typedata)
         local tokens = {}
         tokens[#tokens + 1] = typedata[1]
-        tokens[#tokens + 1] = "|"
-
+        
         if #typedata[2] > 0 then
+            tokens[#tokens + 1] = "("
             local conds = utils.deep_copy_table(typedata[2])
             table.sort(conds, utils.condsort)
-
+            
             for _, cond in ipairs(conds) do
                 tokens[#tokens + 1] = cond[1]
                 tokens[#tokens + 1] = ">"
@@ -140,6 +140,7 @@ utils = {
                 end
                 tokens[#tokens + 1] = "|"
             end
+            tokens[#tokens + 1] = ")"
         end
         return table.concat(tokens)
     end,
