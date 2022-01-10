@@ -489,9 +489,10 @@ local function get_stablefeatures_from_name(name)
          ]]
         if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
             -- Copy the feature and add an additional condition for stable
-            local ruleid = get_ruleid(feature[3], feature[1])
+            local ruleid = utils.serialize_feature(feature)
+            -- local ruleid = get_ruleid(feature[3], feature[1])
             utils.debug_assert(ruleid)
-            local dup_feature = utils.deep_copy_table(feature)
+            local dup_feature = utils.deep_copy_table(feature) --@TODO: maybe you dont deepcopy the table fully first before copying through every cond?
             local rule_display = get_stablerule_display(dup_feature)
 
             local newcond = {}

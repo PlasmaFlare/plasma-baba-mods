@@ -72,23 +72,21 @@ utils = {
     end,
 
     condsort = function(a,b)
-        function condsort(a, b)
-            if a[1] ~= b[1] then
-                return a[1] < b[1]
+        if a[1] ~= b[1] then
+            return a[1] < b[1]
+        else
+            if #a[2] ~= #b[2] then
+                return #a[2] < #b[2]
             else
-                if #a[2] ~= #b[2] then
-                    return #a[2] < #b[2]
-                else
-                    local param_a = utils.deep_copy_table(a[2])
-                    local param_b = utils.deep_copy_table(b[2])
+                local param_a = utils.deep_copy_table(a[2])
+                local param_b = utils.deep_copy_table(b[2])
 
-                    table.sort(param_a)
-                    table.sort(param_b)
+                table.sort(param_a)
+                table.sort(param_b)
 
-                    for i = 1, #param_a do
-                        if param_a[i] ~= param_b[i] then
-                            return param_a[i] < param_b[i]
-                        end
+                for i = 1, #param_a do
+                    if param_a[i] ~= param_b[i] then
+                        return param_a[i] < param_b[i]
                     end
                 end
             end
@@ -96,7 +94,6 @@ utils = {
     end,
 
     serialize_feature = function(feature)
-        -- return feature[1][1]..feature[1][2]..feature[1][3]
         local tokens = {}
         local baserule = feature[1]
         for _, word in ipairs(baserule) do

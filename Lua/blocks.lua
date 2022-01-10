@@ -612,7 +612,7 @@ function block(small_)
 					tune = ptunes[sound_name][octave]
 					freq = pfreqs[truefreq]
 					-- MF_alert("True freq: " .. tostring(truefreq) .. ", " .. tostring(play_data.freqs[truefreq]))
-				else
+				else	
 					tune = ptunes[sound_name][2]
 				end
 			end
@@ -1261,7 +1261,9 @@ function block(small_)
 		end
 	end
 	
+	GLOBAL_disable_guard_checking = true
 	delthese,doremovalsound = handledels(delthese,doremovalsound)
+	GLOBAL_disable_guard_checking = false
 	
 	if (small == false) then
 		local iscrash = getunitswitheffect("crash",false,delthese)

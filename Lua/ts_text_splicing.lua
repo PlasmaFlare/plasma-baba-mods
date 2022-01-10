@@ -240,7 +240,9 @@ function handle_text_cutting(data, cut_direction)
         generaldata.values[SHAKE] = 3
 
         -- deleting without triggering has and ignoring guard @mods(guard)(param)
+        GLOBAL_disable_guard_checking = true
         delete(data.cut_text, nil, nil, nil, true, true)
+        GLOBAL_disable_guard_checking = false
 
         cut_texts[data.cut_text] = true
         setsoundname("removal",1,sound)
@@ -474,7 +476,9 @@ function handle_text_packing(unitid, dir, pack_entry)
             MF_particles("eat",u.values[XPOS],u.values[YPOS],5 * pmult,0,3,1,1)
 
             -- deleting without triggering has and ignoring guard @mods(guard)(param)
-            delete(letterunit, nil, nil, nil, true, true)
+            GLOBAL_disable_guard_checking = true
+            delete(letterunit, nil, nil, nil, true)
+            GLOBAL_disable_guard_checking = false
         end
         local newunitid = create("text_"..pack_entry.packed_text_name, pack_entry.packed_text_pos[1], pack_entry.packed_text_pos[2], dir, old_x, old_y, nil, nil, nil)
         local newunit = mmf.newObject(newunitid)

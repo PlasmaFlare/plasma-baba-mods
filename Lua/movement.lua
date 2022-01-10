@@ -1168,7 +1168,6 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 	end
 	
 	local gone = false
-	
 	for i,v in pairs(specials) do
 		if (gone == false) then
 			local b = v[1]
@@ -1278,6 +1277,12 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 				elseif reason == "pack" then
 					handle_text_packing(b, dir, v[3])
 				end
+			end
+
+			--@mods(guard) - if "keke guard rock is weak" and baba pushes rock into a wall, baba should not walk into the rock's space 
+			-- if the rock gets guarded by keke.
+			if is_unit_saved_by_guard(b) then
+				gone = true
 			end
 		end
 	end
@@ -1514,14 +1519,12 @@ function check(unitid,x,y,dir,pulling_,reason)
 							table.insert(queued_pack_specials, {id, "pack", data})
 						end
 					end
-					if not dopack then
-						local obspack = hasfeature(obsname,"is","pack",id,x+ox,y+oy)
-						if obspack ~= nil then
-							local data = check_text_packing(id, unitid, rotate(dir), pulling, true, x, y)
-							if data then
-								valid = false
-								table.insert(queued_pack_specials, {id, "pack", data})
-							end
+					local obspack = hasfeature(obsname,"is","pack",id,x+ox,y+oy)
+					if obspack ~= nil then
+						local data = check_text_packing(id, unitid, rotate(dir), pulling, true, x, y)
+						if data then
+							valid = false
+							table.insert(queued_pack_specials, {id, "pack", data})
 						end
 					end
 				end
@@ -1723,7 +1726,12 @@ function check(unitid,x,y,dir,pulling_,reason)
 		results = {0}
 	end
 
-	if #queued_pack_specials > 0 and #specials == 0 then
+	--[[ 
+		(1/11/21) Its been a while and this code was from 8 months ago when I started prototyping cut/pack. By the commit message, this might be garbage code,
+		since we dont support passive packing. The commented line below was what it was originally. I'm not sure if this is correct. Look into this.
+	 ]]
+	-- if #queued_pack_specials > 0 and #specials == 0 then
+	if #queued_pack_specials > 0 then
 		-- This section has two purposes:
 		-- 1) Ensure that all other collision-based interactions take priority over pack
 		-- 2) In the event of a pack, do not move any nearby units.
@@ -1735,21 +1743,6 @@ function check(unitid,x,y,dir,pulling_,reason)
 		result = {0}
 		-- results = {0}
 	end
-
-	-- if #specials == 0 and (#queued_pack_specials > 0 or #queued_passive_pack_specials > 0)  then
-	-- 	result = {}
-	-- 	for _, special in ipairs(queued_pack_specials) do
-	-- 		table.insert(specials, special)
-	-- 	end
-	-- 	for _, special in ipairs(queued_passive_pack_specials) do
-	-- 		table.insert(specials, special)
-	-- 		-- table.insert(result, special[1])
-	-- 	end
-
-	-- 	if #result == 0 then
-	-- 		result = {0}
-	-- 	end
-	-- end
 	
 	return result,results,specials
 end
