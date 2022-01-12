@@ -1281,7 +1281,7 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 
 			--@mods(guard) - if "keke guard rock is weak" and baba pushes rock into a wall, baba should not walk into the rock's space 
 			-- if the rock gets guarded by keke.
-			if is_unit_saved_by_guard(b) then
+			if is_unit_saved_by_guard(b, x, y) then
 				gone = true
 			end
 		end
