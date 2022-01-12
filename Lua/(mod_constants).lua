@@ -4,6 +4,7 @@ br_prefix = "branching_"
 br_prefix_len = string.len(br_prefix)
 pivot_prefix = "pivot_"
 pivot_prefix_len = string.len(pivot_prefix)
+pf_filler_text_type = 11
 
 dirfeaturemap = {"right", "up", "left", "down"}
 
