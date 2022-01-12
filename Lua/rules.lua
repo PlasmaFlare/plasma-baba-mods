@@ -1281,6 +1281,8 @@ function docode(firstwords)
 											else
 												realname = unitreference["text_"..testunit.strings[NAME]]
 											end
+										elseif is_turning_text(testunit.strings[NAME]) then
+											realname = unitreference["text_" .. testunit.strings[NAME]]
 										else
 											realname = unitreference["text_" .. wname]
 										end

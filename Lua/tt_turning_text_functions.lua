@@ -191,6 +191,18 @@ function get_turning_text_interpretation(turning_text_unitid)
         if v_name == "falldown" then
             v_name = "fall"
         end
+
+        if turn_word == "beside" then
+            if dirstring == "right" then
+                v_name = "besideright"  
+            elseif dirstring == "up" then
+                v_name = "above"  
+            elseif dirstring == "left" then
+                v_name = "besideleft"  
+            elseif dirstring == "down" then
+                v_name = "below"  
+            end
+        end
     end
     return v_name
 end

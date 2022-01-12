@@ -35,6 +35,7 @@ turning_word_names = {
     more=true,
     select=true,
     boom=true,
+    beside=true,
 }
 
 branching_text_names = {

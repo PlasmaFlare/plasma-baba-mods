@@ -2,6 +2,7 @@ table.insert(editor_objlist_order, "text_turning_fall")
 table.insert(editor_objlist_order, "text_turning_nudge")
 table.insert(editor_objlist_order, "text_turning_dir")
 table.insert(editor_objlist_order, "text_turning_locked")
+table.insert(editor_objlist_order, "text_turning_beside")
 
 table.insert(editor_objlist_order, "text_youdown")
 table.insert(editor_objlist_order, "text_youright")
@@ -743,6 +744,18 @@ editor_objlist["text_turning_boom"] =
 	layer = 20,
 	colour = {2, 1},
 	colour_active = {2, 2},
+}
+editor_objlist["text_turning_beside"] = 
+{
+	name = "text_turning_beside",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"turning text", "plasma's mods", "text", "abstract", "text_condition"},
+	tiling = 0,
+	type = 7,
+	layer = 20,
+	colour = {1, 3},
+	colour_active = {1, 4},
 }
 
 formatobjlist()

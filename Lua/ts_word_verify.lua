@@ -24,7 +24,7 @@ local function get_special_cut_mappings()
     end
     -- Turning text
     for turning_prop, _ in pairs(turning_word_names) do
-        if turning_prop ~= "dir" then
+        if turning_prop ~= "dir" and turning_prop ~= "beside" then
             cut_mappings["turning_"..turning_prop] = turning_prop
         end
     end
@@ -154,6 +154,12 @@ function get_cut_text(name, text_dir, cut_direction)
         elseif text_dir == 1 then return "up"
         elseif text_dir == 2 then return "left"
         elseif text_dir == 3 then return "down"
+        end
+    elseif name == "turning_beside" then
+        if text_dir == 0 then return "beside"
+        elseif text_dir == 1 then return "above"
+        elseif text_dir == 2 then return "beside"
+        elseif text_dir == 3 then return "below"
         end
     end
 
