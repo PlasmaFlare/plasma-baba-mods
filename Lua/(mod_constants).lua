@@ -1,4 +1,4 @@
-plasma_modpack_version = "1.3.9"
+plasma_modpack_version = "1.4.0"
 
 br_prefix = "branching_"
 br_prefix_len = string.len(br_prefix)
@@ -53,6 +53,8 @@ branching_text_names = {
     facing = true,
     above = true,
     below = true,
+    besideleft = true,
+    besideright = true,
     feeling = true,
     ["and"] = true
 }

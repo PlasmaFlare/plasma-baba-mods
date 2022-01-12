@@ -754,7 +754,7 @@ editor_objlist["text_turning_beside"] =
 	tiling = 0,
 	type = 7,
 	layer = 20,
-	colour = {1, 3},
+	colour = {1, 2},
 	colour_active = {1, 4},
 }
 

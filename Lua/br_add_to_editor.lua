@@ -43,6 +43,12 @@ table.insert(editor_objlist_order, "text_branching_above")
 table.insert(editor_objlist_order, "text_pivot_below")
 table.insert(editor_objlist_order, "text_branching_below")
 
+table.insert(editor_objlist_order, "text_pivot_besideleft")
+table.insert(editor_objlist_order, "text_branching_besideleft")
+
+table.insert(editor_objlist_order, "text_pivot_besideright")
+table.insert(editor_objlist_order, "text_branching_besideright")
+
 table.insert(editor_objlist_order, "text_pivot_feeling")
 table.insert(editor_objlist_order, "text_branching_feeling")
 
@@ -260,6 +266,32 @@ editor_objlist["text_branching_below"] =
 	colour = omni_blue[1],
 	colour_active = omni_blue[2],
 	pairedwith = "text_below",
+}
+editor_objlist["text_branching_besideleft"] = 
+{
+	name = "text_branching_besideleft",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"omni text", "plasma's mods", "text", "abstract", "text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = omni_blue[1],
+	colour_active = omni_blue[2],
+	pairedwith = "text_besideleft",
+}
+editor_objlist["text_branching_besideright"] = 
+{
+	name = "text_branching_besideright",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"omni text", "plasma's mods", "text", "abstract", "text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = omni_blue[1],
+	colour_active = omni_blue[2],
+	pairedwith = "text_besideright",
 }
 editor_objlist["text_branching_feeling"] = 
 {
@@ -482,6 +514,32 @@ editor_objlist["text_pivot_below"] =
 	colour = {3, 2},
 	colour_active = pivot_blue[2],
 	pairedwith = "text_below",
+}
+editor_objlist["text_pivot_besideleft"] = 
+{
+	name = "text_pivot_besideleft",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"pivot text", "plasma's mods", "text", "abstract", "text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {3, 2},
+	colour_active = pivot_blue[2],
+	pairedwith = "text_besideleft",
+}
+editor_objlist["text_pivot_besideright"] = 
+{
+	name = "text_pivot_besideright",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"pivot text", "plasma's mods", "text", "abstract", "text_condition"},
+	tiling = -1,
+	type = 7,
+	layer = 20,
+	colour = {3, 2},
+	colour_active = pivot_blue[2],
+	pairedwith = "text_besideright",
 }
 editor_objlist["text_pivot_feeling"] = 
 {
