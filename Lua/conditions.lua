@@ -288,7 +288,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									pname = string.sub(b, 5)
 								end
 
-								local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
+								local is_param_this, raycast_units, _, this_count = parse_this_param_and_get_raycast_units(pname)
 								
 								local bcode = b .. "_" .. tostring(a)
 								
@@ -357,7 +357,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								else
 									local ulist = false
 									
-									if (b ~= "empty") and (b ~= "level") then
+									if is_param_this then
+										if this_count > 0 then
+											ulist = true
+										end
+									elseif (b ~= "empty") and (b ~= "level") then
 										if (pnot == false) then
 											if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 												for c,d in ipairs(unitlists[b]) do
@@ -479,7 +483,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, _, this_count = parse_this_param_and_get_raycast_units(pname)
 							
 							local bcode = b .. "_" .. tostring(a)
 							
@@ -543,7 +547,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									allfound = allfound + 1
 								end
 							else
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -1303,7 +1312,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -1407,7 +1416,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -1509,7 +1522,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -1611,8 +1624,13 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								end
 							else
 								local ulist = false
-							
-								if (b ~= "empty") and (b ~= "text") then
+								
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -1721,7 +1739,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, _, this_count = parse_this_param_and_get_raycast_units(pname)
 							
 							local bcode = b .. "_" .. tostring(a)
 							
@@ -1821,7 +1839,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -1923,7 +1945,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units _, this_count = parse_this_param_and_get_raycast_units(pname)
 							
 							local bcode = b .. "_" .. tostring(a)
 							
@@ -2023,7 +2045,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -2370,7 +2397,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -2463,7 +2490,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -2563,7 +2594,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -2656,7 +2687,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -2753,7 +2789,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -2846,7 +2882,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -2946,7 +2986,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3039,7 +3079,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -3134,7 +3179,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -3223,7 +3268,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -3323,7 +3372,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -3412,7 +3461,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do
@@ -3507,7 +3561,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3596,7 +3650,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "level") then
+								if is_param_this then
+									if this_count > 0 then
+										ulist = true
+									end
+								elseif (b ~= "empty") and (b ~= "level") then
 									if (pnot == false) then
 										if (unitlists[pname] ~= nil) and (#unitlists[pname] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[pname]) do
@@ -3696,7 +3754,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3785,7 +3843,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 							else
 								local ulist = false
 							
-								if (b ~= "empty") and (b ~= "text") then
+								if is_param_this then
+									if this_count > 0 then
+										alreadyfound[bcode] = 1
+										allfound = allfound + 1
+									end
+								elseif (b ~= "empty") and (b ~= "text") then
 									if (pnot == false) then
 										if (unitlists[b] ~= nil) and (#unitlists[b] > 0) and (alreadyfound[bcode] == nil) then
 											for c,d in ipairs(unitlists[b]) do

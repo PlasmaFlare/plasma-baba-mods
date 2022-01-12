@@ -66,9 +66,9 @@ local enable_guard_chaining = not get_toggle_setting("disable_guard_chain")
 
 local utils = plasma_utils
 
-local GUARD_LOGGING = true
+local GUARD_LOGGING = false
 local GUARD_ALG_LOGGING = false
-local GUARD_CHECK_LOGGING = true
+local GUARD_CHECK_LOGGING = false
 
 local function clear_guard_mod()
     guard_relation_map = {}
