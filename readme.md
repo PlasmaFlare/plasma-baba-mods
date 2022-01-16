@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You versions: 453 on PC**
+**Current compatable Baba Is You versions: 454 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,7 +41,19 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.4.0** (1/12/22)
+  - Updated for Version 454
+  - GUARD rework! (Sorry for the wait)
+  - [TURNING TEXT] Added turning beside! (Idk what else to name this) 
+  - [TURNING TEXT] Fixed conditional `level is shift` not working
+  - [OMNI TEXT] Added omni/pivot besideleft and besideright!
+  - [STABLE] Fixed rules from `All is X` not being copied properly into STABLE
+  - [THIS] Fixed `level near this is flag` (and similar conditions with level + this) not doing anything
+  - [CUT/PACK] Fixed "level is cut" and "empty is cut" giving a lua error and duplicating text
+  - [FILLER] Fixed filler text lighting up in `baba is you ... ... push`
+  - Fixed modpack settings not loading when first opening the modpack
 - **1.3.9** (1/7/22)
+  - Quick update to version 453
 - **1.3.8** (1/2/22)
   - Updated for 451D
   - WIP GUARD mod (Some features of it might not work with other mods)

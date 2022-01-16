@@ -74,6 +74,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 	end
 	
 	checkedconds[tostring(conds)] = 1
+	checkedconds[tostring(conds) .. "_s_"] = 1
 	
 	if (unitid == 0) or (unitid == nil) then
 		print("WARNING!! Unitid is " .. tostring(unitid))
@@ -959,7 +960,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					local tileid = (x + ox) + (y + oy) * roomsizex
 					local solid = 0
 					
-					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds)] ~= nil) then
+					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds) .. "_s_"] ~= nil) then
 						result = false
 						dir = 4
 					end
@@ -1134,7 +1135,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 					local tileid = (x + ox) + (y + oy) * roomsizex
 					local solid = 0
 					
-					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds)] ~= nil) then
+					if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds) .. "_s_"] ~= nil) then
 						result = false
 						dir = -99
 					end

@@ -592,32 +592,15 @@ function block(small_)
 		if (#sound_units > 0) then
 			local ptunes = play_data.tunes
 			local pfreqs = play_data.freqs
-			local multisample = false
 			
 			local tune = "beep"
 			local freq = pfreqs[sound_freq] or 24000
 			
 			if (ptunes[sound_name] ~= nil) then
-				if (type(ptunes[sound_name]) == "string") then
-					tune = ptunes[sound_name]
-				elseif (type(ptunes[sound_name]) == "table") then
-					multisample = true
-				end
+				tune = ptunes[sound_name]
 			end
 			
-			if multisample then
-				if (tonumber(string.sub(sound_freq, -1)) ~= nil) then
-					local octave = math.min(math.max(tonumber(string.sub(sound_freq, -1)) - base_octave, 1), #ptunes[sound_name])
-					local truefreq = string.sub(sound_freq, 1, #sound_freq-1)
-					tune = ptunes[sound_name][octave]
-					freq = pfreqs[truefreq]
-					-- MF_alert("True freq: " .. tostring(truefreq) .. ", " .. tostring(play_data.freqs[truefreq]))
-				else	
-					tune = ptunes[sound_name][2]
-				end
-			end
-			
-			-- MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
+			--MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
 			
 			MF_playsound_freq(tune,freq)
 			setsoundname("turn",11,nil)

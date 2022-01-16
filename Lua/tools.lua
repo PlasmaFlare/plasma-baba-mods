@@ -1,4 +1,3 @@
-
 function writerules(parent,name,x_,y_)
 	--[[ 
 		@mods(this) - Override reason: Custom "this" rule display. Also remove unitid display when 
