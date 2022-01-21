@@ -30,6 +30,11 @@ function initialize_palette_groups()
         "text_right", "text_up", "text_left", "text_down"
     })
     editor_objlist_pack_group_map["text_turning_dir"] = #editor_objlist_pack_groups
+    
+    table.insert(editor_objlist_pack_groups, {
+        "text_besideright", "text_above", "text_besideleft", "text_below"
+    })
+    editor_objlist_pack_group_map["text_turning_beside"] = #editor_objlist_pack_groups
 
 
     local multi_pair_texts = {"text_cut"}
