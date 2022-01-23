@@ -600,7 +600,7 @@ function block(small_)
 				tune = ptunes[sound_name]
 			end
 			
-			--MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
+			-- MF_alert(sound_name .. " played at " .. tostring(freq) .. " (" .. sound_freq .. ")")
 			
 			MF_playsound_freq(tune,freq)
 			setsoundname("turn",11,nil)
@@ -2354,6 +2354,19 @@ function levelblock()
 						if (featureindex["reverse"] ~= nil) then
 							dir = reversecheck(1,dir)
 						end
+						
+						local drs = ndirs[dir + 1]
+						local ox,oy = drs[1],drs[2]
+						
+						if (lstill == false) and (lsleep == false) then
+							addundo({"levelupdate",Xoffset,Yoffset,Xoffset + ox * tilesize,Yoffset + oy * tilesize,dir,dir})
+							MF_scrollroom(ox * tilesize,oy * tilesize)
+							updateundo = true
+						end
+					elseif (action == "chill") then
+						local dir = fixedrandom(0,3)
+						addundo({"mapdir",mapdir,dir})
+						mapdir = dir
 						
 						local drs = ndirs[dir + 1]
 						local ox,oy = drs[1],drs[2]

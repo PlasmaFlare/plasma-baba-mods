@@ -1,9 +1,8 @@
 local modpack_name = string.format("Plasmaflare's Mods V%s", plasma_modpack_version)
 local modpack_name_with_color = string.format("$1,4Plasma$3,4flare$0,3's Mods V%s", plasma_modpack_version)
 
--- Note: 10 is the baba font letter width + spacing between letters (8 + 2)
 local function write_modpack_version()
-    local x = screenw-(#modpack_name * 10) - 20
+    local x = screenw - (baba_font_consts.total_letter_w * (#modpack_name - 2))
     local y = f_tilesize * 1.5
     writetext(modpack_name_with_color, -1, x, y, "level")
 end
@@ -74,6 +73,7 @@ menufuncs.pfsettings = {
     slide = {1,0},
     enter = function(parent,name,buttonid,extra)
         MF_letterclear("leveltext")
+        MF_cursorvisible(0) -- Letting this be off until Hempuli fixes "escbutton" field not working
 
         local dynamic_structure = {}
 
