@@ -71,14 +71,16 @@ function parse_this_param(this_param)
         this_param_name = "not "
         this_param = string.sub(this_param, 5, #this_param)
     end
-    if not is_name_text_this(string.sub(this_param, 1, 4)) then 
+    if not is_name_text_this(this_param) then 
         return nil, nil
     end
     local end_index = string.find(this_param, " ", 5)
     if not end_index then
         end_index = #this_param
+        this_param_name = this_param_name..string.sub(this_param, 1, end_index) 
+    else
+        this_param_name = this_param_name..string.sub(this_param, 1, end_index-1) 
     end
-    this_param_name = this_param_name..string.sub(this_param, 1, end_index-1) 
     local param_id = string.sub(this_param, end_index + 1)
 
     return this_param_name, param_id
@@ -92,16 +94,17 @@ function parse_this_param_and_get_raycast_units(this_param)
         return false, nil, nil, 0, nil
     end
     
-    local raycast_units = get_raycast_units(this_unitid, true, true)            
-    local tileid = get_raycast_tileid(this_unitid)
+    local raycast_objects = get_raycast_units(this_unitid, true, true)            
+    local tileids = get_raycast_tileid(this_unitid)
     local out = {}
     local count = 0
-    for _, ray_unitid in ipairs(raycast_units) do
-        out[ray_unitid] = true
+    for _, ray_object in ipairs(raycast_objects) do
+        local ray_unit = plasma_utils.parse_object(ray_object)
+        out[ray_unit] = true
         count = count + 1
     end
 
-    return this_param_name, out, tileid, count, this_unitid
+    return this_param_name, out, tileids, count, this_unitid
 end
 
 local function get_singlular_unitid_from_rule(idgroup, include_letters)

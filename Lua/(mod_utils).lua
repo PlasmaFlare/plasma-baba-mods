@@ -25,13 +25,14 @@ utils = {
             local tileid = object - 200
             local x = tileid % roomsizex
             local y = math.floor(tileid / roomsizex)
-            return 2, x, y
+            return 2, x, y, tileid
         elseif object == 1 then
             return 1
         else
             local unit = mmf.newObject(object)
             utils.debug_assert(unit)
-            return object, unit.values[XPOS], unit.values[YPOS]
+
+            return object, unit.values[XPOS], unit.values[YPOS], unit.values[XPOS] + unit.values[YPOS] * roomsizex
         end
     end,
 

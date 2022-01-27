@@ -660,7 +660,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a 
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -729,7 +729,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									local tile = l:get_x(x + ox,y + oy)
 									
 									if (pnot == false) then
-										local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and tileid == raycast_tileid)
+										local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and raycast_tileids[tileid])
 										if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and this_cond then
 											if (alreadyfound[bcode] == nil) then
 												alreadyfound[bcode] = 1
@@ -808,7 +808,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a 
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -883,7 +883,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 									
 									if (dir ~= 4) then
 										if (pnot == false) then
-											local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and tileid == raycast_tileid)
+											local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and raycast_tileids[tileid])
 											if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and this_cond then
 												if (alreadyfound[bcode] == nil) then
 													alreadyfound[bcode] = 1
@@ -891,7 +891,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												end
 											end
 										else
-											-- local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and tileid == raycast_tileid))
+											-- local this_cond = not ray_unit_is_empty or (ray_unit_is_empty and tileid == raycast_tileids))
 											if ((unitmap[tileid] ~= nil) and (#unitmap[tileid] > 0)) or (tile ~= 255) then
 												if (alreadyfound[bcode] == nil) then
 													alreadyfound[bcode] = 1
@@ -1313,7 +1313,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -1389,7 +1389,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												end
 
 												-- added "not pnot" since being near "not empty" means near any nonempty object
-												if nearempty and not pnot and ray_unit_is_empty and tileid ~= raycast_tileid then
+												if nearempty and not pnot and ray_unit_is_empty and raycast_tileids[tileid] == nil then
 													nearempty = false
 												end
 												
@@ -1523,7 +1523,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -1598,7 +1598,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													end
 												end
 
-												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid then
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
 													nearempty = false
 												end
 												
@@ -2180,7 +2180,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid, count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, _, count = parse_this_param_and_get_raycast_units(pname)
 							if is_param_this then
 								if count == 0 or (count > 0 and raycast_units[unitid]) then
 									alreadyfound[bcode] = 1
@@ -2304,7 +2304,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								break
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid, count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, _, count = parse_this_param_and_get_raycast_units(pname)
 							if is_param_this then
 								if count > 0 and not (raycast_units[unitid] and count == 1) then
 									alreadyfound[bcode] = 1
@@ -2398,7 +2398,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -2463,7 +2463,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 
-												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid and not pnot then
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil and not pnot then
 													nearempty = false
 												end
 												
@@ -2595,7 +2595,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -2660,7 +2660,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 
-												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid and not pnot then
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil and not pnot then
 													nearempty = false
 												end
 												
@@ -2790,7 +2790,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -2855,7 +2855,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 
-												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid and not pnot then
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil and not pnot then
 													nearempty = false
 												end
 												
@@ -2987,7 +2987,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3052,7 +3052,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 													nearempty = true
 												end
 
-												if nearempty and ray_unit_is_empty and tileid ~= raycast_tileid then
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
 													nearempty = false
 												end
 												
@@ -3180,7 +3180,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -3243,6 +3243,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												
 												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (alreadyfound[tcode] == nil) then 
 													nearempty = true
+												end
+
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
+													nearempty = false
 												end
 												
 												if (pnot == false) then
@@ -3373,7 +3377,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 							
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 
 							local bcode = b .. "_" .. tostring(a)
@@ -3436,6 +3440,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												
 												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and (alreadyfound[tcode] == nil) then 
 													nearempty = true
+												end
+
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
+													nearempty = false
 												end
 												
 												if (pnot == false) then
@@ -3562,7 +3570,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3625,6 +3633,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												
 												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and (alreadyfound[tcode] == nil) then 
 													nearempty = true
+												end
+
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
+													nearempty = false
 												end
 												
 												if (pnot == false) then
@@ -3755,7 +3767,7 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 								pname = string.sub(b, 5)
 							end
 
-							local is_param_this, raycast_units, raycast_tileid, this_count = parse_this_param_and_get_raycast_units(pname)
+							local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
 							local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit
 							
 							local bcode = b .. "_" .. tostring(a)
@@ -3818,6 +3830,10 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 												
 												if ((unitmap[tileid] == nil) or (#unitmap[tileid] == 0)) and (tile == 255) and (alreadyfound[tcode] == nil) then 
 													nearempty = true
+												end
+
+												if nearempty and ray_unit_is_empty and raycast_tileids[tileid] == nil then
+													nearempty = false
 												end
 												
 												if (pnot == false) then
@@ -4403,10 +4419,11 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 						-- @TODO: @mods(this) deciding on when to check block and/or pass when calling get_raycast_units() is currently janky. It depends on 
 						-- whether or not do_subrule_this() is being called and weird update order shennanigans somehow makes this all work out
 						-- in the end. Clean this up when we revisit THIS mod.
-						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+						for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+							local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
-								if get_raycast_tileid(this_text_unitid) == tileid then
+								if ray_tileid == tileid then
 									pass = true
 								end
 								break
@@ -4430,10 +4447,12 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
                         local this_text_unitid = parse_this_unit_from_param_id(params[1])
                         
 						local pass = true
-						for _, ray_unit in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+						for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+							local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
+
 							if ray_unit == 2 then
 								local tileid = x + y * roomsizex
-								if get_raycast_tileid(this_text_unitid) == tileid then
+								if ray_tileid == tileid then
 									pass = false
 								end
 								break

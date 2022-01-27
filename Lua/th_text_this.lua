@@ -42,6 +42,7 @@ editor_objlist["text_pass"] =
 formatobjlist()
 
 register_directional_text_prefix("this")
+register_directional_text_prefix("these")
 
 this_mod_globals = {}
 local function reset_this_mod_globals()
@@ -52,21 +53,56 @@ local function reset_this_mod_globals()
 end   
 reset_this_mod_globals()
 
-local text_to_cursor = {} -- mapping from this text unitid to cursor unitid
+local utils = plasma_utils
+
 local text_to_raycast_units = {} -- mapping from this text unitid to all units that were hit by a raycast
 local text_to_raycast_pos = {}
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local on_level_start = false
+local NO_POSITION = -1
+
+--[[ 
+    local raycast_data = {
+        <unit id of THIS text> = {
+            -- list of all objects that were hit by the raycast
+            raycast_unitids = [<object>, <object>],
+
+            -- Mapping of raycast positions to the objects that are in those objects. Note that these
+            -- object lists aren't currently used since we don't need position specific logic. But maybe later
+            -- if we come up with another word that needs that data.
+            raycast_positions = { 
+                <tileid> = [<object>, <object>], 
+                <tileid> = [<object>, <object>], 
+                ...
+            }
+
+
+            -- List of all cursors associated with the raycast
+            cursors: [
+                {
+                    unitid: <unitid of cursor>,
+                    position: <tileid>
+                }
+            ]
+        }
+    }
+ ]]
+local raycast_data = {}
+
+local POINTER_NOUNS = {
+    this = true,
+    these = true
+}
 
 local function reset_this_mod_locals()
-    text_to_cursor = {}
     text_to_raycast_units = {}
     text_to_raycast_pos = {}
     blocked_tiles = {}
     explicit_passed_tiles = {}
     cond_features_with_this_noun = {}
+    raycast_data = {}
 end
 
 local make_cursor, update_all_cursors
@@ -86,12 +122,6 @@ table.insert(mod_hook_functions["always"],
 
 table.insert(mod_hook_functions["level_start"], 
     function()
-        for i,unitid in ipairs(codeunits) do
-            local unit = mmf.newObject(unitid)
-            if is_name_text_this(unit.strings[NAME]) then
-                text_to_cursor[unitid] = make_cursor(unit)
-            end
-        end
         on_level_start = true
     end
 )
@@ -132,19 +162,55 @@ table.insert(mod_hook_functions["rule_update_after"],
     end
 )
 
+-- This actually returns the pointer name if valid. It should be named "get_pointer_noun_from_name()" But can't rename it because the BASED mod uses "is_name_text_this"
 function is_name_text_this(name, check_not_)
     local check_not = check_not_ or false
-    if check_not then
-        return string.sub(name, 1, 4) == "not " and string.sub(name, 5, 8) == "this"
-    else
-        return string.sub(name, 1, 4) == "this"
+
+    local isnot = false
+    if string.sub(name, 1, 4) == "not " then
+        isnot = true
+        name = string.sub(name, 5)
     end
+
+    if check_not and not isnot then
+        return false
+    end
+
+    for noun, _ in pairs(POINTER_NOUNS) do
+        if string.sub(name, 1, #noun) == noun then
+            return noun
+        end
+    end
+    return nil
 end
 
--- Really useless function whose only purpose is to gatekeep calling update_raycast_units() in code() before checking updatecode. Also allows
--- the variable "text_to_cursor" to be file scoped
+-- Determine the raycast velocity vectors, given a name of a pointer noun
+local function get_raycast_vectors(name, dir)
+    local cast_vecs = {}
+    local pointer_noun = is_name_text_this(name)
+
+    if pointer_noun then
+        local dir_vec = {dirs[dir+1][1], dirs[dir+1][2] * -1}
+
+        if pointer_noun == "this" then
+            table.insert(cast_vecs, dir_vec)
+        elseif pointer_noun == "these" then
+            if (math.abs(dir_vec[1]) > math.abs(dir_vec[2])) then
+                table.insert(cast_vecs, {dir_vec[1], dir_vec[2] + 1} )
+                table.insert(cast_vecs, {dir_vec[1], dir_vec[2] - 1} )
+            else
+                table.insert(cast_vecs, {dir_vec[1] + 1, dir_vec[2]} )
+                table.insert(cast_vecs, {dir_vec[1] - 1, dir_vec[2]} )
+            end
+        end
+    end
+
+    return cast_vecs
+end
+
+-- Really useless function whose only purpose is to gatekeep calling update_raycast_units() in code() before checking updatecode.
 function this_mod_has_this_text()
-    for _,_ in pairs(text_to_cursor) do
+    for _,_ in pairs(raycast_data) do
         return true
     end
     return false
@@ -152,30 +218,58 @@ end
 
 -- This is used in {{mod_injections}}
 function reset_this_mod()
-    local count = 0
-    for _, cursor_unitid in pairs(text_to_cursor) do
-        delunit(cursor_unitid)
-        MF_remove(cursor_unitid)
-        count = count + 1
+    for this_unitid, v in pairs(raycast_data) do
+        for _, cursor in ipairs(v.cursors) do
+            delunit(cursor.unitid)
+            MF_remove(cursor.unitid)
+        end
     end
     reset_this_mod_globals()
     reset_this_mod_locals()
 end
 
 function on_add_this_text(this_unitid)
-    if not text_to_cursor[this_unitid] then
-        local wordunit = mmf.newObject(this_unitid)
-        local cursorunit = make_cursor(wordunit)
-        text_to_cursor[this_unitid] = cursorunit
+    if not raycast_data[this_unitid] then
+        local unit = mmf.newObject(this_unitid)
+        local pointer_noun = is_name_text_this(unit.strings[NAME])
+
+        local num_cursors = 0
+        if pointer_noun == "this" then
+            num_cursors = 1
+        elseif pointer_noun == "these" then
+            num_cursors = 2
+        end
+
+        raycast_data[this_unitid] = {
+            cursors = {},
+            raycast_unitids = {},
+            raycast_positions = {},
+        }
+
+        for i = 1, num_cursors do
+            local wordunit = mmf.newObject(this_unitid)
+            local cursorunit = make_cursor(wordunit)
+    
+            table.insert(raycast_data[this_unitid].cursors, 
+                {
+                    position = NO_POSITION,
+                    unitid = cursorunit,
+                }
+            )
+        end
     end
 end
 
 function on_delele_this_text(this_unitid)
-    if text_to_cursor[this_unitid] then
-        MF_cleanremove(text_to_cursor[this_unitid])
-        text_to_cursor[this_unitid] = nil
+    if raycast_data[this_unitid] then
         text_to_raycast_units[this_unitid] = nil
         text_to_raycast_pos[this_unitid] = nil
+
+        for _, cursor in ipairs(raycast_data[this_unitid].cursors) do
+            delunit(cursor.unitid)
+            MF_cleanremove(cursor.unitid)
+        end
+        raycast_data[this_unitid] = nil
     end
 end
 
@@ -190,57 +284,66 @@ local function set_passed_tile(tileid)
     end
 end
 
-local function update_this_cursor(wordunit, cursorunit)
-    local x = wordunit.values[XPOS]
-    local y = wordunit.values[YPOS]
 
-    local tileid = text_to_raycast_pos[wordunit.fixed]
-    if tileid then
-        local nx = math.floor(tileid % roomsizex)
-        local ny = math.floor(tileid / roomsizex)
-        local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-        cursorunit.values[XPOS] = nx * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
-        cursorunit.values[YPOS] = ny * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
+-- local
+function update_all_cursors()
+    for this_unitid, v in pairs(raycast_data) do
+        for _, cursor in ipairs(v.cursors) do
+            local wordunit = mmf.newObject(this_unitid)
+            local cursorunit = mmf.newObject(cursor.unitid)
 
-        local c1 = 0
-        local c2 = 0
-        cursorunit.layer = 1
-        if blocked_tiles[tileid] then
-            -- display different sprite if the tile is blocked
-            cursorunit.values[ZLAYER] = 44
-            cursorunit.direction = 30
-            MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
-            c1,c2 = getuicolour("blocked")
-        elseif explicit_passed_tiles[tileid] then
-            cursorunit.values[ZLAYER] = 42
-            cursorunit.direction = 31
-            MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
-            c1,c2 = 4, 4
-        else
-            if ruleids[wordunit.fixed] then
-                cursorunit.values[ZLAYER] = 41 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
+            local x = wordunit.values[XPOS]
+            local y = wordunit.values[YPOS]
+
+            local tileid = cursor.position
+            if tileid ~= NO_POSITION then
+                local nx = math.floor(tileid % roomsizex)
+                local ny = math.floor(tileid / roomsizex)
+                local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+                cursorunit.values[XPOS] = nx * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
+                cursorunit.values[YPOS] = ny * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
+
+                local c1 = 0
+                local c2 = 0
+                cursorunit.layer = 1
+                if blocked_tiles[tileid] then
+                    -- display different sprite if the tile is blocked
+                    cursorunit.values[ZLAYER] = 44
+                    cursorunit.direction = 30
+                    MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
+                    c1,c2 = getuicolour("blocked")
+                elseif explicit_passed_tiles[tileid] then
+                    cursorunit.values[ZLAYER] = 42
+                    cursorunit.direction = 31
+                    MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
+                    c1,c2 = 4, 4
+                else
+                    if ruleids[wordunit.fixed] then
+                        cursorunit.values[ZLAYER] = 41 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
+                    else
+                        cursorunit.values[ZLAYER] = 30
+                    end
+                    cursorunit.direction = 28
+                    MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
+                    -- MF_loadsprite(cursorunit.fixed,"stable_indicator_0",28,true)
+                    c1,c2 = wordunit.colour[1],wordunit.colour[2]
+                end
+            
+                MF_setcolour(cursorunit.fixed,c1,c2)
             else
-                cursorunit.values[ZLAYER] = 30
+                -- Just to hide it
+                cursorunit.values[XPOS] = -20
+                cursorunit.values[YPOS] = -20
             end
-            cursorunit.direction = 28
-            MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
-            -- MF_loadsprite(cursorunit.fixed,"stable_indicator_0",28,true)
-            c1,c2 = wordunit.colour[1],wordunit.colour[2]
+            cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+            cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+            
+            if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
+                -- Just to hide it
+                cursorunit.values[XPOS] = -20
+                cursorunit.values[YPOS] = -20
+            end
         end
-    
-        MF_setcolour(cursorunit.fixed,c1,c2)
-    else
-        -- Just to hide it
-        cursorunit.values[XPOS] = -20
-        cursorunit.values[YPOS] = -20
-    end
-    cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-    cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-    
-    if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
-        -- Just to hide it
-        cursorunit.values[XPOS] = -20
-        cursorunit.values[YPOS] = -20
     end
 end
 
@@ -250,48 +353,32 @@ function make_cursor(unit)
     local unit2 = mmf.newObject(unitid2)
     
     unit2.values[ONLINE] = 1
-
+    
     unit2.layer = 1
     unit2.direction = 28
     MF_loadsprite(unitid2,"this_cursor_0",28,true)
-    update_this_cursor(unit, unit2)
-
+    
     return unitid2
 end
 
--- local
-function update_all_cursors()
-    for this_unitid, cursor_unitid in pairs(text_to_cursor) do
-        local wordunit = mmf.newObject(this_unitid)
-        local cursorunit = mmf.newObject(cursor_unitid)
+local function this_raycast(x, y, vector, checkemptyblock)
+    local ox = x + vector[1]
+    local oy = y + vector[2]
+    while inbounds(ox,oy) do
+        local tileid = ox + oy * roomsizex
 
-        update_this_cursor(wordunit, cursorunit)
-    end
-end
-
-local function this_raycast(x, y, dir, checkemptyblock)
-    if dir >= 0 and dir <= 3 then 
-        local dir_vec = dirs[dir+1]
-        local dx = dir_vec[1]
-        local dy = dir_vec[2] * -1
-        local ox = x + dx
-        local oy = y + dy
-        while inbounds(ox,oy) do
-            local tileid = ox + oy * roomsizex
-
-            if unitmap[tileid] == nil then
-                if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
-                    return {ox, oy},true, false
-                elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
-                    return {ox, oy}, false, true
-                end
-            elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
-                return {ox, oy},false, false
+        if unitmap[tileid] == nil then
+            if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
+                return {ox, oy},true, false
+            elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
+                return {ox, oy}, false, true
             end
-
-            ox = ox + dx
-            oy = oy + dy
+        elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
+            return {ox, oy},false, false
         end
+
+        ox = ox + vector[1]
+        oy = oy + vector[2]
     end
 
     return nil
@@ -312,120 +399,134 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     if checkpass then
         all_pass = findfeature("all", "is", "pass") ~= nil
     end
-    for unitid, _ in pairs(text_to_cursor) do
+    for unitid, curr_raycast_data in pairs(raycast_data) do
         if (include_this_units == nil or include_this_units[unitid]) and not exclude_this_units[unitid] then
             local unit = mmf.newObject(unitid)
             local x = unit.values[XPOS]
             local y = unit.values[YPOS]
             local dir = unit.values[DIR]
-            local ray_unitids = {}
 
-            local tileid = nil
-            local blocked = false
+            local cast_vecs = get_raycast_vectors(unit.strings[NAME], dir)
+            
+            local all_rayunits = {}
             local select_empty_tile = false
-            local tile_pass = true
+            local tileid = nil
+            for i, vector in ipairs(cast_vecs) do
+                local ray_unitids = {}
 
-            while tile_pass do
-                tile_pass = false
-                local ray_pos,is_emptyblock, select_empty = this_raycast(x, y, dir, checkblocked)
-                if ray_pos then
-                    tileid = ray_pos[1] + ray_pos[2] * roomsizex
+                local blocked = false
+                local tile_pass = true
 
-                    if checkblocked and is_emptyblock then
-                        blocked = true
-                    elseif select_empty then
-                        select_empty_tile = true
-                        table.insert(ray_unitids, 2)
-                    else
-                        local total_pass = 0
-                        for _, ray_unitid in ipairs(unitmap[tileid]) do
-                            local ray_unit = mmf.newObject(ray_unitid)
-                            local ray_unit_name = ray_unit.strings[NAME] 
-                            
-                            if ray_unit.strings[UNITTYPE] == "text" then
-                                ray_unit_name = "text"
-                            end
+                while tile_pass do
+                    tile_pass = false
+                    local ray_pos,is_emptyblock, select_empty = this_raycast(x, y, vector, checkblocked)
+                    if ray_pos then
+                        tileid = ray_pos[1] + ray_pos[2] * roomsizex
 
-                            if checkblocked then
-                                if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                    blocked = true
-                                elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
-                                    blocked = true
+                        if checkblocked and is_emptyblock then
+                            blocked = true
+                        elseif select_empty then
+                            select_empty_tile = true
+                            local object = utils.make_object(2, ray_pos[1], ray_pos[2])
+                            table.insert(ray_unitids, object)
+                        else
+                            local total_pass = 0
+                            for _, ray_unitid in ipairs(unitmap[tileid]) do
+                                local ray_unit = mmf.newObject(ray_unitid)
+                                local ray_unit_name = ray_unit.strings[NAME] 
+                                
+                                if ray_unit.strings[UNITTYPE] == "text" then
+                                    ray_unit_name = "text"
                                 end
-                            end
 
-                            local add_to_rayunits = not blocked
-                            if checkpass and not blocked then
-                                if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                    total_pass = total_pass + 1
-                                    add_to_rayunits = false
-                                else
-                                    local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                                    local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
-                                    if has_pass and not has_not_pass then
-                                        total_pass = total_pass + 1
-                                        add_to_rayunits = false
+                                if checkblocked then
+                                    if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                        blocked = true
+                                    elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
+                                        blocked = true
                                     end
                                 end
+
+                                local add_to_rayunits = not blocked
+                                if checkpass and not blocked then
+                                    if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                        total_pass = total_pass + 1
+                                        add_to_rayunits = false
+                                    else
+                                        local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                                        local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
+                                        if has_pass and not has_not_pass then
+                                            total_pass = total_pass + 1
+                                            add_to_rayunits = false
+                                        end
+                                    end
+                                end
+
+                                if add_to_rayunits then
+                                    local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
+                                    table.insert(ray_unitids, object)
+                                end
                             end
 
-                            if add_to_rayunits then
-                                table.insert(ray_unitids, ray_unitid)
+                            if checkpass and total_pass >= #unitmap[tileid] then
+                                tile_pass = true
+                                tileid = nil
+                                ray_unitids = {}
+                                x = ray_pos[1]
+                                y = ray_pos[2]
                             end
-                        end
-
-                        if checkpass and total_pass >= #unitmap[tileid] then
-                            tile_pass = true
-                            tileid = nil
-                            ray_unitids = {}
-                            x = ray_pos[1]
-                            y = ray_pos[2]
                         end
                     end
                 end
-            end
 
-            if blocked and tileid then
-                set_blocked_tile(tileid)
-                ray_unitids = {}
+                if blocked and tileid then
+                    set_blocked_tile(tileid)
+                    ray_unitids = {}
+                end
+
+                if tileid then
+                    curr_raycast_data.cursors[i].position = tileid
+                    curr_raycast_data.raycast_positions[tileid] = ray_unitids
+                else
+                    -- Do not set curr_raycast_data.raycast_positions[tileid] to indicate that the cursor didn't
+                    -- stop at any position
+                    curr_raycast_data.cursors[i].position = NO_POSITION
+                end
+
+                for _, ray_unitid in ipairs(ray_unitids) do
+                    table.insert(all_rayunits, ray_unitid)
+                end
             end
 
             if affect_updatecode and updatecode == 0 then
                 -- set updatecode to 1 if any of the raycast units changed
-                local prev_raycast_unitids = text_to_raycast_units[unitid] or {}
-                local prev_raycast_tileid = text_to_raycast_pos[unitid] or -1
+                local prev_raycast_unitids = curr_raycast_data.raycast_unitids or {}
 
-                if #ray_unitids ~= #prev_raycast_unitids then
+                if #all_rayunits ~= #prev_raycast_unitids then
                     updatecode = 1
                 else
-                    if #prev_raycast_unitids > 0 and prev_raycast_unitids[1] == 2 then
-                        if not select_empty_tile then
-                            updatecode = 1
-                        elseif prev_raycast_tileid ~= tileid then
-                            updatecode = 1
-                        end
-                    else
-                        for _, ray_unitid in ipairs(ray_unitids) do
-                            local found_unitid = false
-                            for _, prev_unitid in ipairs(prev_raycast_unitids) do
-                                if prev_unitid == ray_unitid then
-                                    found_unitid = true
-                                    break
-                                end
-                            end
-
-                            if not found_unitid then
-                                updatecode = 1
+                    for _, ray_object in ipairs(all_rayunits) do
+                        local found_unit = false
+                        for _, prev_object in ipairs(prev_raycast_unitids) do
+                            if prev_object == found_unit then
+                                found_unit = true
                                 break
                             end
+                        end
+
+                        if not found_unit then
+                            updatecode = 1
+                            break
                         end
                     end
                 end
             end
-            if #ray_unitids == 0 then
+            if #all_rayunits == 0 then
                 text_to_raycast_units[unitid] = nil
+                curr_raycast_data.raycast_unitids = nil
             else
-                text_to_raycast_units[unitid] = ray_unitids
+                text_to_raycast_units[unitid] = all_rayunits
+                curr_raycast_data.raycast_unitids = all_rayunits
             end
 
             text_to_raycast_pos[unitid] = tileid
@@ -455,10 +556,11 @@ function get_raycast_units(this_text_unitid, checkblocked, checkpass)
         return get_stable_this_raycast_units(tonumber(this_text_unitid))
     end
 
-    local raycast_units = text_to_raycast_units[this_text_unitid]
+    local raycast_units = raycast_data[this_text_unitid].raycast_unitids
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked or checkpass then
-            local tileid = text_to_raycast_pos[this_text_unitid]
+            -- originally text_to_raycast_pos[this_text_unitid]
+            local unitid, _, _, tileid = utils.parse_object(raycast_units[1])
             if checkblocked then
                 if blocked_tiles[tileid] then
                     return {}
@@ -479,7 +581,8 @@ function get_raycast_tileid(this_text_unitid)
     if is_this_unit_in_stablerule(this_text_unitid) then
         return get_stable_this_raycast_pos(tonumber(this_text_unitid))
     end
-    return text_to_raycast_pos[this_text_unitid]
+
+    return raycast_data[this_text_unitid].raycast_positions
 end
 
 local function is_unit_valid_this_property(unitid, verb)
@@ -661,8 +764,8 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                         table.insert(visualfeatures, {rule, conds, ids, tags})
                     end
                 else
-                    local ray_tileid = get_raycast_tileid(this_text_unitid)
-                    for _, ray_unitid in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass)) do
+                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass)) do
+                        local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
                         if ray_unitid == 2 then
                             ray_name = "empty"
@@ -732,7 +835,6 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
     -- description for why we do this.
     for _, data in ipairs(this_noun_cond_options_list) do
         local checkcond = nil
-        local ray_tileid = get_raycast_tileid(data.this_unitid)
         if data.ray_unitid == 2 then
             local x = math.floor(data.ray_tileid % roomsizex)
             local y = math.floor(data.ray_tileid / roomsizex)
@@ -768,9 +870,16 @@ function do_subrule_this()
     -- "this is pass" will apply to all this texts *other* than the "this" in the original rule.
     -- The idea is that "block" will be "active" in enforcing its effect while "pass" will be "passive" in doing the same thing.
     local all_processed_this_units = {}
+    local deferred_rules_with_this = {}
+    for pointer_noun, _ in pairs(POINTER_NOUNS) do
+        if featureindex[pointer_noun] ~= nil then
+            for _, feature in ipairs(featureindex[pointer_noun]) do
+                table.insert(deferred_rules_with_this, feature)
+            end
+        end
+    end
 
-    if (featureindex["this"] ~= nil) then
-        local deferred_rules_with_this = featureindex["this"]
+    if (#deferred_rules_with_this > 0) then
         update_raycast_units(true, true, false)
         local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block")
         for unit, _ in pairs(processed_block_this_units) do
@@ -799,38 +908,40 @@ function do_subrule_this()
         end
 
         for this_unitid, _ in pairs(processed_block_this_units) do
-            local tileid = get_raycast_tileid(this_unitid)
-            local x = math.floor(tileid % roomsizex)
-            local y = math.floor(tileid / roomsizex)
-
-            for _, ray_unitid in ipairs(get_raycast_units(this_unitid, false, false)) do
-                local has_block = false
-                local has_not_block = false
-                if ray_unitid == 2 then
-                    has_block = hasfeature("empty", "is", "block", 2, x, y)
-                    has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    local ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
+            -- @todo - optimize by looping through each tileid and each ray unit within each tileid
+            local processed_tileids = {}
+            for _, ray_object in ipairs(get_raycast_units(this_unitid, false, false)) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                if not processed_tileids[tileid] then
+                    local has_block = false
+                    local has_not_block = false
+                    if ray_unitid == 2 then
+                        has_block = hasfeature("empty", "is", "block", 2, x, y)
+                        has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
+                    else
+                        local ray_unit = mmf.newObject(ray_unitid)
+                        local ray_unit_name = ray_unit.strings[NAME]
+                        if ray_unit.strings[UNITTYPE] == "text" then
+                            ray_unit_name = "text"
+                        end
+                        has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
+                        has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
                     end
-                    has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
-                    has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
-                end
-                
-                if has_block and not has_not_block then
-                    set_blocked_tile(tileid)
-                    break
+                    
+                    if has_block and not has_not_block then
+                        processed_tileids[tileid] = true
+                        set_blocked_tile(tileid)
+                        -- break
+                    end
                 end
             end
         end
 
         for this_unitid, _ in pairs(processed_pass_this_units) do
-            local tileid = get_raycast_tileid(this_unitid)
-            local x = math.floor(tileid % roomsizex)
-            local y = math.floor(tileid / roomsizex)
-            for _, ray_unitid in ipairs(get_raycast_units(this_unitid, false, false)) do
+            -- @todo - optimize by looping through each tileid and each ray unit within each tileid. Need to make a "get_raycast_units_by_tileid"
+            local processed_tileids = {}
+            for _, ray_object in ipairs(get_raycast_units(this_unitid, false, false)) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
                 local ray_unit_name = ""
                 local has_pass = false
                 local has_not_pass = false
@@ -850,8 +961,8 @@ function do_subrule_this()
                 end
 
                 if has_pass and not has_not_pass then
+                    processed_tileids[tileid] = true
                     set_passed_tile(tileid)
-                    break
                 end
             end
         end
