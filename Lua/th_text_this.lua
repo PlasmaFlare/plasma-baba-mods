@@ -1,5 +1,6 @@
 table.insert(editor_objlist_order, "text_this")
 table.insert(editor_objlist_order, "text_block")
+table.insert(editor_objlist_order, "text_route")
 table.insert(editor_objlist_order, "text_pass")
 
 editor_objlist["text_this"] = 
@@ -38,6 +39,18 @@ editor_objlist["text_pass"] =
 	colour = {4, 3},
     colour_active = {4, 4},
 }
+editor_objlist["text_route"] = 
+{
+	name = "text_route",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract", "text_quality"},
+	tiling = -1,
+	type = 2,
+	layer = 20,
+	colour = {5, 1},
+    colour_active = {5, 3},
+}
 
 formatobjlist()
 
@@ -55,13 +68,12 @@ reset_this_mod_globals()
 
 local utils = plasma_utils
 
-local text_to_raycast_units = {} -- mapping from this text unitid to all units that were hit by a raycast
-local text_to_raycast_pos = {}
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local on_level_start = false
 local NO_POSITION = -1
+local THIS_LOGGING = false
 
 --[[ 
     local raycast_data = {
@@ -76,20 +88,35 @@ local NO_POSITION = -1
                 <tileid> = [<object>, <object>], 
                 <tileid> = [<object>, <object>], 
                 ...
-            }
+            },
 
 
-            -- List of all cursors associated with the raycast
-            cursors: [
+            -- List of all primary cursors associated with the raycast
+            cursors = [
                 {
                     unitid: <unitid of cursor>,
                     position: <tileid>
                 }
-            ]
+            ],
+
+            -- List of all extra cursors spawned from route or other raycast splitting
+            cursors = {
+                <tileid> = <unitid of cursor>,
+                ...
+            },
         }
     }
  ]]
 local raycast_data = {}
+
+--[[ 
+    local route_indicators = {
+        <tileid + dir> = <unitid of indicator>,
+        <tileid + dir> = <unitid of indicator>,
+        ...
+    }    
+]]
+local route_indicators = {}
 
 local POINTER_NOUNS = {
     this = true,
@@ -97,15 +124,14 @@ local POINTER_NOUNS = {
 }
 
 local function reset_this_mod_locals()
-    text_to_raycast_units = {}
-    text_to_raycast_pos = {}
     blocked_tiles = {}
     explicit_passed_tiles = {}
     cond_features_with_this_noun = {}
     raycast_data = {}
+    route_indicators = {}
 end
 
-local make_cursor, update_all_cursors
+local make_cursor, update_all_cursors, make_route_indicator
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
@@ -219,10 +245,14 @@ end
 -- This is used in {{mod_injections}}
 function reset_this_mod()
     for this_unitid, v in pairs(raycast_data) do
-        for _, cursor in ipairs(v.cursors) do
-            delunit(cursor.unitid)
-            MF_remove(cursor.unitid)
+        for _, cursor in pairs(v.cursors) do
+            delunit(cursor)
+            MF_cleanremove(cursor)
         end
+    end
+    for tileid, route_indicator_unitid in pairs(route_indicators) do
+        delunit(route_indicator_unitid)
+        MF_cleanremove(route_indicator_unitid)
     end
     reset_this_mod_globals()
     reset_this_mod_locals()
@@ -241,33 +271,18 @@ function on_add_this_text(this_unitid)
         end
 
         raycast_data[this_unitid] = {
-            cursors = {},
             raycast_unitids = {},
             raycast_positions = {},
+            cursors = {},
         }
-
-        for i = 1, num_cursors do
-            local wordunit = mmf.newObject(this_unitid)
-            local cursorunit = make_cursor(wordunit)
-    
-            table.insert(raycast_data[this_unitid].cursors, 
-                {
-                    position = NO_POSITION,
-                    unitid = cursorunit,
-                }
-            )
-        end
     end
 end
 
 function on_delele_this_text(this_unitid)
     if raycast_data[this_unitid] then
-        text_to_raycast_units[this_unitid] = nil
-        text_to_raycast_pos[this_unitid] = nil
-
         for _, cursor in ipairs(raycast_data[this_unitid].cursors) do
-            delunit(cursor.unitid)
-            MF_cleanremove(cursor.unitid)
+            delunit(cursor)
+            MF_cleanremove(cursor)
         end
         raycast_data[this_unitid] = nil
     end
@@ -288,14 +303,13 @@ end
 -- local
 function update_all_cursors()
     for this_unitid, v in pairs(raycast_data) do
-        for _, cursor in ipairs(v.cursors) do
+        for tileid, cursor_unitid in pairs(v.cursors) do
             local wordunit = mmf.newObject(this_unitid)
-            local cursorunit = mmf.newObject(cursor.unitid)
+            local cursorunit = mmf.newObject(cursor_unitid)
 
             local x = wordunit.values[XPOS]
             local y = wordunit.values[YPOS]
 
-            local tileid = cursor.position
             if tileid ~= NO_POSITION then
                 local nx = math.floor(tileid % roomsizex)
                 local ny = math.floor(tileid / roomsizex)
@@ -348,7 +362,7 @@ function update_all_cursors()
 end
 
 -- local
-function make_cursor(unit)
+function make_cursor()
     local unitid2 = MF_create("customsprite")
     local unit2 = mmf.newObject(unitid2)
     
@@ -359,6 +373,38 @@ function make_cursor(unit)
     MF_loadsprite(unitid2,"this_cursor_0",28,true)
     
     return unitid2
+end
+
+-- local
+function make_route_indicator(x, y, dir)
+    local unitid = MF_create("customsprite")
+    local unit = mmf.newObject(unitid)
+    
+    unit.values[ONLINE] = 1
+    
+    unit.layer = 1
+    unit.direction = 29
+    MF_loadsprite(unitid,"route_indicator_0",29,true)
+
+    if dir == 0 then
+        unit.angle = 0
+    elseif dir == 1 then
+        unit.angle = 90
+    elseif dir == 2 then
+        unit.angle = 180
+    elseif dir == 3 then
+        unit.angle = 270
+    end
+
+    local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    unit.values[XPOS] = x * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
+    unit.values[YPOS] = y * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
+    unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+
+    MF_setcolour(unitid,5,4)
+    
+    return unitid
 end
 
 local function this_raycast(x, y, vector, checkemptyblock)
@@ -384,14 +430,16 @@ local function this_raycast(x, y, vector, checkemptyblock)
     return nil
 end
 
-function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, include_this_units, mark_passed_tiles)
+function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, include_this_units)
     local checkblocked = checkblocked_ or false
     local checkpass = checkpass_ or false
     exclude_this_units = exclude_this_units or {}
-    local mark_passed_tiles = mark_passed_tiles or false
     local new_raycast_units = {}
     local all_block = false
     local all_pass = false
+    
+    local found_route_indicators = {}
+    local new_route_indicators = {}
     
     if checkblocked then
         all_block = findfeature("all", "is", "block") ~= nil
@@ -401,6 +449,9 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     end
     for unitid, curr_raycast_data in pairs(raycast_data) do
         if (include_this_units == nil or include_this_units[unitid]) and not exclude_this_units[unitid] then
+            curr_raycast_data.raycast_unitids = nil
+            curr_raycast_data.raycast_positions = {}
+
             local unit = mmf.newObject(unitid)
             local x = unit.values[XPOS]
             local y = unit.values[YPOS]
@@ -408,93 +459,165 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
 
             local cast_vecs = get_raycast_vectors(unit.strings[NAME], dir)
             
+            local found_raycast_pos_count = 0
             local all_rayunits = {}
-            local select_empty_tile = false
-            local tileid = nil
             for i, vector in ipairs(cast_vecs) do
-                local ray_unitids = {}
+                local ray_unitids_found_in_curr_cast = {}
+                local visited_tileids = {}
+                local pending_raycast_stack = {
+                    {
+                        x = x,
+                        y = y,
+                        vector = vector,
+                    }
+                }
 
-                local blocked = false
-                local tile_pass = true
-
-                while tile_pass do
-                    tile_pass = false
-                    local ray_pos,is_emptyblock, select_empty = this_raycast(x, y, vector, checkblocked)
+                while #pending_raycast_stack > 0 do
+                    local raycast_data = table.remove(pending_raycast_stack)
+                    local ray_pos,is_emptyblock, select_empty = this_raycast(raycast_data.x,raycast_data.y, raycast_data.vector, checkblocked)
+                    
                     if ray_pos then
-                        tileid = ray_pos[1] + ray_pos[2] * roomsizex
+                        local ray_unitids = {}
+                        local route_dirs = {}
+                        local blocked = false
+                        local is_stopping_point = true
+                        local tileid = ray_pos[1] + ray_pos[2] * roomsizex
 
-                        if checkblocked and is_emptyblock then
-                            blocked = true
-                        elseif select_empty then
-                            select_empty_tile = true
-                            local object = utils.make_object(2, ray_pos[1], ray_pos[2])
-                            table.insert(ray_unitids, object)
-                        else
-                            local total_pass = 0
-                            for _, ray_unitid in ipairs(unitmap[tileid]) do
-                                local ray_unit = mmf.newObject(ray_unitid)
-                                local ray_unit_name = ray_unit.strings[NAME] 
-                                
-                                if ray_unit.strings[UNITTYPE] == "text" then
-                                    ray_unit_name = "text"
-                                end
-
-                                if checkblocked then
-                                    if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                        blocked = true
-                                    elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
-                                        blocked = true
+                        if not visited_tileids[tileid] then
+                            visited_tileids[tileid] = true
+    
+                            if checkblocked and is_emptyblock then
+                                blocked = true
+                            elseif select_empty then
+                                local object = utils.make_object(2, ray_pos[1], ray_pos[2])
+                                table.insert(ray_unitids, object)
+                            else
+                                local total_pass_unit_count = 0
+                                local found_route = false
+                                for _, ray_unitid in ipairs(unitmap[tileid]) do
+                                    local ray_unit = mmf.newObject(ray_unitid)
+                                    local ray_unit_name = getname(ray_unit) -- If the unit is a text block, we want the name to be "text"
+    
+                                    if checkblocked then
+                                        if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                            blocked = true
+                                        elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
+                                            blocked = true
+                                        end
                                     end
-                                end
-
-                                local add_to_rayunits = not blocked
-                                if checkpass and not blocked then
-                                    if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                        total_pass = total_pass + 1
-                                        add_to_rayunits = false
-                                    else
-                                        local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                                        local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
-                                        if has_pass and not has_not_pass then
-                                            total_pass = total_pass + 1
+    
+                                    local add_to_rayunits = not blocked
+                                    if checkpass and not blocked then
+                                        if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                            total_pass_unit_count = total_pass_unit_count + 1
                                             add_to_rayunits = false
+                                        else
+                                            local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                                            local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
+                                            if has_pass and not has_not_pass then
+                                                total_pass_unit_count = total_pass_unit_count + 1
+                                                add_to_rayunits = false
+                                            end
+                                        end
+                                    end
+    
+                                    if add_to_rayunits then
+                                        local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
+                                        table.insert(ray_unitids, object)
+                                    end
+    
+                                    -- Route logic
+                                    if not blocked then
+                                        if hasfeature(ray_unit_name, "is", "route", ray_unitid) then
+                                            found_route = true
+                                            route_dirs[ray_unit.values[DIR]] = true
+                                            
+                                            local indicator_key = tileid + ray_unit.values[DIR] * roomsizex * roomsizey
+                                            found_route_indicators[indicator_key] = true
+                                            if route_indicators[indicator_key] == nil and new_route_indicators[indicator_key] == nil then
+                                                new_route_indicators[indicator_key] = make_route_indicator(ray_pos[1], ray_pos[2], ray_unit.values[DIR])
+                                            end
                                         end
                                     end
                                 end
 
-                                if add_to_rayunits then
-                                    local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
-                                    table.insert(ray_unitids, object)
+    
+                                if found_route and not blocked then
+                                    is_stopping_point = false
+                                    for dir, _ in pairs(route_dirs) do
+                                        table.insert(pending_raycast_stack, {
+                                            x = ray_pos[1],
+                                            y = ray_pos[2],
+                                            vector = ndirs[dir+1],
+                                        })
+                                    end
+                                elseif checkpass and total_pass_unit_count >= #unitmap[tileid] and not blocked then
+                                    is_stopping_point = false
+                                    table.insert(pending_raycast_stack, {
+                                        x = ray_pos[1],
+                                        y = ray_pos[2],
+                                        vector = raycast_data.vector,
+                                    })
+                                else
+                                    -- Found stopping point. Keep is_stopping_point = true
                                 end
                             end
-
-                            if checkpass and total_pass >= #unitmap[tileid] then
-                                tile_pass = true
-                                tileid = nil
+                            
+                            if blocked then
+                                set_blocked_tile(tileid)
+                            end
+    
+                            if is_stopping_point then
+                                if curr_raycast_data.raycast_positions[tileid] == nil then
+                                    curr_raycast_data.raycast_positions[tileid] = ray_unitids
+                                    found_raycast_pos_count = found_raycast_pos_count + 1
+                                end
+                            else
+                                -- Note: maybe in the future there's a case where we insert back into pending_raycast_stack but we still
+                                -- want to insert units into the final set of raycast units?
                                 ray_unitids = {}
-                                x = ray_pos[1]
-                                y = ray_pos[2]
+                            end
+    
+                            for _, ray_unitid in ipairs(ray_unitids) do
+                                table.insert(ray_unitids_found_in_curr_cast, ray_unitid)
                             end
                         end
                     end
                 end
 
-                if blocked and tileid then
-                    set_blocked_tile(tileid)
-                    ray_unitids = {}
-                end
-
-                if tileid then
-                    curr_raycast_data.cursors[i].position = tileid
-                    curr_raycast_data.raycast_positions[tileid] = ray_unitids
-                else
-                    -- Do not set curr_raycast_data.raycast_positions[tileid] to indicate that the cursor didn't
-                    -- stop at any position
-                    curr_raycast_data.cursors[i].position = NO_POSITION
-                end
-
-                for _, ray_unitid in ipairs(ray_unitids) do
+                for _, ray_unitid in ipairs(ray_unitids_found_in_curr_cast) do
                     table.insert(all_rayunits, ray_unitid)
+                end
+            end
+
+            -- Add/Update/Remove cursors based on how many raycast positions we found
+            local new_positions = {}
+            for tileid, _ in pairs(curr_raycast_data.raycast_positions) do
+                if not curr_raycast_data.cursors[tileid] then
+                    table.insert(new_positions, tileid)
+                end
+            end
+
+            local tileids_to_delete = {}
+            for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
+                if not curr_raycast_data.raycast_positions[tileid] then
+                    table.insert(tileids_to_delete, tileid)
+                    if #new_positions > 0 then
+                        local new_tileid = table.remove(new_positions)
+                        curr_raycast_data.cursors[new_tileid] = cursor_unitid
+                    else
+                        delunit(cursor_unitid)
+                        MF_cleanremove(cursor_unitid)
+                    end
+                end
+            end
+            for _, tileid in ipairs(tileids_to_delete) do
+                curr_raycast_data.cursors[tileid] = nil
+            end
+            if #new_positions > 0 then
+                for _, tileid in ipairs(new_positions) do
+                    local cursor_unitid = make_cursor()
+                    curr_raycast_data.cursors[tileid] = cursor_unitid
                 end
             end
 
@@ -522,15 +645,23 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                 end
             end
             if #all_rayunits == 0 then
-                text_to_raycast_units[unitid] = nil
                 curr_raycast_data.raycast_unitids = nil
             else
-                text_to_raycast_units[unitid] = all_rayunits
                 curr_raycast_data.raycast_unitids = all_rayunits
             end
-
-            text_to_raycast_pos[unitid] = tileid
         end
+    end
+
+    -- Updating the set of route indicators
+    for indicator_key, indicator in pairs(route_indicators) do
+        if not found_route_indicators[indicator_key] then
+            delunit(indicator)
+            MF_cleanremove(indicator)
+            route_indicators[indicator_key] = nil
+        end
+    end
+    for indicator_key, indicator in pairs(new_route_indicators) do 
+        route_indicators[indicator_key] = indicator
     end
 end
 
@@ -559,7 +690,6 @@ function get_raycast_units(this_text_unitid, checkblocked, checkpass)
     local raycast_units = raycast_data[this_text_unitid].raycast_unitids
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked or checkpass then
-            -- originally text_to_raycast_pos[this_text_unitid]
             local unitid, _, _, tileid = utils.parse_object(raycast_units[1])
             if checkblocked then
                 if blocked_tiles[tileid] then
@@ -612,7 +742,7 @@ end
 
 -- Like get_raycast_units, but factors in this redirection
 local function get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
-    if not text_to_raycast_pos[this_text_unitid] then
+    if not raycast_data[this_text_unitid] then
         return {}, {}
     end
     local this_text_unit = mmf.newObject(this_text_unitid)
@@ -627,32 +757,31 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
 
     while #raycast_this_texts > 0 do
         local curr_this_unitid = table.remove(raycast_this_texts) -- Pop the stack 
-        local curr_raycast_tileid = text_to_raycast_pos[curr_this_unitid]
         
-        if checkblocked and blocked_tiles[curr_raycast_tileid] then
-            -- do nothing if blocked
-        elseif checkpass and explicit_passed_tiles[curr_raycast_tileid] then
-            -- do nothing if the tile is explicitly passed
-        elseif visited_tileids[curr_raycast_tileid] then
+        for curr_raycast_tileid, raycast_objects in pairs(raycast_data[curr_this_unitid].raycast_positions) do
+            if checkblocked and blocked_tiles[curr_raycast_tileid] then
+                -- do nothing if blocked
+            elseif checkpass and explicit_passed_tiles[curr_raycast_tileid] then
+                -- do nothing if the tile is explicitly passed
+            elseif visited_tileids[curr_raycast_tileid] then
 
-        elseif curr_raycast_tileid then
-            visited_tileids[curr_raycast_tileid] = true
-            lit_up_this_texts[curr_this_unitid] = true
+            elseif curr_raycast_tileid then
+                visited_tileids[curr_raycast_tileid] = true
+                lit_up_this_texts[curr_this_unitid] = true
 
-            local raycast_units = text_to_raycast_units[curr_this_unitid]
-            if raycast_units then
-                for i, ray_unitid in ipairs(raycast_units) do
-
+                for i, ray_object in ipairs(raycast_objects) do
+                    local ray_unitid = utils.parse_object(ray_object)
                     if ray_unitid == 2 then
-                        table.insert(out_raycast_units, ray_unitid)
+                        table.insert(out_raycast_units, ray_object)
                     else
                         local ray_unit = mmf.newObject(ray_unitid)
 
+                        print(ray_unit.strings[NAME])
                         if is_name_text_this(ray_unit.strings[NAME]) then
                             table.insert(raycast_this_texts, ray_unitid)
                             table.insert(all_redirected_this_units, ray_unitid)
                         elseif is_unit_valid_this_property(ray_unitid, verb) then
-                            table.insert(out_raycast_units, ray_unitid)
+                            table.insert(out_raycast_units, ray_object)
                         end
                     end
                 end
@@ -698,10 +827,11 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
-                local raycast_units, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
-                for _, unitid in ipairs(raycast_units) do
-                    local rulename = ""
+                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
+                for _, object in ipairs(raycast_objects) do
+                    local unitid = utils.parse_object(object)
                     local ray_unit = mmf.newObject(unitid)
+                    local rulename = ""
                     if unitid == 2 then
                         rulename = "empty"
                     else
@@ -712,7 +842,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     end
 
                     if filter_property_func(rulename) then
-                        if unitid ~= "empty" then
+                        if rulename ~= "empty" then
                             if ray_unit.strings[UNITTYPE] == "text" then
                                 this_mod_globals.active_this_property_text[unitid] = true
                             end
@@ -870,7 +1000,7 @@ function do_subrule_this()
     -- "this is pass" will apply to all this texts *other* than the "this" in the original rule.
     -- The idea is that "block" will be "active" in enforcing its effect while "pass" will be "passive" in doing the same thing.
     local all_processed_this_units = {}
-    local deferred_rules_with_this = {}
+    local deferred_rules_with_this = {} -- Every call to process_this_rules() removes entries from this table
     for pointer_noun, _ in pairs(POINTER_NOUNS) do
         if featureindex[pointer_noun] ~= nil then
             for _, feature in ipairs(featureindex[pointer_noun]) do
@@ -879,40 +1009,66 @@ function do_subrule_this()
         end
     end
 
+    --[[ 
+        Notes:
+        - update_raycast_units considers block/pass rules in the current featureindex at that time
+            - checkblocked/checkpass in update_raycast_units means whether or not to consider the existing block/pass rules in featureindex when updating rayunits
+        - process_this_rules
+            - checkblocked/checkpass in process_this_rules is mainly a proxy for calling the same in get_raycast_units()
+                - checkblocked/checkpass in get_raycast_units means whether or not to consider if the raycast position is marked as block or pass (see set_blocked_tile(), set_passed_tile())
+    ]]
+
     if (#deferred_rules_with_this > 0) then
         update_raycast_units(true, true, false)
         local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block")
+
+        if THIS_LOGGING then
+            print("block phase---------")
+        end
         for unit, _ in pairs(processed_block_this_units) do
+            if THIS_LOGGING then
+                print(utils.unitstring(unit))
+            end
             all_processed_this_units[unit] = true
         end
-
+        
+        if THIS_LOGGING then
+            print("pass phase---------")
+        end
         update_raycast_units(true, true, false, all_processed_this_units)
         local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass")
         for unit, _ in pairs(processed_pass_this_units) do
+            if THIS_LOGGING then
+                print(utils.unitstring(unit))
+            end
             all_processed_this_units[unit] = true
         end
         
-        update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
+        -- @Note (resolve before publish): - I claim that we don't need these phases since the block and pass phase above also covers "X is this(block)" and all variations. Check that this is correct
+        -- print("ray-block phase")
+        -- update_raycast_units(true, true, false, all_processed_this_units)
+        -- local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
         
-        for unit, _ in pairs(processed_block_this_units2) do
-            all_processed_this_units[unit] = true
-            processed_block_this_units[unit] = true
-        end
-
-        update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
-        for unit, _ in pairs(processed_pass_this_units2) do
-            all_processed_this_units[unit] = true
-            processed_pass_this_units[unit] = true
-        end
+        -- for unit, _ in pairs(processed_block_this_units2) do
+        --     print(utils.unitstring(unit))
+        --     all_processed_this_units[unit] = true
+        --     processed_block_this_units[unit] = true
+        -- end
+        
+        -- print("ray-pass phase")
+        -- update_raycast_units(true, true, false, all_processed_this_units)
+        -- local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
+        -- for unit, _ in pairs(processed_pass_this_units2) do
+        --     print(utils.unitstring(unit))
+        --     all_processed_this_units[unit] = true
+        --     processed_pass_this_units[unit] = true
+        -- end
 
         for this_unitid, _ in pairs(processed_block_this_units) do
-            -- @todo - optimize by looping through each tileid and each ray unit within each tileid
-            local processed_tileids = {}
-            for _, ray_object in ipairs(get_raycast_units(this_unitid, false, false)) do
+            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+                for _, ray_object in ipairs(ray_objects) do
                 local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                if not processed_tileids[tileid] then
+                    
                     local has_block = false
                     local has_not_block = false
                     if ray_unitid == 2 then
@@ -929,18 +1085,16 @@ function do_subrule_this()
                     end
                     
                     if has_block and not has_not_block then
-                        processed_tileids[tileid] = true
                         set_blocked_tile(tileid)
-                        -- break
+                        break
                     end
                 end
             end
         end
 
         for this_unitid, _ in pairs(processed_pass_this_units) do
-            -- @todo - optimize by looping through each tileid and each ray unit within each tileid. Need to make a "get_raycast_units_by_tileid"
-            local processed_tileids = {}
-            for _, ray_object in ipairs(get_raycast_units(this_unitid, false, false)) do
+            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+                for _, ray_object in ipairs(ray_objects) do
                 local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
                 local ray_unit_name = ""
                 local has_pass = false
@@ -961,8 +1115,9 @@ function do_subrule_this()
                 end
 
                 if has_pass and not has_not_pass then
-                    processed_tileids[tileid] = true
                     set_passed_tile(tileid)
+                        break
+                    end
                 end
             end
         end
