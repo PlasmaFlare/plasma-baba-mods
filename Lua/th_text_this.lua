@@ -1,6 +1,6 @@
 table.insert(editor_objlist_order, "text_this")
 table.insert(editor_objlist_order, "text_block")
-table.insert(editor_objlist_order, "text_route")
+table.insert(editor_objlist_order, "text_relay")
 table.insert(editor_objlist_order, "text_pass")
 
 editor_objlist["text_this"] = 
@@ -39,9 +39,9 @@ editor_objlist["text_pass"] =
 	colour = {4, 3},
     colour_active = {4, 4},
 }
-editor_objlist["text_route"] = 
+editor_objlist["text_relay"] = 
 {
-	name = "text_route",
+	name = "text_relay",
 	sprite_in_root = false,
 	unittype = "text",
 	tags = {"plasma's mods", "text", "abstract", "text_quality"},
@@ -91,15 +91,7 @@ local THIS_LOGGING = false
             },
 
 
-            -- List of all primary cursors associated with the raycast
-            cursors = [
-                {
-                    unitid: <unitid of cursor>,
-                    position: <tileid>
-                }
-            ],
-
-            -- List of all extra cursors spawned from route or other raycast splitting
+            -- List of all extra spawned from relay or other raycast splitting
             cursors = {
                 <tileid> = <unitid of cursor>,
                 ...
@@ -110,13 +102,13 @@ local THIS_LOGGING = false
 local raycast_data = {}
 
 --[[ 
-    local route_indicators = {
+    local relay_indicators = {
         <tileid + dir> = <unitid of indicator>,
         <tileid + dir> = <unitid of indicator>,
         ...
     }    
 ]]
-local route_indicators = {}
+local relay_indicators = {}
 
 local POINTER_NOUNS = {
     this = true,
@@ -128,10 +120,10 @@ local function reset_this_mod_locals()
     explicit_passed_tiles = {}
     cond_features_with_this_noun = {}
     raycast_data = {}
-    route_indicators = {}
+    relay_indicators = {}
 end
 
-local make_cursor, update_all_cursors, make_route_indicator
+local make_cursor, update_all_cursors, make_relay_indicator
 
 table.insert(mod_hook_functions["rule_baserules"],
     function()
@@ -250,9 +242,9 @@ function reset_this_mod()
             MF_cleanremove(cursor)
         end
     end
-    for tileid, route_indicator_unitid in pairs(route_indicators) do
-        delunit(route_indicator_unitid)
-        MF_cleanremove(route_indicator_unitid)
+    for tileid, relay_indicator_unitid in pairs(relay_indicators) do
+        delunit(relay_indicator_unitid)
+        MF_cleanremove(relay_indicator_unitid)
     end
     reset_this_mod_globals()
     reset_this_mod_locals()
@@ -376,7 +368,7 @@ function make_cursor()
 end
 
 -- local
-function make_route_indicator(x, y, dir)
+function make_relay_indicator(x, y, dir)
     local unitid = MF_create("customsprite")
     local unit = mmf.newObject(unitid)
     
@@ -384,7 +376,7 @@ function make_route_indicator(x, y, dir)
     
     unit.layer = 1
     unit.direction = 29
-    MF_loadsprite(unitid,"route_indicator_0",29,true)
+    MF_loadsprite(unitid,"relay_indicator_0",29,true)
 
     if dir == 0 then
         unit.angle = 0
@@ -438,8 +430,8 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     local all_block = false
     local all_pass = false
     
-    local found_route_indicators = {}
-    local new_route_indicators = {}
+    local found_relay_indicators = {}
+    local new_relay_indicators = {}
     
     if checkblocked then
         all_block = findfeature("all", "is", "block") ~= nil
@@ -478,7 +470,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                     
                     if ray_pos then
                         local ray_unitids = {}
-                        local route_dirs = {}
+                        local relay_dirs = {}
                         local blocked = false
                         local is_stopping_point = true
                         local tileid = ray_pos[1] + ray_pos[2] * roomsizex
@@ -493,7 +485,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                                 table.insert(ray_unitids, object)
                             else
                                 local total_pass_unit_count = 0
-                                local found_route = false
+                                local found_relay = false
                                 for _, ray_unitid in ipairs(unitmap[tileid]) do
                                     local ray_unit = mmf.newObject(ray_unitid)
                                     local ray_unit_name = getname(ray_unit) -- If the unit is a text block, we want the name to be "text"
@@ -526,25 +518,25 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                                         table.insert(ray_unitids, object)
                                     end
     
-                                    -- Route logic
+                                    -- relay logic
                                     if not blocked then
-                                        if hasfeature(ray_unit_name, "is", "route", ray_unitid) then
-                                            found_route = true
-                                            route_dirs[ray_unit.values[DIR]] = true
+                                        if hasfeature(ray_unit_name, "is", "relay", ray_unitid) then
+                                            found_relay = true
+                                            relay_dirs[ray_unit.values[DIR]] = true
                                             
                                             local indicator_key = tileid + ray_unit.values[DIR] * roomsizex * roomsizey
-                                            found_route_indicators[indicator_key] = true
-                                            if route_indicators[indicator_key] == nil and new_route_indicators[indicator_key] == nil then
-                                                new_route_indicators[indicator_key] = make_route_indicator(ray_pos[1], ray_pos[2], ray_unit.values[DIR])
+                                            found_relay_indicators[indicator_key] = true
+                                            if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
+                                                new_relay_indicators[indicator_key] = make_relay_indicator(ray_pos[1], ray_pos[2], ray_unit.values[DIR])
                                             end
                                         end
                                     end
                                 end
 
     
-                                if found_route and not blocked then
+                                if found_relay and not blocked then
                                     is_stopping_point = false
-                                    for dir, _ in pairs(route_dirs) do
+                                    for dir, _ in pairs(relay_dirs) do
                                         table.insert(pending_raycast_stack, {
                                             x = ray_pos[1],
                                             y = ray_pos[2],
@@ -652,16 +644,16 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
         end
     end
 
-    -- Updating the set of route indicators
-    for indicator_key, indicator in pairs(route_indicators) do
-        if not found_route_indicators[indicator_key] then
+    -- Updating the set of relay indicators
+    for indicator_key, indicator in pairs(relay_indicators) do
+        if not found_relay_indicators[indicator_key] then
             delunit(indicator)
             MF_cleanremove(indicator)
-            route_indicators[indicator_key] = nil
+            relay_indicators[indicator_key] = nil
         end
     end
-    for indicator_key, indicator in pairs(new_route_indicators) do 
-        route_indicators[indicator_key] = indicator
+    for indicator_key, indicator in pairs(new_relay_indicators) do 
+        relay_indicators[indicator_key] = indicator
     end
 end
 
