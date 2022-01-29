@@ -409,19 +409,28 @@ function make_relay_indicator(x, y, dir)
 end
 
 local function this_raycast(x, y, vector, checkemptyblock)
+    -- return values: ray_pos, is_emptyblock, select_empty, emptyrelay_dir
     local ox = x + vector[1]
     local oy = y + vector[2]
-    while inbounds(ox,oy) do
+    while inbounds(ox,oy,1) do
         local tileid = ox + oy * roomsizex
 
         if unitmap[tileid] == nil then
+            local empty_dir = emptydir(ox, oy)
+            --@TODO: should empty have a random direction? It would lead to dumb tesla coil levels
+            -- if empty_dir == 4 then
+            --     empty_dir = fixedrandom(0,3)
+            -- end
+
             if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
-                return {ox, oy},true, false
+                return {ox, oy}, true, false, nil
+            elseif hasfeature("empty", "is", "relay", 2, ox, oy) and not hasfeature("empty", "is", "not relay", 2, ox, oy) and empty_dir ~= 4 then
+                return {ox, oy}, false, false, empty_dir
             elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
-                return {ox, oy}, false, true
+                return {ox, oy}, false, true, nil
             end
         elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
-            return {ox, oy},false, false
+            return {ox, oy}, false, false, nil
         end
 
         ox = ox + vector[1]
@@ -475,7 +484,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
 
                 while #pending_raycast_stack > 0 do
                     local raycast_data = table.remove(pending_raycast_stack)
-                    local ray_pos,is_emptyblock, select_empty = this_raycast(raycast_data.x,raycast_data.y, raycast_data.vector, checkblocked)
+                    local ray_pos,is_emptyblock, select_empty, emptyrelay_dir = this_raycast(raycast_data.x,raycast_data.y, raycast_data.vector, checkblocked)
                     
                     if ray_pos then
                         local ray_unitids = {}
@@ -489,6 +498,19 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     
                             if checkblocked and is_emptyblock then
                                 blocked = true
+                            elseif emptyrelay_dir then
+                                local indicator_key = tileid + emptyrelay_dir * roomsizex * roomsizey
+                                found_relay_indicators[indicator_key] = true
+                                if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
+                                    new_relay_indicators[indicator_key] = make_relay_indicator(ray_pos[1], ray_pos[2], emptyrelay_dir)
+                                end
+
+                                is_stopping_point = false
+                                table.insert(pending_raycast_stack, {
+                                    x = ray_pos[1],
+                                    y = ray_pos[2],
+                                    vector = ndirs[emptyrelay_dir+1],
+                                })
                             elseif select_empty then
                                 local object = utils.make_object(2, ray_pos[1], ray_pos[2])
                                 table.insert(ray_unitids, object)
