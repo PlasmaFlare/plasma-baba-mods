@@ -48,8 +48,8 @@ editor_objlist["text_relay"] =
 	tiling = -1,
 	type = 2,
 	layer = 20,
-	colour = {5, 1},
-    colour_active = {5, 3},
+	colour = {5, 2},
+    colour_active = {5, 4},
 }
 
 formatobjlist()
@@ -70,6 +70,7 @@ local utils = plasma_utils
 
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
+local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local on_level_start = false
 local NO_POSITION = -1
@@ -118,6 +119,7 @@ local POINTER_NOUNS = {
 local function reset_this_mod_locals()
     blocked_tiles = {}
     explicit_passed_tiles = {}
+    explicit_relayed_tiles = {}
     cond_features_with_this_noun = {}
     raycast_data = {}
     relay_indicators = {}
@@ -175,7 +177,6 @@ table.insert(mod_hook_functions["rule_update_after"],
         end
         if this_mod_globals.undoed_after_called then
             this_mod_globals.undoed_after_called = false
-            -- update_all_cursors()
         end
     end
 )
@@ -290,7 +291,11 @@ local function set_passed_tile(tileid)
         explicit_passed_tiles[tileid] = true
     end
 end
-
+local function set_relay_tile(tileid)
+    if tileid then
+        explicit_relayed_tiles[tileid] = true
+    end
+end
 
 -- local
 function update_all_cursors()
@@ -313,11 +318,15 @@ function update_all_cursors()
                 local c2 = 0
                 cursorunit.layer = 1
                 if blocked_tiles[tileid] then
-                    -- display different sprite if the tile is blocked
                     cursorunit.values[ZLAYER] = 44
                     cursorunit.direction = 30
                     MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
                     c1,c2 = getuicolour("blocked")
+                elseif explicit_relayed_tiles[tileid] then
+                    cursorunit.values[ZLAYER] = 43
+                    cursorunit.direction = 29
+                    MF_loadsprite(cursorunit.fixed,"this_cursor_relay_0",29,true)
+                    c1,c2 = 5, 4
                 elseif explicit_passed_tiles[tileid] then
                     cursorunit.values[ZLAYER] = 42
                     cursorunit.direction = 31
@@ -375,8 +384,8 @@ function make_relay_indicator(x, y, dir)
     unit.values[ONLINE] = 1
     
     unit.layer = 1
-    unit.direction = 29
-    MF_loadsprite(unitid,"relay_indicator_0",29,true)
+    unit.direction = 27
+    MF_loadsprite(unitid,"relay_indicator_0",27,true)
 
     if dir == 0 then
         unit.angle = 0
@@ -422,7 +431,7 @@ local function this_raycast(x, y, vector, checkemptyblock)
     return nil
 end
 
-function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, include_this_units)
+function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, keep_relay_indicators)
     local checkblocked = checkblocked_ or false
     local checkpass = checkpass_ or false
     exclude_this_units = exclude_this_units or {}
@@ -440,7 +449,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
         all_pass = findfeature("all", "is", "pass") ~= nil
     end
     for unitid, curr_raycast_data in pairs(raycast_data) do
-        if (include_this_units == nil or include_this_units[unitid]) and not exclude_this_units[unitid] then
+        if not exclude_this_units[unitid] then
             curr_raycast_data.raycast_unitids = nil
             curr_raycast_data.raycast_positions = {}
 
@@ -556,6 +565,9 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                             end
                             
                             if blocked then
+                                if THIS_LOGGING then
+                                    print("setting blocked in update raycast", ray_pos[1], ray_pos[2])
+                                end
                                 set_blocked_tile(tileid)
                             end
     
@@ -645,11 +657,13 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     end
 
     -- Updating the set of relay indicators
-    for indicator_key, indicator in pairs(relay_indicators) do
-        if not found_relay_indicators[indicator_key] then
-            delunit(indicator)
-            MF_cleanremove(indicator)
-            relay_indicators[indicator_key] = nil
+    if not keep_relay_indicators then
+        for indicator_key, indicator in pairs(relay_indicators) do
+            if not found_relay_indicators[indicator_key] then
+                delunit(indicator)
+                MF_cleanremove(indicator)
+                relay_indicators[indicator_key] = nil
+            end
         end
     end
     for indicator_key, indicator in pairs(new_relay_indicators) do 
@@ -674,7 +688,7 @@ function check_cond_rules_with_this_noun()
     end
 end
 
-function get_raycast_units(this_text_unitid, checkblocked, checkpass)
+function get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)
     if is_this_unit_in_stablerule(this_text_unitid) then
         return get_stable_this_raycast_units(tonumber(this_text_unitid))
     end
@@ -682,14 +696,35 @@ function get_raycast_units(this_text_unitid, checkblocked, checkpass)
     local raycast_units = raycast_data[this_text_unitid].raycast_unitids
     if raycast_units ~= nil and #raycast_units > 0 then
         if checkblocked or checkpass then
-            local unitid, _, _, tileid = utils.parse_object(raycast_units[1])
+            local unitid, x, y, tileid = utils.parse_object(raycast_units[1])
             if checkblocked then
                 if blocked_tiles[tileid] then
+                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkblocked = true. And found blocked units at (%d, %d)", x, y)
+                    -- utils.debug_assert(false, dbg_str)
+                    if THIS_LOGGING then
+                        print(dbg_str)
+                    end
                     return {}
                 end
             end
             if checkpass then
                 if explicit_passed_tiles[tileid] then
+                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkpass = true. And found passed units at (%d, %d)", x, y)
+                    -- utils.debug_assert(false, dbg_str)
+                    if THIS_LOGGING then
+                        print(dbg_str)
+                    end
+                    return {}
+                end
+            end
+            
+            if checkrelay then
+                if explicit_relayed_tiles[tileid] then
+                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkrelay = true. And found relayed units at (%d, %d)", x, y)
+                    if THIS_LOGGING then
+                        print(dbg_str)
+                    end
+                    -- utils.debug_assert(false, dbg_str)
                     return {}
                 end
             end
@@ -733,7 +768,7 @@ local function is_unit_valid_this_property(unitid, verb)
 end
 
 -- Like get_raycast_units, but factors in this redirection
-local function get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
+local function get_raycast_property_units(this_text_unitid, checkblocked, checkpass, checkrelay, verb)
     if not raycast_data[this_text_unitid] then
         return {}, {}
     end
@@ -755,6 +790,8 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
                 -- do nothing if blocked
             elseif checkpass and explicit_passed_tiles[curr_raycast_tileid] then
                 -- do nothing if the tile is explicitly passed
+            elseif checkrelay and explicit_relayed_tiles[curr_raycast_tileid] then
+                -- do nothing if the tile is explicitly relayed
             elseif visited_tileids[curr_raycast_tileid] then
 
             elseif curr_raycast_tileid then
@@ -768,7 +805,6 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
                     else
                         local ray_unit = mmf.newObject(ray_unitid)
 
-                        print(ray_unit.strings[NAME])
                         if is_name_text_this(ray_unit.strings[NAME]) then
                             table.insert(raycast_this_texts, ray_unitid)
                             table.insert(all_redirected_this_units, ray_unitid)
@@ -789,8 +825,8 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
 
     return out_raycast_units, all_redirected_this_units
 end
-
-local function process_this_rules(this_rules, filter_property_func, checkblocked, checkpass, curr_phase)
+--@TODO: move curr_phase to before checkblocked
+local function process_this_rules(this_rules, filter_property_func, checkblocked, checkpass, curr_phase, checkrelay)
     local final_options = {}
     local this_noun_cond_options_list = {}
     local processed_this_units = {}
@@ -819,7 +855,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
-                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, curr_phase, verb)
+                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, checkrelay, verb)
                 for _, object in ipairs(raycast_objects) do
                     local unitid = utils.parse_object(object)
                     local ray_unit = mmf.newObject(unitid)
@@ -886,7 +922,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                         table.insert(visualfeatures, {rule, conds, ids, tags})
                     end
                 else
-                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass)) do
+                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
                         if ray_unitid == 2 then
@@ -911,7 +947,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
 
                             -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
                             -- description for why we do this.
-                            if curr_phase == "block" or curr_phase == "pass" or curr_phase == "ray-block" or curr_phase == "ray-pass" and #conds > 0 then
+                            if (curr_phase == "block" or curr_phase == "pass" or curr_phase == "relay" or curr_phase == "ray-block" or curr_phase == "ray-pass" or curr_phase == "ray-relay") and #conds > 0 then
                                 table.insert(this_noun_cond_options_list, {
                                     this_unitid = this_text_unitid,
                                     ray_tileid = ray_tileid,
@@ -978,6 +1014,9 @@ end
 local function pass_filter(name)
     return name == "pass"
 end
+local function relay_filter(name)
+    return name == "relay"
+end
 local function other_filter(name)
     return name ~= "block" and name ~= "pass"
 end
@@ -985,6 +1024,7 @@ end
 function do_subrule_this()
     blocked_tiles = {}
     explicit_passed_tiles = {}
+    explicit_relayed_tiles = {}
 
     -- Used for preventing certain this texts from updating their raycast units in later phases.
     -- This is used for this texts found in "pass" phase. 
@@ -1005,19 +1045,32 @@ function do_subrule_this()
         Notes:
         - update_raycast_units considers block/pass rules in the current featureindex at that time
             - checkblocked/checkpass in update_raycast_units means whether or not to consider the existing block/pass rules in featureindex when updating rayunits
+            - it also calls hasfeature to check if a unit is blocked/pass, which calls testcond, which if there is a rule with block/pass that also has THIS, would also call get_raycast_units()
         - process_this_rules
             - checkblocked/checkpass in process_this_rules is mainly a proxy for calling the same in get_raycast_units()
                 - checkblocked/checkpass in get_raycast_units means whether or not to consider if the raycast position is marked as block or pass (see set_blocked_tile(), set_passed_tile())
     ]]
 
     if (#deferred_rules_with_this > 0) then
-        update_raycast_units(true, true, false)
-        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block")
-
         if THIS_LOGGING then
             print("block phase---------")
         end
+        update_raycast_units(true, true, false, {}, true) -- @TODO: not sure if I like setting the last param to true. This would rely on the update_raycast_units() call in {{mod_injections}} to clear the relay indicators
+        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block", true)
+
         for unit, _ in pairs(processed_block_this_units) do
+            if THIS_LOGGING then
+                print(utils.unitstring(unit))
+            end
+            all_processed_this_units[unit] = true
+        end
+        
+        if THIS_LOGGING then
+            print("relay phase---------")
+        end
+        update_raycast_units(true, true, false, all_processed_this_units, true)
+        local processed_relay_this_units = process_this_rules(deferred_rules_with_this, relay_filter, true, false, "relay", true)
+        for unit, _ in pairs(processed_relay_this_units) do
             if THIS_LOGGING then
                 print(utils.unitstring(unit))
             end
@@ -1027,8 +1080,8 @@ function do_subrule_this()
         if THIS_LOGGING then
             print("pass phase---------")
         end
-        update_raycast_units(true, true, false, all_processed_this_units)
-        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass")
+        update_raycast_units(true, true, false, all_processed_this_units, true)
+        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass", true)
         for unit, _ in pairs(processed_pass_this_units) do
             if THIS_LOGGING then
                 print(utils.unitstring(unit))
@@ -1059,7 +1112,7 @@ function do_subrule_this()
         for this_unitid, _ in pairs(processed_block_this_units) do
             for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
                 for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
                     
                     local has_block = false
                     local has_not_block = false
@@ -1079,6 +1132,32 @@ function do_subrule_this()
                     if has_block and not has_not_block then
                         set_blocked_tile(tileid)
                         break
+                    end    
+                end
+            end
+        end
+
+        for this_unitid, _ in pairs(processed_relay_this_units) do
+            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+                for _, ray_object in ipairs(ray_objects) do
+                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                    local has_relay = false
+                    local has_not_relay = false
+                    if ray_unitid == 2 then
+                        has_relay = hasfeature("empty", "is", "relay", 2, x, y)
+                        has_not_relay = hasfeature("empty", "is", "not relay", 2, x, y)
+                    else
+                        local ray_unit = mmf.newObject(ray_unitid)
+                        local ray_unit_name = ray_unit.strings[NAME]
+                        if ray_unit.strings[UNITTYPE] == "text" then
+                            ray_unit_name = "text"
+                        end
+                        has_relay = hasfeature(ray_unit_name, "is", "relay", ray_unitid)
+                        has_not_relay = hasfeature(ray_unit_name, "is", "not relay", ray_unitid)
+                    end
+                    
+                    if has_relay and not has_not_relay then
+                        set_relay_tile(tileid)
                     end
                 end
             end
@@ -1087,34 +1166,40 @@ function do_subrule_this()
         for this_unitid, _ in pairs(processed_pass_this_units) do
             for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
                 for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                local ray_unit_name = ""
-                local has_pass = false
-                local has_not_pass = false
+                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                    local ray_unit_name = ""
+                    local has_pass = false
+                    local has_not_pass = false
 
-                if ray_unitid == 2 then
-                    ray_unit_name = "empty"
-                    has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
-                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
+                    if ray_unitid == 2 then
+                        ray_unit_name = "empty"
+                        has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
+                        has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
+                    else
+                        local ray_unit = mmf.newObject(ray_unitid)
+                        ray_unit_name = ray_unit.strings[NAME]
+                        if ray_unit.strings[UNITTYPE] == "text" then
+                            ray_unit_name = "text"
+                        end
+                        has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                        has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
                     end
-                    has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
-                end
 
-                if has_pass and not has_not_pass then
-                    set_passed_tile(tileid)
+                    if has_pass and not has_not_pass then
+                        set_passed_tile(tileid)
                         break
                     end
                 end
             end
         end
 
-        update_raycast_units(true, true, false, all_processed_this_units)
-        process_this_rules(deferred_rules_with_this, other_filter, true, true, "other")
+        if THIS_LOGGING then
+            print("other phase---------")
+        end
+        update_raycast_units(true, true, false, all_processed_this_units, true)
+        process_this_rules(deferred_rules_with_this, other_filter, true, true, "other", true)
+        if THIS_LOGGING then
+            print("end---------")
+        end
     end
 end
