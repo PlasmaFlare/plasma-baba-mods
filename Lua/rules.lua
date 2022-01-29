@@ -1483,9 +1483,17 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 	
 	if (#option == 3) then
 		local rule = {option,conds,ids,tags}
-		-- Don't display any rules with THIS as either target or property
-		if is_name_text_this(option[1]) or is_name_text_this(option[1], true) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
-			visual = false
+		--[[ 
+			Defer processing any sentences with "this" as target or effect.
+			The reason that we do this is if we insert "not this is blue" into featureindex before we call do_subrule_this(), it will evaluate as "anything that isn't the non-text object called "this" is blue".
+			This would make everything blue, since everything on the level isn't this hypothetical-non-text-THIS-object. 
+		]]
+		if is_name_text_this(option[1]) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
+			defer_addoption_with_this(rule)
+			return
+		elseif is_name_text_this(option[1], true) then
+			defer_addoption_with_this(rule)
+			return
 		end
 
 		table.insert(features, rule)

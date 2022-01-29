@@ -72,6 +72,7 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
+local deferred_rules_with_this = {} -- gather all features with THIS in the sentence into here instead of directly submitting into featureindex. Then when do_subrule_this() is called, process all features
 local on_level_start = false
 local NO_POSITION = -1
 local THIS_LOGGING = false
@@ -168,6 +169,7 @@ table.insert(mod_hook_functions["rule_update"],
     function(is_this_a_repeated_update)
         this_mod_globals.active_this_property_text = {}
         cond_features_with_this_noun = {}
+        deferred_rules_with_this = {}
     end
 )
 table.insert(mod_hook_functions["rule_update_after"],
@@ -279,6 +281,10 @@ function on_delele_this_text(this_unitid)
         end
         raycast_data[this_unitid] = nil
     end
+end
+
+function defer_addoption_with_this(rule)
+    table.insert(deferred_rules_with_this, rule)
 end
 
 local function set_blocked_tile(tileid)
@@ -931,7 +937,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                                 local newrule = {i, option.rule[2], option.rule[3]}
                                 local newconds = {}
                                 table.insert(newconds, {"not this", {this_unit_as_param_id} })
-                                for a,b in ipairs(conds) do
+                                for a,b in ipairs(option.conds) do
                                     table.insert(newconds, b)
                                 end
                                 table.insert(target_options, {rule = newrule, conds = newconds, notrule = true, showrule = false})
@@ -941,7 +947,22 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     
                     -- Rule display in pause menu
                     if #target_options > 0 and filter_property_func(property) then
-                        table.insert(visualfeatures, {rule, conds, ids, tags})
+                        local raycast_names = {}
+                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
+                            local ray_unitid = utils.parse_object(ray_object)
+                            local ray_unit = mmf.newObject(ray_unitid)
+                            local ray_name = getname(ray_unit)
+
+                            if raycast_names[ray_name] == nil then
+                                local newrule = {ray_name, rule[2], rule[2]}
+                                local newconds = {}
+                                table.insert(newconds, {"not this", {this_unit_as_param_id} })
+                                for a,b in ipairs(conds) do
+                                    table.insert(newconds, b)
+                                end
+                                table.insert(visualfeatures, {newrule, newconds, ids, tags})
+                            end
+                        end 
                     end
                 else
                     for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
@@ -1054,14 +1075,6 @@ function do_subrule_this()
     -- "this is pass" will apply to all this texts *other* than the "this" in the original rule.
     -- The idea is that "block" will be "active" in enforcing its effect while "pass" will be "passive" in doing the same thing.
     local all_processed_this_units = {}
-    local deferred_rules_with_this = {} -- Every call to process_this_rules() removes entries from this table
-    for pointer_noun, _ in pairs(POINTER_NOUNS) do
-        if featureindex[pointer_noun] ~= nil then
-            for _, feature in ipairs(featureindex[pointer_noun]) do
-                table.insert(deferred_rules_with_this, feature)
-            end
-        end
-    end
 
     --[[ 
         Notes:
@@ -1073,155 +1086,155 @@ function do_subrule_this()
                 - checkblocked/checkpass in get_raycast_units means whether or not to consider if the raycast position is marked as block or pass (see set_blocked_tile(), set_passed_tile())
     ]]
 
-    if (#deferred_rules_with_this > 0) then
-        if THIS_LOGGING then
-            print("block phase---------")
-        end
-        update_raycast_units(true, true, false, {}, true) -- @TODO: not sure if I like setting the last param to true. This would rely on the update_raycast_units() call in {{mod_injections}} to clear the relay indicators
-        local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block", true)
+    if THIS_LOGGING then
+        print("block phase---------")
+    end
+    update_raycast_units(true, true, false, {}, true) -- @TODO: not sure if I like setting the last param to true. This would rely on the update_raycast_units() call in {{mod_injections}} to clear the relay indicators
+    local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block", true)
 
-        for unit, _ in pairs(processed_block_this_units) do
-            if THIS_LOGGING then
-                print(utils.unitstring(unit))
-            end
-            all_processed_this_units[unit] = true
-        end
-        
+    for unit, _ in pairs(processed_block_this_units) do
         if THIS_LOGGING then
-            print("relay phase---------")
+            print(utils.unitstring(unit))
         end
-        update_raycast_units(true, true, false, all_processed_this_units, true)
-        local processed_relay_this_units = process_this_rules(deferred_rules_with_this, relay_filter, true, false, "relay", true)
-        for unit, _ in pairs(processed_relay_this_units) do
-            if THIS_LOGGING then
-                print(utils.unitstring(unit))
-            end
-            all_processed_this_units[unit] = true
-        end
-        
+        all_processed_this_units[unit] = true
+    end
+    
+    if THIS_LOGGING then
+        print("relay phase---------")
+    end
+    update_raycast_units(true, true, false, all_processed_this_units, true)
+    local processed_relay_this_units = process_this_rules(deferred_rules_with_this, relay_filter, true, false, "relay", true)
+    for unit, _ in pairs(processed_relay_this_units) do
         if THIS_LOGGING then
-            print("pass phase---------")
+            print(utils.unitstring(unit))
         end
-        update_raycast_units(true, true, false, all_processed_this_units, true)
-        local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass", true)
-        for unit, _ in pairs(processed_pass_this_units) do
-            if THIS_LOGGING then
-                print(utils.unitstring(unit))
-            end
-            all_processed_this_units[unit] = true
+        all_processed_this_units[unit] = true
+    end
+    
+    if THIS_LOGGING then
+        print("pass phase---------")
+    end
+    update_raycast_units(true, true, false, all_processed_this_units, true)
+    local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass", true)
+    for unit, _ in pairs(processed_pass_this_units) do
+        if THIS_LOGGING then
+            print(utils.unitstring(unit))
         end
-        
-        -- @Note (resolve before publish): - I claim that we don't need these phases since the block and pass phase above also covers "X is this(block)" and all variations. Check that this is correct
-        -- print("ray-block phase")
-        -- update_raycast_units(true, true, false, all_processed_this_units)
-        -- local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
-        
-        -- for unit, _ in pairs(processed_block_this_units2) do
-        --     print(utils.unitstring(unit))
-        --     all_processed_this_units[unit] = true
-        --     processed_block_this_units[unit] = true
-        -- end
-        
-        -- print("ray-pass phase")
-        -- update_raycast_units(true, true, false, all_processed_this_units)
-        -- local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
-        -- for unit, _ in pairs(processed_pass_this_units2) do
-        --     print(utils.unitstring(unit))
-        --     all_processed_this_units[unit] = true
-        --     processed_pass_this_units[unit] = true
-        -- end
+        all_processed_this_units[unit] = true
+    end
+    
+    -- @Note (resolve before publish): - I claim that we don't need these phases since the block and pass phase above also covers "X is this(block)" and all variations. Check that this is correct
+    -- print("ray-block phase")
+    -- update_raycast_units(true, true, false, all_processed_this_units)
+    -- local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
+    
+    -- for unit, _ in pairs(processed_block_this_units2) do
+    --     print(utils.unitstring(unit))
+    --     all_processed_this_units[unit] = true
+    --     processed_block_this_units[unit] = true
+    -- end
+    
+    -- print("ray-pass phase")
+    -- update_raycast_units(true, true, false, all_processed_this_units)
+    -- local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
+    -- for unit, _ in pairs(processed_pass_this_units2) do
+    --     print(utils.unitstring(unit))
+    --     all_processed_this_units[unit] = true
+    --     processed_pass_this_units[unit] = true
+    -- end
 
-        for this_unitid, _ in pairs(processed_block_this_units) do
-            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-                for _, ray_object in ipairs(ray_objects) do
-                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                    
-                    local has_block = false
-                    local has_not_block = false
-                    if ray_unitid == 2 then
-                        has_block = hasfeature("empty", "is", "block", 2, x, y)
-                        has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
-                    else
-                        local ray_unit = mmf.newObject(ray_unitid)
-                        local ray_unit_name = ray_unit.strings[NAME]
-                        if ray_unit.strings[UNITTYPE] == "text" then
-                            ray_unit_name = "text"
-                        end
-                        has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
-                        has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
+    for this_unitid, _ in pairs(processed_block_this_units) do
+        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+            for _, ray_object in ipairs(ray_objects) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                
+                local has_block = false
+                local has_not_block = false
+                if ray_unitid == 2 then
+                    has_block = hasfeature("empty", "is", "block", 2, x, y)
+                    has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    local ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
                     end
-                    
-                    if has_block and not has_not_block then
-                        set_blocked_tile(tileid)
-                        break
-                    end    
+                    has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
+                    has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
+                end
+                
+                if has_block and not has_not_block then
+                    set_blocked_tile(tileid)
+                    break
+                end    
+            end
+        end
+    end
+
+    for this_unitid, _ in pairs(processed_relay_this_units) do
+        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+            for _, ray_object in ipairs(ray_objects) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                local has_relay = false
+                local has_not_relay = false
+                if ray_unitid == 2 then
+                    has_relay = hasfeature("empty", "is", "relay", 2, x, y)
+                    has_not_relay = hasfeature("empty", "is", "not relay", 2, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    local ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
+                    end
+                    has_relay = hasfeature(ray_unit_name, "is", "relay", ray_unitid)
+                    has_not_relay = hasfeature(ray_unit_name, "is", "not relay", ray_unitid)
+                end
+                
+                if has_relay and not has_not_relay then
+                    set_relay_tile(tileid)
                 end
             end
         end
+    end
 
-        for this_unitid, _ in pairs(processed_relay_this_units) do
-            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-                for _, ray_object in ipairs(ray_objects) do
-                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                    local has_relay = false
-                    local has_not_relay = false
-                    if ray_unitid == 2 then
-                        has_relay = hasfeature("empty", "is", "relay", 2, x, y)
-                        has_not_relay = hasfeature("empty", "is", "not relay", 2, x, y)
-                    else
-                        local ray_unit = mmf.newObject(ray_unitid)
-                        local ray_unit_name = ray_unit.strings[NAME]
-                        if ray_unit.strings[UNITTYPE] == "text" then
-                            ray_unit_name = "text"
-                        end
-                        has_relay = hasfeature(ray_unit_name, "is", "relay", ray_unitid)
-                        has_not_relay = hasfeature(ray_unit_name, "is", "not relay", ray_unitid)
+    for this_unitid, _ in pairs(processed_pass_this_units) do
+        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
+            for _, ray_object in ipairs(ray_objects) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                local ray_unit_name = ""
+                local has_pass = false
+                local has_not_pass = false
+
+                if ray_unitid == 2 then
+                    ray_unit_name = "empty"
+                    has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
+                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
                     end
-                    
-                    if has_relay and not has_not_relay then
-                        set_relay_tile(tileid)
-                    end
+                    has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
+                end
+
+                if has_pass and not has_not_pass then
+                    set_passed_tile(tileid)
+                    break
                 end
             end
         end
+    end
 
-        for this_unitid, _ in pairs(processed_pass_this_units) do
-            for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-                for _, ray_object in ipairs(ray_objects) do
-                    local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                    local ray_unit_name = ""
-                    local has_pass = false
-                    local has_not_pass = false
+    if THIS_LOGGING then
+        print("other phase---------")
+    end
+    update_raycast_units(true, true, false, all_processed_this_units, true)
+    process_this_rules(deferred_rules_with_this, other_filter, true, true, "other", true)
 
-                    if ray_unitid == 2 then
-                        ray_unit_name = "empty"
-                        has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
-                        has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
-                    else
-                        local ray_unit = mmf.newObject(ray_unitid)
-                        ray_unit_name = ray_unit.strings[NAME]
-                        if ray_unit.strings[UNITTYPE] == "text" then
-                            ray_unit_name = "text"
-                        end
-                        has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                        has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
-                    end
-
-                    if has_pass and not has_not_pass then
-                        set_passed_tile(tileid)
-                        break
-                    end
-                end
-            end
-        end
-
-        if THIS_LOGGING then
-            print("other phase---------")
-        end
-        update_raycast_units(true, true, false, all_processed_this_units, true)
-        process_this_rules(deferred_rules_with_this, other_filter, true, true, "other", true)
-        if THIS_LOGGING then
-            print("end---------")
-        end
+    deferred_rules_with_this = {}
+    if THIS_LOGGING then
+        print("end---------")
     end
 end
