@@ -351,20 +351,44 @@ function update_all_cursors()
                 end
             
                 MF_setcolour(cursorunit.fixed,c1,c2)
+                cursorunit.visible = true
             else
                 -- Just to hide it
-                cursorunit.values[XPOS] = -20
-                cursorunit.values[YPOS] = -20
+                cursorunit.visible = false
             end
             cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             
             if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
                 -- Just to hide it
-                cursorunit.values[XPOS] = -20
-                cursorunit.values[YPOS] = -20
+                cursorunit.visible = false
+            else
+                cursorunit.visible = true
             end
         end
+    end
+
+    for indicator_key, indicator_id in pairs(relay_indicators) do
+        local relay_indicator = mmf.newObject(indicator_id)
+        
+        local dir = relay_indicator.values[DIR]
+        local tileid = indicator_key - (dir * roomsizex * roomsizey)
+        local x = math.floor(tileid % roomsizex)
+        local y = math.floor(tileid / roomsizex)
+        
+        local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+        relay_indicator.values[XPOS] = x * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
+        relay_indicator.values[YPOS] = y * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
+        
+        if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
+            -- Just to hide it
+            relay_indicator.visible = false
+        else
+            relay_indicator.visible = true
+        end
+
+        relay_indicator.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+        relay_indicator.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
     end
 end
 
@@ -393,6 +417,7 @@ function make_relay_indicator(x, y, dir)
     unit.direction = 27
     MF_loadsprite(unitid,"relay_indicator_0",27,true)
 
+    unit.values[DIR] = dir
     if dir == 0 then
         unit.angle = 0
     elseif dir == 1 then

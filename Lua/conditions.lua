@@ -1,3 +1,4 @@
+if true then
 function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken_,subgroup_)
 	--[[ 
 		@mods(this) - Override reason: Handle infix conditions with "this" as param. Also handle "this is X"
@@ -4498,3 +4499,4 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 	return result
 end
 
+end
