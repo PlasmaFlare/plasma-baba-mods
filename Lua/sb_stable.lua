@@ -745,7 +745,7 @@ function update_stable_state(alreadyrun)
                     
                     local ruleids = {} -- Get a list of ruleids 
                     for ruleid, v in pairs(stable_rules[name]) do
-                        local conds_to_test = {}
+                        local conds_to_test = {}  -- These are special conditions that we have to test before adding the stablerule
                         for _, cond in ipairs(v.feature[2]) do
                             local condtype = cond[1]
                             if condtype == "this" or condtype == "not this" then
@@ -881,17 +881,28 @@ function update_stable_state(alreadyrun)
             
             local ruleids = {} -- Get a list of ruleids 
             for ruleid, v in pairs(stable_rules[name]) do
-                table.insert(ruleids, ruleid)
+                local conds_to_test = {} -- These are special conditions that we have to test before adding the stablerule
+                for _, cond in ipairs(v.feature[2]) do
+                    local condtype = cond[1]
+                    if condtype == "this" or condtype == "not this" then
+                        table.insert(conds_to_test, cond)
+                    end
+                end
+                local add_ruleid = testcond(conds_to_test, 2, x, y)
 
-                if not stablestate.rules[ruleid] then
-                    stablestate.rules[ruleid] = {
-                        feature = v.feature,
-                        unit_count = 1,
-                        display = v.display,
-                        stable_this_ids = v.stable_this_ids,
-                    }
-                else
-                    stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+                if add_ruleid then
+                    table.insert(ruleids, ruleid)
+
+                    if not stablestate.rules[ruleid] then
+                        stablestate.rules[ruleid] = {
+                            feature = v.feature,
+                            unit_count = 1,
+                            display = v.display,
+                            stable_this_ids = v.stable_this_ids,
+                        }
+                    else
+                        stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+                    end
                 end
             end
 
