@@ -91,7 +91,6 @@ local turnid = 1
 local curr_stable_this_id = STABLE_THIS_ID_BASE
 local on_stable_undo = false
 local stable_state_updated = false
-local stablerule_timer = 0 -- Used mainly for changing color on stablerule display
 local TIMER_PERIOD = 400 -- Used mainly for changing color on stablerule display
 
 local STABLE_LOGGING = false
@@ -579,10 +578,10 @@ function make_stable_indicator()
     local indicator = mmf.newObject(indicator_id)
 
     indicator.values[ONLINE] = 1
-    indicator.layer = 1
-    indicator.direction = 27
-    indicator.values[ZLAYER] = 30
-    MF_loadsprite(indicator_id,"stable_indicator_0",27,true)
+    indicator.layer = 2
+    indicator.direction = 26
+    indicator.values[ZLAYER] = 23
+    MF_loadsprite(indicator_id,"stable_indicator_0",26,true)
     MF_setcolour(indicator_id,3,3)
     return indicator_id
 end
@@ -1053,7 +1052,11 @@ local LINE_SPACING = LETTER_HEIGHT - 4
 local MARGIN = 12
 local PADDING = 4
 
-local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
+local function write_stable_rules(su_key_list, x, y, empty_tileid)
+    if generaldata2.values[INPAUSEMENU] == 1 then
+        return -- Don't display the stablerules when in the pause menu
+    end
+    
     local ruleids = {}
     local ruleid_count = 0
     for _, su_key in ipairs(su_key_list) do
@@ -1135,7 +1138,7 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
         end
     end
 
-    -- Write the rules
+    -- Write the rules 
     local y_offset = 0
     for ruleid,_ in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
@@ -1145,10 +1148,10 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid, timer)
         -- Create the text "outline". (Hacky but does the job. Though if there's a more supported way to do this I'm all ears)
         for outline_x = -2, 2, 2 do
             for outline_y = -2, 2, 2 do
-                writetext(display,-1, final_x + outline_x, final_y + y_offset + outline_y,"stablerules",true,1,true, {0, 4})
+                writetext(display,-1, final_x + outline_x, final_y + y_offset + outline_y,"stablerules",true,2,true, {0, 4})
             end
         end
-        writetext(display,-1, final_x, final_y + y_offset,"stablerules",true,1,true, color)
+        writetext(display,-1, final_x, final_y + y_offset,"stablerules",true,2,true, color)
 
         y_offset = y_offset + LINE_SPACING
     end
@@ -1198,16 +1201,12 @@ table.insert(mod_hook_functions["always"],
                 end
 
                 if #displayed_su_keys > 0 or empty_tileid then
-                    write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid, stablerule_timer)
+                    write_stable_rules(displayed_su_keys, unit_x, unit_y, empty_tileid)
                 else
                     for ray_unit_id, indicator_id in pairs(stable_this_indicators) do
                         MF_cleanremove(indicator_id)
                         stable_this_indicators[ray_unit_id] = nil
                     end
-                end
-                stablerule_timer = stablerule_timer + 1
-                if stablerule_timer >= TIMER_PERIOD then
-                    stablerule_timer = 0
                 end
             end
         end

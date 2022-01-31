@@ -322,27 +322,27 @@ function update_all_cursors()
 
                 local c1 = 0
                 local c2 = 0
-                cursorunit.layer = 1
+                cursorunit.layer = 2
                 if blocked_tiles[tileid] then
-                    cursorunit.values[ZLAYER] = 44
+                    cursorunit.values[ZLAYER] = 30
                     cursorunit.direction = 30
                     MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
                     c1,c2 = getuicolour("blocked")
                 elseif explicit_relayed_tiles[tileid] then
-                    cursorunit.values[ZLAYER] = 43
+                    cursorunit.values[ZLAYER] = 29
                     cursorunit.direction = 29
                     MF_loadsprite(cursorunit.fixed,"this_cursor_relay_0",29,true)
                     c1,c2 = 5, 4
                 elseif explicit_passed_tiles[tileid] then
-                    cursorunit.values[ZLAYER] = 42
+                    cursorunit.values[ZLAYER] = 28
                     cursorunit.direction = 31
                     MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
                     c1,c2 = 4, 4
                 else
                     if ruleids[wordunit.fixed] then
-                        cursorunit.values[ZLAYER] = 41 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
+                        cursorunit.values[ZLAYER] = 27 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
                     else
-                        cursorunit.values[ZLAYER] = 30
+                        cursorunit.values[ZLAYER] = 26
                     end
                     cursorunit.direction = 28
                     MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
@@ -399,7 +399,7 @@ function make_cursor()
     
     unit2.values[ONLINE] = 1
     
-    unit2.layer = 1
+    unit2.layer = 2
     unit2.direction = 28
     MF_loadsprite(unitid2,"this_cursor_0",28,true)
     
@@ -413,7 +413,7 @@ function make_relay_indicator(x, y, dir)
     
     unit.values[ONLINE] = 1
     
-    unit.layer = 1
+    unit.layer = 2
     unit.direction = 27
     MF_loadsprite(unitid,"relay_indicator_0",27,true)
 
