@@ -51,8 +51,8 @@ local stablestate = {
     stable_this_raycast_units = {},
     --[[ 
         stable_this_id -> {
-            ids: [list of raycast units], 
-            tileid: int
+            objects: [list of raycast units], 
+            tileids: int
         }
      ]]
 }
@@ -86,7 +86,6 @@ local stable_this_indicators = {}
     
 local LEVEL_SU_KEY = -1
 local STABLE_THIS_ID_BASE = -50
-local STABLE_THIS_ID_EMPTY = -49
 local stableid = 1
 local turnid = 1
 local curr_stable_this_id = STABLE_THIS_ID_BASE
@@ -218,9 +217,9 @@ function get_ruleid(id_list, option)
                 ruleid = ruleid..unit.strings[NAME]
                 if is_name_text_this(unit.strings[NAME]) then
                     ruleid = ruleid.."["..tostring(unit.values[ID]).."]"
-                    for _, ray_unitid in ipairs(get_raycast_units(unitid)) do
+                    for _, ray_object in ipairs(get_raycast_units(unitid)) do
+                        local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         if ray_unitid == 2 then
-                            local ray_tileid = get_raycast_tileid(unitid)
                             ruleid = ruleid.."-empty{"..ray_tileid.."}"
                         else
                             local id = get_stableunit_key(ray_unitid) -- This isn't actually meant to reference an object in stableunits. Its just a convenient method for getting a unique id 
@@ -381,24 +380,13 @@ local function get_stablerule_display(feature)
 end
 
 local function register_this_text_in_stablerule(this_unitid)
-    local raycast_units = get_raycast_units(this_unitid, true, true)
-    local raycast_tileid = get_raycast_tileid(this_unitid)
-
-    -- @NOTE: if THIS mod changes get_raycast_units() to output values[ID] instead of unitid, then delete this block
-    local ids = {}
-    for _, ray_unitid in ipairs(raycast_units) do
-        if ray_unitid == 2 then
-            table.insert(ids, STABLE_THIS_ID_EMPTY)
-        else
-            local u = mmf.newObject(ray_unitid)
-            table.insert(ids, u.values[ID])
-        end
-    end
+    local raycast_objects = get_raycast_units(this_unitid, true, true)
+    local raycast_tileids = get_raycast_tileid(this_unitid)
 
     local stable_this_id = curr_stable_this_id  
     curr_stable_this_id = curr_stable_this_id - 1
 
-    stablestate.stable_this_raycast_units[stable_this_id] = {ids = ids, tileid = raycast_tileid}
+    stablestate.stable_this_raycast_units[stable_this_id] = {objects = raycast_objects, tileids = raycast_tileids}
     return stable_this_id
 end
 
@@ -435,23 +423,14 @@ end
 
 function get_stable_this_raycast_units(stable_this_id)
     if stablestate.stable_this_raycast_units[stable_this_id] then
-        local unitids = {} -- @TODO: when THIS mod converts to using values[ID], just return stablestate.stable_this_raycast_units[stable_this_id] directly
-        for _, id in ipairs(stablestate.stable_this_raycast_units[stable_this_id].ids) do
-            if id == STABLE_THIS_ID_EMPTY then
-                table.insert(unitids, 2)
-            else    
-                local unitid = MF_getfixed(id)
-                table.insert(unitids, unitid)
-            end
-        end
-        return unitids
+        return stablestate.stable_this_raycast_units[stable_this_id].objects
     else
         return {}
     end
 end
 
 function get_stable_this_raycast_pos(stable_this_id)
-    return stablestate.stable_this_raycast_units[stable_this_id].tileid
+    return stablestate.stable_this_raycast_units[stable_this_id].tileids
 end
 
 function is_this_unit_in_stablerule(this_unitid)
@@ -540,7 +519,7 @@ local function get_stablefeatures_from_name(name)
             local rule = dup_feature[1]
 
             if STABLE_LOGGING then
-                print("recorded stable feature for name"..name..": "..rule[1].." "..rule[2].." "..rule[3])
+                print("recorded stable feature for name "..name..": "..utils.serialize_feature(dup_feature))
             end
         end
     end

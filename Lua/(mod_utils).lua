@@ -11,28 +11,37 @@ utils = {
 
     make_object = function(unitid, x, y)
         if unitid == 2 then
-            return 200 + x + y * roomsizex -- JAAAAAAANK
+            utils.debug_assert(unitid)
+            utils.debug_assert(x)
+            utils.debug_assert(y)
+            return -(200 + x + y * roomsizex) -- JAAAAAAANK
         elseif unitid == 1 then
-            return 1
+            return -1
         else
-            return unitid
+            local unit = mmf.newObject(unitid)
+            utils.debug_assert(unit, tostring(unitid))
+            return unit.values[ID]
+            -- return unitid
         end
     end,
 
     parse_object = function(object)
         utils.debug_assert(object)
-        if object >= 200 then
-            local tileid = object - 200
+        if object <= -200 then
+            local tileid = (-object) - 200
             local x = tileid % roomsizex
             local y = math.floor(tileid / roomsizex)
             return 2, x, y, tileid
-        elseif object == 1 then
+        elseif object == -1 then
             return 1
         else
-            local unit = mmf.newObject(object)
-            utils.debug_assert(unit)
+            -- local unit = mmf.newObject(object)
+            local unitid = MF_getfixed(object)
+            utils.debug_assert(unitid, "Cannot find unitid of object: "..tostring(object))
+            local unit = mmf.newObject(unitid)
+            utils.debug_assert(unit, "Cannot find unit of object: "..tostring(object))
 
-            return object, unit.values[XPOS], unit.values[YPOS], unit.values[XPOS] + unit.values[YPOS] * roomsizex
+            return unitid, unit.values[XPOS], unit.values[YPOS], unit.values[XPOS] + unit.values[YPOS] * roomsizex
         end
     end,
 
@@ -97,24 +106,49 @@ utils = {
     serialize_feature = function(feature)
         local tokens = {}
         local baserule = feature[1]
-        for _, word in ipairs(baserule) do
+        for i, word in ipairs(baserule) do
             tokens[#tokens + 1] = word
-            tokens[#tokens + 1] = " "
+            if i ~= #baserule then
+                tokens[#tokens + 1] = " "
+            end
         end
-        tokens[#tokens + 1] = ":"
+        tokens[#tokens + 1] = " => "
 
         if #feature[2] > 0 then
             local conds = utils.deep_copy_table(feature[2])
             table.sort(conds, utils.condsort)
 
-            for _, cond in ipairs(conds) do
+            for j, cond in ipairs(conds) do
                 tokens[#tokens + 1] = cond[1]
-                tokens[#tokens + 1] = ">"
-                for _, param in ipairs(cond[2]) do
+                tokens[#tokens + 1] = "["
+                for i, param in ipairs(cond[2]) do
+                    tokens[#tokens + 1] = "("
                     tokens[#tokens + 1] = param
-                    tokens[#tokens + 1] = ","
+                    tokens[#tokens + 1] = ")"
+
+                    if i ~= #cond[2] then
+                        tokens[#tokens + 1] = ","
+                    end
                 end
-                tokens[#tokens + 1] = "|"
+
+                -- Serialization with THIS as a cond
+                -- if is_name_text_this(cond[1]) then
+                --     local this_text_unitid = parse_this_unit_from_param_id(cond[2][1])
+                --     for _, ray_object in ipairs(get_raycast_units(this_text_unitid)) do
+                --         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
+                --         if ray_unitid == 2 then
+                --             tokens[#tokens + 1] = "empty{"..tostring(ray_tileid).."}"
+                --         else
+                --             local ray_unit = mmf.newObject(ray_unitid)
+                --             tokens[#tokens + 1] = tostring(ray_unit.values[ID])
+                --         end
+                --     end
+                -- end
+
+                tokens[#tokens + 1] = "]"
+                if j ~= #conds then
+                    tokens[#tokens + 1] = " | "
+                end
             end
         end
         return table.concat(tokens)
@@ -145,3 +179,44 @@ utils = {
 }
 
 plasma_utils = utils
+
+-- DEBUG STUFF
+-- Set to true if you want to test that utils.make_object() and utils.parse_object() work
+if false then
+    local function test_make_parse_object()
+        local all_test_objects = {}
+        for id, _ in pairs(units) do
+            local unitid = MF_getfixed(id)
+            local object = utils.make_object(unitid)
+            local changed_unitid = utils.parse_object(object)
+            utils.debug_assert(unitid == changed_unitid, utils.unitstring(utils.make_object(unitid)).." failed the object check")
+
+            utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(unitid).." Unit 2:"..tostring(all_test_objects[object]))
+            all_test_objects[object] = unitid
+            if unitid > 2 and unitid < 3 then
+            end
+        end
+        for i=0,roomsizex-1 do
+            for j=0,roomsizey-1 do
+                local object = utils.make_object(2, i, j)
+                local unitid, x, y = utils.parse_object(object)
+
+                utils.debug_assert(unitid == 2, utils.unitstring(object).." failed the object check")
+                utils.debug_assert(x == i and y == j, utils.unitstring(object).." failed the object check through different coords: "..x..","..y)
+
+                utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[object]))
+                all_test_objects[object] = 2
+            end
+        end
+
+        local levelobject = utils.make_object(1)
+        local level_unitid = utils.parse_object(levelobject)
+        utils.debug_assert(level_unitid == 1, utils.unitstring(levelobject).." failed the object check")
+
+        utils.debug_assert(all_test_objects[levelobject] == nil, "Found two units that map to the same object: "..levelobject..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[levelobject]))
+        all_test_objects[levelobject] = 1
+    end
+
+    table.insert(mod_hook_functions["command_given"], test_make_parse_object)
+    table.insert(mod_hook_functions["undoed"], test_make_parse_object)
+end
