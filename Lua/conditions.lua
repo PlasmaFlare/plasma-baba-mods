@@ -89,15 +89,27 @@ function testcond(conds,unitid,x_,y_,autofail_,limit_,checkedconds_,ignorebroken
 		result = false
 	end
 
-	if not GLOBAL_checking_stable and is_stableunit(unitid, x, y) then
+	--[[ 
+		@mods(stable) - if a stableunit is being checked, the set of conditions must have the "stable" cond in order
+		to make sure that the stableunit only has stablerules applied.
+
+		EXCEPTIONS:
+		- When GLOBAL_checking_stable == true. This is a global that tells is set to true whenever we intend to do a testcond() on a "X is stable" rule.
+			Rules in the form of "X is stable" should never be a stablerule (aka, appear in the list of rules when hovering a stableunit with mouse).
+			So it makes sense that we should not perform this check when testing "X is stable".
+		- When conds == nil. NOT WHEN conds == {}. In the rare cases where testcond() gets passed in nil instead of an empty table
+			for conds, the code just wants all units regardless of conditions. (At least, thats what I gathered from
+			handling the special case of "teeth eat baba"; It calls findtype() while passing in nil conds). I'm guessing that
+			other cases where the game passes an empty table means that the game wants to consider conditions.
+			WARNING: this is a pretty unfounded assumption that can collapse easily.
+	]]
+	if not GLOBAL_checking_stable and conds ~= nil and is_stableunit(unitid, x, y) then
 		local found_stablecond = false
-		if conds ~= nil then
 			for _,cond in ipairs(conds) do
 				local condtype = cond[1]
 				if condtype == "stable" or condtype == "not stable" then
 					found_stablecond = true
 					break
-				end
 			end
 		end
 		if not found_stablecond then
