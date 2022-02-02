@@ -128,3 +128,88 @@ function addundo(line,...)
     check_undo_data_for_updating_guards(line)
     return table.unpack(ret)
 end
+
+--[[ 
+    @mods(stable) - Injection reason:
+        - (see giant block comment below)
+        - treat "not stable" condtype as "stable".
+            - invertconds() can change condtype "stable" to "not stable". "stable" as a condtype technically doesn't make sense. It's more of a hacky way to prevent other non-stable rules from affecting stable objects.
+              So if we somehow end up with a "not stable" condition, treat it as a normal "stable" condtype.
+]]
+local old_testcond = testcond
+function testcond(conds, unitid, x_, y_, ...)
+    local x,y = 0,0
+    if (unitid ~= 0) and (unitid ~= 1) and (unitid ~= 2) and (unitid ~= nil) then
+        local unit = mmf.newObject(unitid)
+		x = unit.values[XPOS]
+		y = unit.values[YPOS]
+    elseif (unitid == 2) then
+		x = x_
+		y = y_
+    end
+
+    --[[ 
+		@mods(stable) - if a stableunit is being checked, the set of conditions must have the "stable" cond in order
+		to make sure that the stableunit only has stablerules applied.
+
+		EXCEPTIONS:
+		- When GLOBAL_checking_stable == true. This is a global that tells is set to true whenever we intend to do a testcond() on a "X is stable" rule.
+			Rules in the form of "X is stable" should never be a stablerule (aka, appear in the list of rules when hovering a stableunit with mouse).
+			So it makes sense that we should not perform this check when testing "X is stable".
+		- When conds == nil. NOT WHEN conds == {}. In the rare cases where testcond() gets passed in nil instead of an empty table
+			for conds, the code just wants all units regardless of conditions. (At least, thats what I gathered from
+			handling the special case of "teeth eat baba"; It calls findtype() while passing in nil conds). I'm guessing that
+			other cases where the game passes an empty table means that the game wants to consider conditions.
+			WARNING: this is a pretty unfounded assumption that can collapse easily.
+	]]
+    local found_stablecond = false
+    for _,cond in ipairs(conds) do
+        local condtype = cond[1]
+        if condtype == "stable" or condtype == "not stable" then
+            found_stablecond = true
+            break
+        end
+    end
+    if not found_stablecond and (not GLOBAL_checking_stable and conds ~= nil and is_stableunit(unitid, x, y)) then
+        return false
+    else
+        return old_testcond(conds, unitid, x_, y_, ...)
+    end
+    --[[ 
+        @NOTE: There was a bug that was originally handled in commit #582f9fd8cef2585c37cabc85880de90a7d66a6cf. However, with the new condition system, I basically removed that fix.
+        But for *some* reason, the issue doesn't *seem* to happen even without the fix. And I don't know why lol. For now, I'll trust that the issue won't happen.
+        But this will bug me to no end.
+
+        To explain what I found so far, if you have "text on baba is stable", "text is push", "text is not push", and trigger the stable, the issue would make non-stable texts be pushable.
+        But in the new system, the non-stablerule "text is push" gets modified by both stablerule and non-stablerule versions of "text is not push". This will end up with a final rule of:
+            text is push | (not stable)[(text is not push)] && never[] && stable[(text is push | (not stable)[(text is not push)] && never[])]
+
+        So the "never" effectively cancels out the non-stablerule "text is push". *sigh* Buuttt, there's a whole alot of implications that I don't want to dive into right now.
+
+        Revisit this later on.
+     ]]
+    -- elseif found_stablecond then
+    --     local newconds = {}
+
+    --     --[[ 
+    --         @NOTE: the original intention here is to replace "not stable" conds with "stable" conds. However, I would have to go through the trouble of parsing through
+    --             the weird syntax of parenthesis generated from invertconds. 
+    --             Yet somehow even without my interference, I don't run into the issue outlined in commit #582f9fd8cef2585c37cabc85880de90a7d66a6cf
+    --      ]]
+
+    --     for _,cond in ipairs(conds) do
+    --         local condtype = cond[1]
+    --         if condtype == "not stable" then
+    --             print("testklsndflsnkfd")
+    --         end
+    --         if condtype == "stable" or condtype == "not stable" then
+    --             condtype = "stable"
+    --         end
+    --         table.insert(newconds, {condtype, cond[2]})
+    --     end
+
+    --     return old_testcond(newconds, unitid, x_, y_, ...)
+    -- else
+    --     return old_testcond(conds, unitid, x_, y_, ...)
+    -- end
+end

@@ -112,9 +112,9 @@ utils = {
                 tokens[#tokens + 1] = " "
             end
         end
-        tokens[#tokens + 1] = " => "
-
+        
         if #feature[2] > 0 then
+            tokens[#tokens + 1] = " | "
             local conds = utils.deep_copy_table(feature[2])
             table.sort(conds, utils.condsort)
 
@@ -147,7 +147,7 @@ utils = {
 
                 tokens[#tokens + 1] = "]"
                 if j ~= #conds then
-                    tokens[#tokens + 1] = " | "
+                    tokens[#tokens + 1] = " && "
                 end
             end
         end
@@ -159,18 +159,27 @@ utils = {
         tokens[#tokens + 1] = typedata[1]
         
         if #typedata[2] > 0 then
-            tokens[#tokens + 1] = "("
+            tokens[#tokens + 1] = " | "
             local conds = utils.deep_copy_table(typedata[2])
             table.sort(conds, utils.condsort)
             
-            for _, cond in ipairs(conds) do
+            for i, cond in ipairs(conds) do
                 tokens[#tokens + 1] = cond[1]
-                tokens[#tokens + 1] = ">"
+                tokens[#tokens + 1] = "["
                 for _, param in ipairs(cond[2]) do
+                    tokens[#tokens + 1] = "("
                     tokens[#tokens + 1] = param
-                    tokens[#tokens + 1] = ","
+                    tokens[#tokens + 1] = ")"
+
+                    if i ~= #cond[2] then
+                        tokens[#tokens + 1] = ","
+                    end
                 end
-                tokens[#tokens + 1] = "|"
+                tokens[#tokens + 1] = "]"
+
+                if i ~= #conds then
+                    tokens[#tokens + 1] = " && "
+                end
             end
             tokens[#tokens + 1] = ")"
         end

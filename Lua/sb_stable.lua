@@ -518,7 +518,7 @@ local function get_stablefeatures_from_name(name)
             local rule = dup_feature[1]
 
             if STABLE_LOGGING then
-                print("recorded stable feature for name "..name..": "..utils.serialize_feature(dup_feature))
+                print("recorded stable feature for name "..name..": "..utils.serialize_feature(feature))
             end
         end
     end
@@ -941,9 +941,23 @@ local function add_stable_rules()
             for _, cond in ipairs(conds) do
                 cond_str = cond_str.." "..cond[1]
             end
-            print("inserting stablerule into featureindex: "..option[1].." "..option[2].." "..option[3], "with conds: ",cond_str)
+            print("inserting stablerule into featureindex: "..utils.serialize_feature(feature))
         end
     end
+end
+
+condlist["stable"] = function(params,checkedconds,checkedconds_,cdata)
+    if #params == 1 then
+        valid = true
+        local unitid, x, y = cdata.unitid, cdata.x, cdata.y
+        local cond_ruleid = params[1]
+
+        local result = stableunit_has_ruleid(unitid, cond_ruleid, x, y)
+        -- print(result, cond_ruleid, utils.unitstring(utils.make_object(unitid)))
+
+        return result, checkedconds
+    end
+    return false, checkedconds
 end
 
 table.insert(mod_hook_functions["rule_baserules"],
@@ -1030,26 +1044,10 @@ function print_stable_state()
     end
     print("===stablerules===")
     for k,v in pairs(stablestate.rules) do
-        print(k.." = { unit_count = "..v.unit_count)
-        print("---")
-        print(v.feature[1][1].." "..v.feature[1][2].." "..v.feature[1][3])
-
-        -- print("id layout:")
-        -- local rule_str = ""
-        -- for _,id in ipairs(v.feature[3]) do
-        --     local u = mmf.newObject(id[1])
-        --     rule_str = rule_str.." "..u.strings[NAME]
-        -- end
-        -- print(rule_str)
-
-
-        print("Conditions: ")
-        for _, cond in ipairs(v.feature[2]) do
-            local condtype = cond[1]
-            local params = cond[2]
-            print(condtype)
-        end
-        print("---")
+        print("{")
+        print("ruleid = "..k)
+        print("unit_count = "..v.unit_count)
+        print("feature: "..utils.serialize_feature(v.feature))
         print("}")
     end
     

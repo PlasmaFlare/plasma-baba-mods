@@ -807,6 +807,31 @@ function get_raycast_tileid(this_text_unitid)
     return raycast_data[this_text_unitid].raycast_positions
 end
 
+condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
+    if #params == 1 then
+        valid = true
+        local unitid = cdata.unitid
+        local this_text_unitid = parse_this_unit_from_param_id(params[1])
+        
+        local pass = false
+        -- @TODO: @mods(this) deciding on when to check block and/or pass when calling get_raycast_units() is currently janky. It depends on 
+        -- whether or not do_subrule_this() is being called and weird update order shennanigans somehow makes this all work out
+        -- in the end. Clean this up when we revisit THIS mod.
+        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+            local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
+            if ray_unit == 2 then
+                local tileid = x + y * roomsizex
+                if ray_tileid == tileid then
+                    return true, checkedconds
+                end
+            elseif ray_unit == unitid then
+                return true, checkedconds
+            end
+        end
+    end
+    return false, checkedconds
+end
+
 local function is_unit_valid_this_property(unitid, verb)
     if unitid == 2 then return true end
         
