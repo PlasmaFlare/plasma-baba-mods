@@ -256,15 +256,6 @@ end
 function on_add_this_text(this_unitid)
     if not raycast_data[this_unitid] then
         local unit = mmf.newObject(this_unitid)
-        local pointer_noun = is_name_text_this(unit.strings[NAME])
-
-        local num_cursors = 0
-        if pointer_noun == "this" then
-            num_cursors = 1
-        elseif pointer_noun == "these" then
-            num_cursors = 2
-        end
-
         raycast_data[this_unitid] = {
             raycast_unitids = {},
             raycast_positions = {},
@@ -490,7 +481,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     end
     for unitid, curr_raycast_data in pairs(raycast_data) do
         if not exclude_this_units[unitid] then
-            curr_raycast_data.raycast_unitids = nil
+            -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented?
             curr_raycast_data.raycast_positions = {}
 
             local unit = mmf.newObject(unitid)
@@ -688,7 +679,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                     for _, ray_object in ipairs(all_rayunits) do
                         local found_unit = false
                         for _, prev_object in ipairs(prev_raycast_unitids) do
-                            if prev_object == found_unit then
+                            if prev_object == ray_object then
                                 found_unit = true
                                 break
                             end
