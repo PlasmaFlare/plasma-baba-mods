@@ -55,6 +55,7 @@ editor_objlist["text_relay"] =
 formatobjlist()
 
 register_directional_text_prefix("this")
+register_directional_text_prefix("that")
 register_directional_text_prefix("these")
 
 this_mod_globals = {}
@@ -114,6 +115,7 @@ local relay_indicators = {}
 
 local POINTER_NOUNS = {
     this = true,
+    that = true,
     these = true
 }
 
@@ -206,27 +208,50 @@ function is_name_text_this(name, check_not_)
 end
 
 -- Determine the raycast velocity vectors, given a name of a pointer noun
-local function get_raycast_vectors(name, dir)
+local function get_rays_from_pointer_noun(name, x, y, dir)
     local cast_vecs = {}
     local pointer_noun = is_name_text_this(name)
+    local out_rays = {}
 
     if pointer_noun then
         local dir_vec = {dirs[dir+1][1], dirs[dir+1][2] * -1}
 
         if pointer_noun == "this" then
             table.insert(cast_vecs, dir_vec)
-        elseif pointer_noun == "these" then
-            if (math.abs(dir_vec[1]) > math.abs(dir_vec[2])) then
-                table.insert(cast_vecs, {dir_vec[1], dir_vec[2] + 1} )
-                table.insert(cast_vecs, {dir_vec[1], dir_vec[2] - 1} )
-            else
-                table.insert(cast_vecs, {dir_vec[1] + 1, dir_vec[2]} )
-                table.insert(cast_vecs, {dir_vec[1] - 1, dir_vec[2]} )
+            table.insert(out_rays, {
+                pos = {x, y},
+                dir = dir_vec,
+            })
+        elseif pointer_noun == "that" then
+            local cast_start_x = x
+            local cast_start_y = y
+
+            if dir == 0 then
+                cast_start_x = roomsizex - 1
+            elseif dir == 1 then
+                cast_start_y = 0
+            elseif dir == 2 then
+                cast_start_x = 0
+            elseif dir == 3 then
+                cast_start_y = roomsizey - 1
             end
+            table.insert(out_rays, {
+                pos = {cast_start_x, cast_start_y},
+                dir = {dir_vec[1] * -1, dir_vec[2] * -1},
+            })
+
+        -- elseif pointer_noun == "these" then
+        --     if (math.abs(dir_vec[1]) > math.abs(dir_vec[2])) then
+        --         table.insert(cast_vecs, {dir_vec[1], dir_vec[2] + 1} )
+        --         table.insert(cast_vecs, {dir_vec[1], dir_vec[2] - 1} )
+        --     else
+        --         table.insert(cast_vecs, {dir_vec[1] + 1, dir_vec[2]} )
+        --         table.insert(cast_vecs, {dir_vec[1] - 1, dir_vec[2]} )
+        --     end
         end
     end
 
-    return cast_vecs
+    return out_rays
 end
 
 -- Really useless function whose only purpose is to gatekeep calling update_raycast_units() in code() before checking updatecode.
@@ -430,10 +455,10 @@ function make_relay_indicator(x, y, dir)
     return unitid
 end
 
-local function this_raycast(x, y, vector, checkemptyblock)
+local function this_raycast(ray, checkemptyblock)
     -- return values: ray_pos, is_emptyblock, select_empty, emptyrelay_dir
-    local ox = x + vector[1]
-    local oy = y + vector[2]
+    local ox = ray.pos[1] + ray.dir[1]
+    local oy = ray.pos[2] + ray.dir[2]
     while inbounds(ox,oy,1) do
         local tileid = ox + oy * roomsizex
 
@@ -455,8 +480,8 @@ local function this_raycast(x, y, vector, checkemptyblock)
             return {ox, oy}, false, false, nil
         end
 
-        ox = ox + vector[1]
-        oy = oy + vector[2]
+        ox = ox + ray.dir[1]
+        oy = oy + ray.dir[2]
     end
 
     return nil
@@ -484,31 +509,25 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
             -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented? (@EDIT: see section where we handle affect_updatecode)
             curr_raycast_data.raycast_positions = {}
 
-            local unit = mmf.newObject(unitid)
-            local x = unit.values[XPOS]
-            local y = unit.values[YPOS]
-            local dir = unit.values[DIR]
+            local pointer_unit = mmf.newObject(unitid)
+            local pointer_noun = is_name_text_this(pointer_unit.strings[NAME])
+            local rays = get_rays_from_pointer_noun(pointer_unit.strings[NAME], pointer_unit.values[XPOS], pointer_unit.values[YPOS], pointer_unit.values[DIR])
 
-            local cast_vecs = get_raycast_vectors(unit.strings[NAME], dir)
-            
-            local found_raycast_pos_count = 0
             local all_rayunits = {}
-            for i, vector in ipairs(cast_vecs) do
+            for i, ray in ipairs(rays) do
                 local ray_unitids_found_in_curr_cast = {}
                 local visited_tileids = {}
-                local pending_raycast_stack = {
-                    {
-                        x = x,
-                        y = y,
-                        vector = vector,
-                    }
-                }
+                local pending_raycast_stack = {ray}
 
                 while #pending_raycast_stack > 0 do
-                    local raycast_data = table.remove(pending_raycast_stack)
-                    local ray_pos,is_emptyblock, select_empty, emptyrelay_dir = this_raycast(raycast_data.x,raycast_data.y, raycast_data.vector, checkblocked)
+                    local curr_ray = table.remove(pending_raycast_stack)
+                    local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_ray, checkblocked)
                     
-                    if ray_pos then
+                    if not ray_pos then
+                        -- Do nothing for now
+                    elseif pointer_noun == "that" and ray_pos[1] == pointer_unit.values[XPOS] and ray_pos[2] == pointer_unit.values[YPOS] then
+                        -- Do nothing. THAT cannot refer to itself
+                    else
                         local ray_unitids = {}
                         local relay_dirs = {}
                         local blocked = false
@@ -528,11 +547,10 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                                 end
 
                                 is_stopping_point = false
-                                table.insert(pending_raycast_stack, {
-                                    x = ray_pos[1],
-                                    y = ray_pos[2],
-                                    vector = ndirs[emptyrelay_dir+1],
-                                })
+
+                                for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], emptyrelay_dir)) do
+                                    table.insert(pending_raycast_stack, ray)
+                                end
                             elseif select_empty then
                                 local object = utils.make_object(2, ray_pos[1], ray_pos[2])
                                 table.insert(ray_unitids, object)
@@ -590,18 +608,15 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                                 if found_relay and not blocked then
                                     is_stopping_point = false
                                     for dir, _ in pairs(relay_dirs) do
-                                        table.insert(pending_raycast_stack, {
-                                            x = ray_pos[1],
-                                            y = ray_pos[2],
-                                            vector = ndirs[dir+1],
-                                        })
+                                        for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], dir)) do
+                                            table.insert(pending_raycast_stack, ray)
+                                        end
                                     end
                                 elseif checkpass and total_pass_unit_count >= #unitmap[tileid] and not blocked then
                                     is_stopping_point = false
                                     table.insert(pending_raycast_stack, {
-                                        x = ray_pos[1],
-                                        y = ray_pos[2],
-                                        vector = raycast_data.vector,
+                                        pos = ray_pos,
+                                        dir = curr_ray.dir,
                                     })
                                 else
                                     -- Found stopping point. Keep is_stopping_point = true
@@ -614,11 +629,10 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                                 end
                                 set_blocked_tile(tileid)
                             end
-    
+
                             if is_stopping_point then
                                 if curr_raycast_data.raycast_positions[tileid] == nil then
                                     curr_raycast_data.raycast_positions[tileid] = ray_unitids
-                                    found_raycast_pos_count = found_raycast_pos_count + 1
                                 end
                             else
                                 -- Note: maybe in the future there's a case where we insert back into pending_raycast_stack but we still
