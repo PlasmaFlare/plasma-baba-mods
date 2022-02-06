@@ -481,7 +481,7 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
     end
     for unitid, curr_raycast_data in pairs(raycast_data) do
         if not exclude_this_units[unitid] then
-            -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented?
+            -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented? (@EDIT: see section where we handle affect_updatecode)
             curr_raycast_data.raycast_positions = {}
 
             local unit = mmf.newObject(unitid)
@@ -669,12 +669,25 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
                 end
             end
 
+            --[[ 
+                @TODO (BUG) - we really need to revamp how we should check if we need to set updatecode = 1 based on if the raycast 
+                units changed. Doing an update_raycast_units() on the beginning of code() is overkill just to set a boolean value.
+                Plus it has side effects that would affect the update_raycast_units() calls in do_subrule_this().
+
+                For example if you uncomment the line:
+                -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented?
+
+                making "THIS(rock) is relay", adds the relay indicator on the rock. This is because after calling do_subrule_this(), the "THIS" in "THIS(rock) is relay" has one ray unit. But then the next call to update_raycast_units() in code() recasts THIS(rock) already assuming that rock is relayed, making the THIS relayed while in code()
+             ]]
             if affect_updatecode and updatecode == 0 then
                 -- set updatecode to 1 if any of the raycast units changed
                 local prev_raycast_unitids = curr_raycast_data.raycast_unitids or {}
 
                 if #all_rayunits ~= #prev_raycast_unitids then
                     updatecode = 1
+                    if THIS_LOGGING then
+                        print("setting updatecode = 1 from different raycast units. #all_rayunits", #all_rayunits, "#prev_raycast_unitids", #prev_raycast_unitids)
+                    end
                 else
                     for _, ray_object in ipairs(all_rayunits) do
                         local found_unit = false
@@ -687,10 +700,18 @@ function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, excl
 
                         if not found_unit then
                             updatecode = 1
+
+                            if THIS_LOGGING then
+                                print("setting updatecode = 1 from not finding object in old rayunits", utils.unitstring(ray_object))
+                            end
                             break
                         end
                     end
                 end
+            end
+
+            if affect_updatecode then
+                print("updatecode", updatecode)
             end
             if #all_rayunits == 0 then
                 curr_raycast_data.raycast_unitids = nil
@@ -963,24 +984,34 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     
                     -- Rule display in pause menu
                     if #target_options > 0 and filter_property_func(property) then
-                        local raycast_names = {}
+                        local ray_names = {}
                         for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
-                            local ray_unitid = utils.parse_object(ray_object)
-                            local ray_unit = mmf.newObject(ray_unitid)
-                            local ray_name = getname(ray_unit)
-
-                            if raycast_names[ray_name] == nil then
-                                local newrule = {ray_name, rule[2], rule[2]}
-                                local newconds = {}
-                                table.insert(newconds, {"not this", {this_unit_as_param_id} })
-                                for a,b in ipairs(conds) do
-                                    table.insert(newconds, b)
+                            local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
+                            local ray_name = ""
+                            if ray_unitid == 2 then
+                                ray_name = "empty"
+                            else
+                                local ray_unit = mmf.newObject(ray_unitid)
+                                ray_name = ray_unit.strings[NAME]
+                                if ray_unit.strings[UNITTYPE] == "text" then
+                                    ray_name = "text"
                                 end
-                                table.insert(visualfeatures, {newrule, newconds, ids, tags})
                             end
+
+                            ray_names[ray_name] = true
+                        end
+                        for ray_name in pairs(ray_names) do
+                            local newrule = {ray_name, rule[2], rule[3]}
+                            local newconds = {}
+                            table.insert(newconds, {"not this", {this_unit_as_param_id} })
+                            for a,b in ipairs(conds) do
+                                table.insert(newconds, b)
+                            end
+                            table.insert(visualfeatures, {newrule, newconds, ids, tags})
                         end 
                     end
                 else
+                    local ray_names = {}
                     for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
@@ -994,6 +1025,9 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                             end
                         end
 
+                        ray_names[ray_name] = true
+                    end
+                    for ray_name in pairs(ray_names) do
                         for _, option in ipairs(property_options) do
                             local newrule = {ray_name, option.rule[2], option.rule[3]}
                             local newconds = {}
@@ -1110,7 +1144,7 @@ function do_subrule_this()
 
     for unit, _ in pairs(processed_block_this_units) do
         if THIS_LOGGING then
-            print(utils.unitstring(unit))
+            print(utils.unitstring(utils.make_object(unit)))
         end
         all_processed_this_units[unit] = true
     end
@@ -1122,7 +1156,7 @@ function do_subrule_this()
     local processed_relay_this_units = process_this_rules(deferred_rules_with_this, relay_filter, true, false, "relay", true)
     for unit, _ in pairs(processed_relay_this_units) do
         if THIS_LOGGING then
-            print(utils.unitstring(unit))
+            print(utils.unitstring(utils.make_object(unit)))
         end
         all_processed_this_units[unit] = true
     end
@@ -1134,7 +1168,7 @@ function do_subrule_this()
     local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass", true)
     for unit, _ in pairs(processed_pass_this_units) do
         if THIS_LOGGING then
-            print(utils.unitstring(unit))
+            print(utils.unitstring(utils.make_object(unit)))
         end
         all_processed_this_units[unit] = true
     end
