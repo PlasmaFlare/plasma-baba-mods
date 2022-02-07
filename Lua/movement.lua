@@ -617,10 +617,9 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 						solved = false
 						
 						if (state == 0) then
-							if ((data.reason == "move") or (data.reason == "chill")) and (data.unitid == 2) and (dir == 4) then
-								dir = fixedrandom(0,3)
-								
-								data.dir = dir
+							if ((data.reason == "move") or (data.reason == "chill")) and (data.unitid == 2) then
+								data.dir = fixedrandom(0,3)
+								dir = data.dir
 								
 								if cantmove(name,data.unitid,dir,x,y) then
 									skipthis = true

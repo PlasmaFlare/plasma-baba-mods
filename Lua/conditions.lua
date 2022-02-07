@@ -5,7 +5,7 @@ condlist.on = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	local tileid = x + y * roomsizex
 	
@@ -196,7 +196,7 @@ condlist.near = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -400,7 +400,7 @@ condlist.nextto = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -600,10 +600,10 @@ condlist.facing = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	
-	local unitid,x,y,dir,extras = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.extras
-	
-	if (unitid == 2) then
-		dir = emptydir(x,y)
+	local unitid,x,y,dir,extras,surrounds,conds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.extras,cdata.surrounds,cdata.conds
+
+	if (unitid == 2) and ((checkedconds_ == nil) or (checkedconds_[conds] == nil)) then
+		dir = emptydir(x,y,checkedconds)
 	end
 	
 	local ndrs = ndirs[dir+1]
@@ -731,7 +731,7 @@ condlist.facing = function(params,checkedconds,checkedconds_,cdata)
 			end
 		end
 	else
-		print("no parameters given!")
+		--print("no parameters given!")
 		return false,checkedconds
 	end
 	
@@ -743,7 +743,7 @@ condlist.seeing = function(params,checkedconds,checkedconds_,cdata)
 	local alreadyfound = {}
 	local targets = {}
 	
-	local unitid,x,y,dir,conds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.conds
+	local unitid,x,y,dir,conds,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.conds,cdata.surrounds
 	
 	if (unitid == 2) then
 		dir = emptydir(x,y)
@@ -906,11 +906,13 @@ condlist.seeing = function(params,checkedconds,checkedconds_,cdata)
 	return (allfound == #params),checkedconds
 end
 
-condlist.without = function(params,checkedconds)
+condlist.without = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	local unitcount = {}
 	
+	local name = cdata.name
+			
 	if (#params > 0) then
 		for a,b in ipairs(params) do
 			if (unitcount[b] == nil) then
@@ -1025,7 +1027,7 @@ end
 condlist.above = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -1215,7 +1217,7 @@ end
 condlist.below = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -1405,7 +1407,7 @@ end
 condlist.besideright = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -1561,8 +1563,8 @@ condlist.besideright = function(params,checkedconds,checkedconds_,cdata)
 				end
 				
 				if (b ~= "text") and (ulist == false) then
-					if (surrounds.u ~= nil) then
-						for c,d in ipairs(surrounds.u) do
+					if (surrounds.l ~= nil) then
+						for c,d in ipairs(surrounds.l) do
 							if (pnot == false) then
 								if (ulist == false) and (d == pname) and (alreadyfound[bcode] == nil) then
 									alreadyfound[bcode] = 1
@@ -1595,7 +1597,7 @@ end
 condlist.besideleft = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
-	local unitid,x,y = cdata.unitid,cdata.x,cdata.y
+	local unitid,x,y,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.surrounds
 	
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -1751,8 +1753,8 @@ condlist.besideleft = function(params,checkedconds,checkedconds_,cdata)
 				end
 				
 				if (b ~= "text") and (ulist == false) then
-					if (surrounds.d ~= nil) then
-						for c,d in ipairs(surrounds.d) do
+					if (surrounds.r ~= nil) then
+						for c,d in ipairs(surrounds.r) do
 							if (pnot == false) then
 								if (ulist == false) and (d == pname) and (alreadyfound[bcode] == nil) then
 									alreadyfound[bcode] = 1

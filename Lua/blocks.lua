@@ -1542,7 +1542,8 @@ function levelblock()
 							end
 							
 							alive = false
-							delete(2,i,j)
+							
+							table.insert(edelthese, {i,j})
 						end
 						
 						if melt and (esafe == false) and alive then
@@ -1553,7 +1554,7 @@ function levelblock()
 							end
 							
 							alive = false
-							delete(2,i,j)
+							table.insert(edelthese, {i,j})
 						end
 						
 						if defeat and (esafe == false) and alive then
@@ -1564,7 +1565,7 @@ function levelblock()
 							end
 							
 							alive = false
-							delete(2,i,j)
+							table.insert(edelthese, {i,j})
 						end
 						
 						if bonus and (esafe == false) and alive then
@@ -1582,7 +1583,7 @@ function levelblock()
 							end
 							
 							alive = false
-							delete(2,i,j)
+							table.insert(edelthese, {i,j})
 						end
 						
 						if victory and alive then
