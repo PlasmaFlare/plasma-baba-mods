@@ -1,4 +1,7 @@
 table.insert(editor_objlist_order, "text_this")
+table.insert(editor_objlist_order, "text_that")
+table.insert(editor_objlist_order, "text_these")
+table.insert(editor_objlist_order, "text_those")
 table.insert(editor_objlist_order, "text_block")
 table.insert(editor_objlist_order, "text_relay")
 table.insert(editor_objlist_order, "text_pass")
@@ -6,6 +9,42 @@ table.insert(editor_objlist_order, "text_pass")
 editor_objlist["text_this"] = 
 {
 	name = "text_this",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract", "text_noun"},
+	tiling = 0,
+	type = 0,
+	layer = 20,
+	colour = {0, 1},
+    colour_active = {0, 3},
+}
+editor_objlist["text_that"] = 
+{
+	name = "text_that",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract", "text_noun"},
+	tiling = 0,
+	type = 0,
+	layer = 20,
+	colour = {0, 1},
+    colour_active = {0, 3},
+}
+editor_objlist["text_these"] = 
+{
+	name = "text_these",
+	sprite_in_root = false,
+	unittype = "text",
+	tags = {"plasma's mods", "text", "abstract", "text_noun"},
+	tiling = 0,
+	type = 0,
+	layer = 20,
+	colour = {0, 1},
+    colour_active = {0, 3},
+}
+editor_objlist["text_those"] = 
+{
+	name = "text_those",
 	sprite_in_root = false,
 	unittype = "text",
 	tags = {"plasma's mods", "text", "abstract", "text_noun"},
@@ -57,6 +96,7 @@ formatobjlist()
 register_directional_text_prefix("this")
 register_directional_text_prefix("that")
 register_directional_text_prefix("these")
+register_directional_text_prefix("those")
 
 this_mod_globals = {}
 local function reset_this_mod_globals()
@@ -208,7 +248,8 @@ local relay_indicators = {}
 local PointerNouns = {
     this = true,
     that = true,
-    these = true
+    these = true,
+    those = true,
 }
 
 local function reset_this_mod_locals()
@@ -314,9 +355,22 @@ function is_name_text_this(name, check_not_)
     return nil
 end
 
+local function dir_vec_to_dir_value(dir_vec)
+    if dir_vec[1] > 0 and dir_vec[2] == 0 then
+        return 0
+    elseif dir_vec[2] < 0 and dir_vec[1] == 0 then
+        return 1
+    elseif dir_vec[1] < 0 and dir_vec[2] == 0 then
+        return 2
+    elseif dir_vec[2] > 0 and dir_vec[1] == 0 then
+        return 3
+    else
+        return 4
+    end
+end
+
 -- Determine the raycast velocity vectors, given a name of a pointer noun
-local function get_rays_from_pointer_noun(name, x, y, dir)
-    local cast_vecs = {}
+local function get_rays_from_pointer_noun(name, x, y, dir, pnoun_unitid)
     local pointer_noun = is_name_text_this(name)
     local out_rays = {}
 
@@ -324,7 +378,6 @@ local function get_rays_from_pointer_noun(name, x, y, dir)
         local dir_vec = {dirs[dir+1][1], dirs[dir+1][2] * -1}
 
         if pointer_noun == "this" then
-            table.insert(cast_vecs, dir_vec)
             table.insert(out_rays, {
                 pos = {x, y},
                 dir = dir_vec,
@@ -346,15 +399,21 @@ local function get_rays_from_pointer_noun(name, x, y, dir)
                 pos = {cast_start_x, cast_start_y},
                 dir = {dir_vec[1] * -1, dir_vec[2] * -1},
             })
-
-        -- elseif pointer_noun == "these" then
-        --     if (math.abs(dir_vec[1]) > math.abs(dir_vec[2])) then
-        --         table.insert(cast_vecs, {dir_vec[1], dir_vec[2] + 1} )
-        --         table.insert(cast_vecs, {dir_vec[1], dir_vec[2] - 1} )
-        --     else
-        --         table.insert(cast_vecs, {dir_vec[1] + 1, dir_vec[2]} )
-        --         table.insert(cast_vecs, {dir_vec[1] - 1, dir_vec[2]} )
-        --     end
+        elseif pointer_noun == "these" then
+            table.insert(out_rays, {
+                pos = {x, y},
+                dir = dir_vec,
+            })
+        elseif pointer_noun == "those" then
+            for pnoun in pairs(raycast_data) do
+                if pnoun ~= pnoun_unitid then
+                    local remote_pnoun = mmf.newObject(pnoun)
+                    table.insert(out_rays, {
+                        pos = {remote_pnoun.values[XPOS], remote_pnoun.values[YPOS]},
+                        dir = dir_vec,
+                    })
+                end
+            end
         end
     end
 
@@ -518,14 +577,12 @@ function update_all_cursors()
                 MF_setcolour(cursorunit.fixed,c1,c2)
                 cursorunit.visible = true
             else
-                -- Just to hide it
                 cursorunit.visible = false
             end
             cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             
             if (generaldata.values[DISABLEPARTICLES] ~= 0 or generaldata5.values[LEVEL_DISABLEPARTICLES] ~= 0) then
-                -- Just to hide it
                 cursorunit.visible = false
             else
                 cursorunit.visible = true
@@ -598,6 +655,7 @@ function make_relay_indicator(x, y, dir)
     unit.values[YPOS] = y * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
     unit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
     unit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+    unit.values[ZLAYER] = 29
 
     MF_setcolour(unitid,5,4)
     
@@ -649,10 +707,11 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
      ]]
     local pointer_unit = mmf.newObject(pnoun_unitid)
     local pointer_noun = is_name_text_this(pointer_unit.strings[NAME])
-    local rays = get_rays_from_pointer_noun(pointer_unit.strings[NAME], pointer_unit.values[XPOS], pointer_unit.values[YPOS], pointer_unit.values[DIR])
+    local rays = get_rays_from_pointer_noun(pointer_unit.strings[NAME], pointer_unit.values[XPOS], pointer_unit.values[YPOS], pointer_unit.values[DIR], pnoun_unitid)
     local ray_objects_by_tileid = {}
     local found_relay_indicators = {} -- indicator ids -> true
     local found_blocked_tiles = {}
+    local found_ending_these_texts = {}
 
     local all_block = false
     local all_pass = false
@@ -668,7 +727,14 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
     end
 
     for i, ray in ipairs(rays) do
-        local stack = { {ray = ray, extradata = {} } }
+        local stack = {
+            {
+                ray = ray, 
+                extradata = {
+                    these_ray_objects_by_tileid = {},
+                }
+            } 
+        }
         local visited_tileids = {}
 
         while #stack > 0 do
@@ -685,7 +751,23 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 local new_stack_entries = {}
                 local ray_objects = {}
                 local tileid = ray_pos[1] + ray_pos[2] * roomsizex
-                if not visited_tileids[tileid] then
+                local found_ending_these = false
+
+                if pointer_noun == "these" then
+                    -- If we found another THESE pointing in the opposite direction, terminate early
+                    for _, ray_unitid in ipairs(unitmap[tileid]) do
+                        local ray_unit = mmf.newObject(ray_unitid)
+                        if ray_unit.strings[NAME] == "these" and ray_unitid ~= pnoun_unitid then
+                            local ray_dir_value = dir_vec_to_dir_value(curr_cast_data.ray.dir)
+                            if rotate(ray_dir_value) == ray_unit.values[DIR] then
+                                found_ending_these_texts[ray_unitid] = true
+                                found_ending_these = true
+                            end
+                        end
+                    end
+                end
+
+                if not visited_tileids[tileid] and not found_ending_these then
                     visited_tileids[tileid] = true
                     
                     if raycast_settings.checkblocked and is_emptyblock then
@@ -781,8 +863,14 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                     end
                     
                 end
-                
-                if blocked then
+
+                if found_ending_these then
+                    for tileid, ray_objects in pairs(curr_cast_data.extradata.these_ray_objects_by_tileid) do
+                        if ray_objects_by_tileid[tileid] == nil then
+                            ray_objects_by_tileid[tileid] = ray_objects
+                        end
+                    end
+                elseif blocked then
                     found_blocked_tiles[tileid] = true
                     ray_objects_by_tileid[tileid] = {}
                     -- If we find that the current tileid has a blocked unit, don't submit anything
@@ -793,23 +881,39 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                     end
     
                     -- Do submit any relay indicators if we found any.
-                    for indicator_key in pairs(new_relay_indicators) do
-                        found_relay_indicators[indicator_key] = true
+                    for indicator_key, data in pairs(new_relay_indicators) do
+                        found_relay_indicators[indicator_key] = data
                     end
                 else
-                    -- At this point, we found a stopping point with valid ray objects. Submit them.
-                    if ray_objects_by_tileid[tileid] == nil then
-                        ray_objects_by_tileid[tileid] = ray_objects --@TODO: if two cursors found units on the same tileid, what do we do?
+                    -- At this point, we found a stopping point with valid ray objects.
+                    if pointer_noun == "these" then
+                        local new_extradata = curr_cast_data.extradata
+                        if new_extradata.these_ray_objects_by_tileid[tileid] == nil then
+                            new_extradata.these_ray_objects_by_tileid[tileid] = ray_objects
+                        end
+
+                        local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
+                        table.insert(stack, {ray = new_ray, extradata = new_extradata})
+                    else
+                        if ray_objects_by_tileid[tileid] == nil then
+                            ray_objects_by_tileid[tileid] = ray_objects --@Todo: if two cursors found units on the same tileid, what do we do?
+                        end
                     end
                     for indicator_key in pairs(new_relay_indicators) do
-                        found_relay_indicators[indicator_key] = true
+                        found_relay_indicators[indicator_key] = data
                     end
                 end
             end
         end
     end
 
-    return ray_objects_by_tileid, found_relay_indicators, found_blocked_tiles
+    local extra_raycast_data = {
+        found_relay_indicators = found_relay_indicators, 
+        found_blocked_tiles = found_blocked_tiles,
+        found_ending_these_texts = found_ending_these_texts,
+    }
+
+    return ray_objects_by_tileid, extra_raycast_data
 end
 
 function check_cond_rules_with_this_noun()
@@ -1274,6 +1378,8 @@ function do_subrule_pnouns()
             if THIS_LOGGING then
                 print(" > New filter ")
             end
+
+            local found_these_ending_texts = {}
             
             -- Main action 1: Update the raycast units for each pnoun
             for pnoun_unitid in pairs(data.pnoun_units) do
@@ -1282,7 +1388,7 @@ function do_subrule_pnouns()
                 end
 
                 local curr_raycast_data = raycast_data[pnoun_unitid]
-                local raycast_objects_by_tileid, found_relay_indicators, found_blocked_tiles = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+                local raycast_objects_by_tileid, extradata = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                 local raycast_objects = {}
                 local raycast_objects_dict = {}
@@ -1295,15 +1401,21 @@ function do_subrule_pnouns()
                     end
                 end
 
-                for indicator_key, data in pairs(found_relay_indicators) do
+                for indicator_key, data in pairs(extradata.found_relay_indicators) do
                     all_found_relay_indicators[indicator_key] = true
-                    if new_relay_indicators[indicator_key] == nil then
+                    if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
                         new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
                     end
                 end
 
-                for tileid, _ in pairs(found_blocked_tiles) do
+                for tileid in pairs(extradata.found_blocked_tiles) do
                     set_blocked_tile(tileid)
+                end
+
+                if pnoun_group ~= PNounGroups.OTHER_INACTIVE then
+                    for these_unitid in pairs(extradata.found_ending_these_texts) do
+                        this_mod_globals.active_this_property_text[these_unitid] = true
+                    end
                 end
 
                 curr_raycast_data.raycast_unitids = raycast_objects
