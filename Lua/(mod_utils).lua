@@ -57,6 +57,14 @@ utils = {
         end
     end,
 
+    --@TODO - this should be the ORIGINAL unitstring(). The other unitstring is pissing me off and should be named objectstring()
+    real_unitstring = function(unitid)
+        local unit = mmf.newObject(unitid)
+        utils.debug_assert(unit)
+
+        return utils.unitstring(utils.make_object(unitid, unit.values[XPOS], unit.values[YPOS]))
+    end,
+
     deep_copy_table = function(table)
         local copy = {}
         for k,v in pairs(table) do

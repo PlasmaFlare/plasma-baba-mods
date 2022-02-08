@@ -73,10 +73,100 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
-local deferred_rules_with_this = {} -- gather all features with THIS in the sentence into here instead of directly submitting into featureindex. Then when do_subrule_this() is called, process all features
 local on_level_start = false
 local NO_POSITION = -1
 local THIS_LOGGING = false
+
+local PNounGroups = {
+    THIS_IS_BLOCK =     1, -- All "THIS is block" rules
+    THIS_IS_RELAY =     2, -- All "THIS is relay" rules
+    THIS_IS_PASS =      3, -- All "THIS is pass" rules
+    X_IS_VAR =          4, -- All "X is THIS" rules
+    THIS_IS_VAR =       5, -- All "THIS is THIS" rules
+    OTHER_ACTIVE =      6, -- All other active rules with THIS as either rule[1] or rule[3]
+    OTHER_INACTIVE =    7, -- This should have no features. Only pnouns not part of an active rule. This is populated only when calling populate_inactive_pnouns()
+}
+
+local function set_blocked_tile(tileid)
+    if tileid then
+        blocked_tiles[tileid] = true
+    end
+end
+local function set_relay_tile(tileid)
+    if tileid then
+        explicit_relayed_tiles[tileid] = true
+    end
+end
+local function set_passed_tile(tileid)
+    if tileid then
+        explicit_passed_tiles[tileid] = true
+    end
+end
+
+local Pnoun_Subrule_Ops = {
+    block = {
+        filter_func = function(name) return name == "block" end,
+        explicit_tile_func = set_blocked_tile
+    },
+    relay = {
+        filter_func = function(name) return name == "relay" end,
+        explicit_tile_func = set_relay_tile
+    },
+    pass = {
+        filter_func = function(name) return name == "pass" end,
+        explicit_tile_func = set_passed_tile
+    },
+    other = {
+        filter_func = function(name) return name ~= "block" and name ~= "pass" and name ~= "relay" end,
+        explicit_tile_func = nil
+    },
+}
+
+
+local Pnoun_Group_Lookup = {
+    [PNounGroups.THIS_IS_BLOCK] = {
+        ops = {"block"}
+    },
+    [PNounGroups.THIS_IS_RELAY] = {
+        ops = {"relay"}
+    },
+    [PNounGroups.THIS_IS_PASS] = {
+        ops = {"pass"}
+    },
+    [PNounGroups.OTHER_ACTIVE] = {
+        ops = {"other"}
+    },
+    [PNounGroups.OTHER_INACTIVE] = {
+        ops = {"other"}
+    },
+    [PNounGroups.X_IS_VAR] = {
+        ops = {"block", "relay", "pass"},
+        redirect_pnoun_group = PNounGroups.OTHER_ACTIVE,
+    },
+    [PNounGroups.THIS_IS_VAR] = {
+        ops = {"block", "relay", "pass"},
+        redirect_pnoun_group = PNounGroups.OTHER_ACTIVE,
+    },
+}
+--[[ 
+    local deferred_pnoun_subrules = {
+        <Pnoun_Group> = {
+            pnoun_features = [<feature>, <feature>],
+            pnoun_units = (<pnoun unitid>, <pnoun unitid>),
+        }
+    }
+]]
+local deferred_pnoun_subrules = {}
+
+--[[ 
+    local pnoun_subrule_data = {
+        pnoun_to_groups = {
+            <pnoun unitid> = <Pnoun_Group>
+            ...    
+        }
+    }    
+]]
+local pnoun_subrule_data = {}
 
 --[[ 
     local raycast_data = {
@@ -99,6 +189,8 @@ local THIS_LOGGING = false
                 <tileid> = <unitid of cursor>,
                 ...
             },
+            
+            pnoun_group = <Pnoun_Group>,
         }
     }
  ]]
@@ -113,7 +205,7 @@ local raycast_data = {}
 ]]
 local relay_indicators = {}
 
-local POINTER_NOUNS = {
+local PointerNouns = {
     this = true,
     that = true,
     these = true
@@ -126,6 +218,8 @@ local function reset_this_mod_locals()
     cond_features_with_this_noun = {}
     raycast_data = {}
     relay_indicators = {}
+    deferred_pnoun_subrules = {}
+    pnoun_subrule_data = {}
 end
 
 local make_cursor, update_all_cursors, make_relay_indicator
@@ -160,18 +254,27 @@ table.insert( mod_hook_functions["undoed_after"],
     end
 )
 
-table.insert( mod_hook_functions["command_given"],
-    function()
-        this_mod_globals.update_cursor_zoom = false
-    end
-)
-
-
 table.insert(mod_hook_functions["rule_update"],
     function(is_this_a_repeated_update)
         this_mod_globals.active_this_property_text = {}
+        blocked_tiles = {}
+        explicit_passed_tiles = {}
+        explicit_relayed_tiles = {}
         cond_features_with_this_noun = {}
-        deferred_rules_with_this = {}
+        pnoun_subrule_data = {
+            pnoun_to_groups = {},
+        }
+        deferred_pnoun_subrules = {}
+        for pnoun_group, value in pairs(PNounGroups) do
+            deferred_pnoun_subrules[value] = {
+                pnoun_features = {},
+                pnoun_units = {},
+            }
+        end
+
+        if THIS_LOGGING then
+            print(">>>>>>>>>>>>>>> rule_update start")
+        end
     end
 )
 table.insert(mod_hook_functions["rule_update_after"],
@@ -181,6 +284,10 @@ table.insert(mod_hook_functions["rule_update_after"],
         end
         if this_mod_globals.undoed_after_called then
             this_mod_globals.undoed_after_called = false
+        end
+
+        if THIS_LOGGING then
+            print("<<<<<<<<<<<<<< rule_update end")
         end
     end
 )
@@ -199,7 +306,7 @@ function is_name_text_this(name, check_not_)
         return false
     end
 
-    for noun, _ in pairs(POINTER_NOUNS) do
+    for noun, _ in pairs(PointerNouns) do
         if string.sub(name, 1, #noun) == noun then
             return noun
         end
@@ -300,22 +407,64 @@ function on_delele_this_text(this_unitid)
 end
 
 function defer_addoption_with_this(rule)
-    table.insert(deferred_rules_with_this, rule)
-end
+    local baserule = rule[1]
+    local target = baserule[1]
+    local property = baserule[3]
+    
+    local target_is_pnoun = is_name_text_this(target) or is_name_text_this(target, true)
+    local property_is_pnoun = is_name_text_this(property) or is_name_text_this(property, true)
 
-local function set_blocked_tile(tileid)
-    if tileid then
-        blocked_tiles[tileid] = true
+    local pnoun_group = nil
+    if target_is_pnoun and not property_is_pnoun then
+        if property == "block" then
+            pnoun_group = PNounGroups.THIS_IS_BLOCK
+        elseif property == "relay" then
+            pnoun_group = PNounGroups.THIS_IS_RELAY
+        elseif property == "pass" then
+            pnoun_group = PNounGroups.THIS_IS_PASS
+        end
+    elseif property_is_pnoun then
+        if target_is_pnoun then
+            pnoun_group = PNounGroups.THIS_IS_VAR
+        else
+            pnoun_group = PNounGroups.X_IS_VAR
+        end
     end
-end
-local function set_passed_tile(tileid)
-    if tileid then
-        explicit_passed_tiles[tileid] = true
+    
+    if pnoun_group == nil then
+        pnoun_group = PNounGroups.OTHER_ACTIVE
     end
-end
-local function set_relay_tile(tileid)
-    if tileid then
-        explicit_relayed_tiles[tileid] = true
+    
+    -- A pnoun feature can only be in one pnoun group. There is no need to check for priority since
+    -- each pnoun group is meant to be mutually exclusive in terms of features.
+    table.insert(deferred_pnoun_subrules[pnoun_group].pnoun_features, rule)
+
+    local pnouns_to_add = {}
+
+    if target_is_pnoun then
+        local target_this_unitid = get_target_unitid_from_rule(rule)
+        table.insert(pnouns_to_add, target_this_unitid)
+    end
+    if property_is_pnoun then
+        local property_this_unitid = get_property_unitid_from_rule(rule)
+        table.insert(pnouns_to_add, property_this_unitid)
+    end
+
+    -- A pnoun unit can only belong to one pnoun group. If a pnoun can be categorized into two
+    -- groups, only go for the group with the higher priority.
+    for _, pnoun in ipairs(pnouns_to_add) do
+        local prev_pnoun_group = pnoun_subrule_data.pnoun_to_groups[pnoun]
+
+        if prev_pnoun_group ~= nil and pnoun_group < prev_pnoun_group then
+            -- Replace with the pnoun group with the higher priority
+            deferred_pnoun_subrules[prev_pnoun_group].pnoun_units[pnoun] = nil
+            deferred_pnoun_subrules[pnoun_group].pnoun_units[pnoun] = true
+            pnoun_subrule_data.pnoun_to_groups[pnoun] = pnoun_group
+        elseif prev_pnoun_group == nil then
+            -- Assign the pnoun group to the pnoun unit
+            deferred_pnoun_subrules[pnoun_group].pnoun_units[pnoun] = true
+            pnoun_subrule_data.pnoun_to_groups[pnoun] = pnoun_group
+        end
     end
 end
 
@@ -487,267 +636,180 @@ local function this_raycast(ray, checkemptyblock)
     return nil
 end
 
-function update_raycast_units(checkblocked_, checkpass_, affect_updatecode, exclude_this_units, keep_relay_indicators)
-    local checkblocked = checkblocked_ or false
-    local checkpass = checkpass_ or false
-    exclude_this_units = exclude_this_units or {}
-    local new_raycast_units = {}
+local function make_relay_indicator_key(tileid, dir)
+    return tileid + dir * roomsizex * roomsizey
+end
+
+function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+    --[[ 
+        return value: {
+            <tileid> = [<object>, <object>]
+            ...
+        }
+     ]]
+    local pointer_unit = mmf.newObject(pnoun_unitid)
+    local pointer_noun = is_name_text_this(pointer_unit.strings[NAME])
+    local rays = get_rays_from_pointer_noun(pointer_unit.strings[NAME], pointer_unit.values[XPOS], pointer_unit.values[YPOS], pointer_unit.values[DIR])
+    local ray_objects_by_tileid = {}
+    local found_relay_indicators = {} -- indicator ids -> true
+    local found_blocked_tiles = {}
+
     local all_block = false
     local all_pass = false
-    
-    local found_relay_indicators = {}
-    local new_relay_indicators = {}
-    
-    if checkblocked then
+    local all_relay = false
+    if raycast_settings.checkblocked then
         all_block = findfeature("all", "is", "block") ~= nil
     end
-    if checkpass then
+    if raycast_settings.checkrelay then
+        all_relay = findfeature("all", "is", "relay") ~= nil
+    end
+    if raycast_settings.checkpass then
         all_pass = findfeature("all", "is", "pass") ~= nil
     end
-    for unitid, curr_raycast_data in pairs(raycast_data) do
-        if not exclude_this_units[unitid] then
-            -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented? (@EDIT: see section where we handle affect_updatecode)
-            curr_raycast_data.raycast_positions = {}
 
-            local pointer_unit = mmf.newObject(unitid)
-            local pointer_noun = is_name_text_this(pointer_unit.strings[NAME])
-            local rays = get_rays_from_pointer_noun(pointer_unit.strings[NAME], pointer_unit.values[XPOS], pointer_unit.values[YPOS], pointer_unit.values[DIR])
+    for i, ray in ipairs(rays) do
+        local stack = { {ray = ray, extradata = {} } }
+        local visited_tileids = {}
 
-            local all_rayunits = {}
-            for i, ray in ipairs(rays) do
-                local ray_unitids_found_in_curr_cast = {}
-                local visited_tileids = {}
-                local pending_raycast_stack = {ray}
-
-                while #pending_raycast_stack > 0 do
-                    local curr_ray = table.remove(pending_raycast_stack)
-                    local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_ray, checkblocked)
+        while #stack > 0 do
+            local curr_cast_data = table.remove(stack)
+            
+            local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_cast_data.ray, raycast_settings.checkblocked)
+            if not ray_pos then
+                -- Do nothing for now
+            elseif pointer_noun == "that" and ray_pos[1] == pointer_unit.values[XPOS] and ray_pos[2] == pointer_unit.values[YPOS] then
+                -- Do nothing. THAT cannot refer to itself
+            else
+                local blocked = false
+                local new_relay_indicators = {}
+                local new_stack_entries = {}
+                local ray_objects = {}
+                local tileid = ray_pos[1] + ray_pos[2] * roomsizex
+                if not visited_tileids[tileid] then
+                    visited_tileids[tileid] = true
                     
-                    if not ray_pos then
-                        -- Do nothing for now
-                    elseif pointer_noun == "that" and ray_pos[1] == pointer_unit.values[XPOS] and ray_pos[2] == pointer_unit.values[YPOS] then
-                        -- Do nothing. THAT cannot refer to itself
+                    if raycast_settings.checkblocked and is_emptyblock then
+                        blocked = true
+                    elseif emptyrelay_dir then
+                        local indicator_key = make_relay_indicator_key(tileid, emptyrelay_dir)
+                        new_relay_indicators[indicator_key] = {
+                            x = ray_pos[1],
+                            y = ray_pos[2],
+                            dir = emptyrelay_dir
+                        }
+                        
+                        for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], emptyrelay_dir)) do
+                            table.insert(new_stack_entries, {ray = ray, extradata = curr_cast_data.extradata})
+                        end
+                    elseif select_empty then
+                        local object = utils.make_object(2, ray_pos[1], ray_pos[2])
+                        table.insert(ray_objects, object)
                     else
-                        local ray_unitids = {}
+                        local total_pass_unit_count = 0
+                        local found_relay = false
                         local relay_dirs = {}
-                        local blocked = false
-                        local is_stopping_point = true
-                        local tileid = ray_pos[1] + ray_pos[2] * roomsizex
 
-                        if not visited_tileids[tileid] then
-                            visited_tileids[tileid] = true
-    
-                            if checkblocked and is_emptyblock then
-                                blocked = true
-                            elseif emptyrelay_dir then
-                                local indicator_key = tileid + emptyrelay_dir * roomsizex * roomsizey
-                                found_relay_indicators[indicator_key] = true
-                                if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
-                                    new_relay_indicators[indicator_key] = make_relay_indicator(ray_pos[1], ray_pos[2], emptyrelay_dir)
+                        -- Check through every unit in the specific space
+                        for _, ray_unitid in ipairs(unitmap[tileid]) do
+                            local ray_unit = mmf.newObject(ray_unitid)
+                            local ray_unit_name = getname(ray_unit) -- If the unit is a text block, we want the name to be "text"
+                            local add_to_rayunits = true
+
+                            -- block logic
+                            if raycast_settings.checkblocked then
+                                if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                    blocked = true
+                                elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
+                                    blocked = true
                                 end
 
-                                is_stopping_point = false
-
-                                for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], emptyrelay_dir)) do
-                                    table.insert(pending_raycast_stack, ray)
+                                if blocked then
+                                    break
                                 end
-                            elseif select_empty then
-                                local object = utils.make_object(2, ray_pos[1], ray_pos[2])
-                                table.insert(ray_unitids, object)
-                            else
-                                local total_pass_unit_count = 0
-                                local found_relay = false
-                                for _, ray_unitid in ipairs(unitmap[tileid]) do
-                                    local ray_unit = mmf.newObject(ray_unitid)
-                                    local ray_unit_name = getname(ray_unit) -- If the unit is a text block, we want the name to be "text"
-    
-                                    if checkblocked then
-                                        if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                            blocked = true
-                                        elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
-                                            blocked = true
-                                        end
-                                    end
-    
-                                    local add_to_rayunits = not blocked
-                                    if checkpass and not blocked then
-                                        if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                            total_pass_unit_count = total_pass_unit_count + 1
-                                            add_to_rayunits = false
-                                        else
-                                            local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                                            local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
-                                            if has_pass and not has_not_pass then
-                                                total_pass_unit_count = total_pass_unit_count + 1
-                                                add_to_rayunits = false
-                                            end
-                                        end
-                                    end
-    
-                                    if add_to_rayunits then
-                                        local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
-                                        table.insert(ray_unitids, object)
-                                    end
-    
-                                    -- relay logic
-                                    if not blocked then
-                                        if hasfeature(ray_unit_name, "is", "relay", ray_unitid) then
-                                            found_relay = true
-                                            relay_dirs[ray_unit.values[DIR]] = true
-                                            
-                                            local indicator_key = tileid + ray_unit.values[DIR] * roomsizex * roomsizey
-                                            found_relay_indicators[indicator_key] = true
-                                            if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
-                                                new_relay_indicators[indicator_key] = make_relay_indicator(ray_pos[1], ray_pos[2], ray_unit.values[DIR])
-                                            end
-                                        end
-                                    end
-                                end
+                            end
 
-    
-                                if found_relay and not blocked then
-                                    is_stopping_point = false
-                                    for dir, _ in pairs(relay_dirs) do
-                                        for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], dir)) do
-                                            table.insert(pending_raycast_stack, ray)
-                                        end
-                                    end
-                                elseif checkpass and total_pass_unit_count >= #unitmap[tileid] and not blocked then
-                                    is_stopping_point = false
-                                    table.insert(pending_raycast_stack, {
-                                        pos = ray_pos,
-                                        dir = curr_ray.dir,
-                                    })
+                            -- relay logic
+                            if raycast_settings.checkrelay and not blocked then
+                                if all_relay or hasfeature(ray_unit_name, "is", "relay", ray_unitid) then
+                                    found_relay = true
+                                    add_to_rayunits = false
+                                    relay_dirs[ray_unit.values[DIR]] = true
+                                    
+                                    local indicator_key = make_relay_indicator_key(tileid, ray_unit.values[DIR])
+                                    new_relay_indicators[indicator_key] = {
+                                        x = ray_pos[1],
+                                        y = ray_pos[2],
+                                        dir = ray_unit.values[DIR]
+                                    }
+                                end
+                            end
+
+                            -- pass logic
+                            if raycast_settings.checkpass and not blocked then
+                                if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                    total_pass_unit_count = total_pass_unit_count + 1
+                                    add_to_rayunits = false
                                 else
-                                    -- Found stopping point. Keep is_stopping_point = true
+                                    local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
+                                    local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
+                                    if has_pass and not has_not_pass then
+                                        total_pass_unit_count = total_pass_unit_count + 1
+                                        add_to_rayunits = false
+                                    end
                                 end
-                            end
-                            
-                            if blocked then
-                                if THIS_LOGGING then
-                                    print("setting blocked in update raycast", ray_pos[1], ray_pos[2])
-                                end
-                                set_blocked_tile(tileid)
                             end
 
-                            if is_stopping_point then
-                                if curr_raycast_data.raycast_positions[tileid] == nil then
-                                    curr_raycast_data.raycast_positions[tileid] = ray_unitids
-                                end
-                            else
-                                -- Note: maybe in the future there's a case where we insert back into pending_raycast_stack but we still
-                                -- want to insert units into the final set of raycast units?
-                                ray_unitids = {}
+                            if add_to_rayunits then
+                                local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
+                                table.insert(ray_objects, object)
                             end
-    
-                            for _, ray_unitid in ipairs(ray_unitids) do
-                                table.insert(ray_unitids_found_in_curr_cast, ray_unitid)
+                        end
+
+                        -- Consolidate findings from scanning all units in a single position.
+                        if not blocked then
+                            if found_relay then
+                                for dir, _ in pairs(relay_dirs) do
+                                    for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], dir)) do
+                                        table.insert(new_stack_entries, {ray = ray, extradata = curr_cast_data.extradata})
+                                    end
+                                end
+                            elseif raycast_settings.checkpass and total_pass_unit_count >= #unitmap[tileid] then
+                                local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
+                                table.insert(new_stack_entries, {ray = new_ray, extradata = curr_cast_data.extradata})
                             end
                         end
                     end
+                    
                 end
-
-                for _, ray_unitid in ipairs(ray_unitids_found_in_curr_cast) do
-                    table.insert(all_rayunits, ray_unitid)
-                end
-            end
-
-            -- Add/Update/Remove cursors based on how many raycast positions we found
-            local new_positions = {}
-            for tileid, _ in pairs(curr_raycast_data.raycast_positions) do
-                if not curr_raycast_data.cursors[tileid] then
-                    table.insert(new_positions, tileid)
-                end
-            end
-
-            local tileids_to_delete = {}
-            for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
-                if not curr_raycast_data.raycast_positions[tileid] then
-                    table.insert(tileids_to_delete, tileid)
-                    if #new_positions > 0 then
-                        local new_tileid = table.remove(new_positions)
-                        curr_raycast_data.cursors[new_tileid] = cursor_unitid
-                    else
-                        delunit(cursor_unitid)
-                        MF_cleanremove(cursor_unitid)
+                
+                if blocked then
+                    found_blocked_tiles[tileid] = true
+                    ray_objects_by_tileid[tileid] = {}
+                    -- If we find that the current tileid has a blocked unit, don't submit anything
+                elseif #new_stack_entries > 0 then
+                    -- If we inserted into the stack, we intend to re-raycast. Don't submit the found ray objects.
+                    for _, stack_entry in ipairs(new_stack_entries) do
+                        table.insert(stack, stack_entry)
                     end
-                end
-            end
-            for _, tileid in ipairs(tileids_to_delete) do
-                curr_raycast_data.cursors[tileid] = nil
-            end
-            if #new_positions > 0 then
-                for _, tileid in ipairs(new_positions) do
-                    local cursor_unitid = make_cursor()
-                    curr_raycast_data.cursors[tileid] = cursor_unitid
-                end
-            end
-
-            --[[ 
-                @TODO (BUG) - we really need to revamp how we should check if we need to set updatecode = 1 based on if the raycast 
-                units changed. Doing an update_raycast_units() on the beginning of code() is overkill just to set a boolean value.
-                Plus it has side effects that would affect the update_raycast_units() calls in do_subrule_this().
-
-                For example if you uncomment the line:
-                -- curr_raycast_data.raycast_unitids = nil -- @TODO: should this be uncommented?
-
-                making "THIS(rock) is relay", adds the relay indicator on the rock. This is because after calling do_subrule_this(), the "THIS" in "THIS(rock) is relay" has one ray unit. But then the next call to update_raycast_units() in code() recasts THIS(rock) already assuming that rock is relayed, making the THIS relayed while in code()
-             ]]
-            if affect_updatecode and updatecode == 0 then
-                -- set updatecode to 1 if any of the raycast units changed
-                local prev_raycast_unitids = curr_raycast_data.raycast_unitids or {}
-
-                if #all_rayunits ~= #prev_raycast_unitids then
-                    updatecode = 1
-                    if THIS_LOGGING then
-                        print("setting updatecode = 1 from different raycast units. #all_rayunits", #all_rayunits, "#prev_raycast_unitids", #prev_raycast_unitids)
+    
+                    -- Do submit any relay indicators if we found any.
+                    for indicator_key in pairs(new_relay_indicators) do
+                        found_relay_indicators[indicator_key] = true
                     end
                 else
-                    for _, ray_object in ipairs(all_rayunits) do
-                        local found_unit = false
-                        for _, prev_object in ipairs(prev_raycast_unitids) do
-                            if prev_object == ray_object then
-                                found_unit = true
-                                break
-                            end
-                        end
-
-                        if not found_unit then
-                            updatecode = 1
-
-                            if THIS_LOGGING then
-                                print("setting updatecode = 1 from not finding object in old rayunits", utils.unitstring(ray_object))
-                            end
-                            break
-                        end
+                    -- At this point, we found a stopping point with valid ray objects. Submit them.
+                    if ray_objects_by_tileid[tileid] == nil then
+                        ray_objects_by_tileid[tileid] = ray_objects --@TODO: if two cursors found units on the same tileid, what do we do?
+                    end
+                    for indicator_key in pairs(new_relay_indicators) do
+                        found_relay_indicators[indicator_key] = true
                     end
                 end
             end
-
-            if affect_updatecode then
-                print("updatecode", updatecode)
-            end
-            if #all_rayunits == 0 then
-                curr_raycast_data.raycast_unitids = nil
-            else
-                curr_raycast_data.raycast_unitids = all_rayunits
-            end
         end
     end
 
-    -- Updating the set of relay indicators
-    if not keep_relay_indicators then
-        for indicator_key, indicator in pairs(relay_indicators) do
-            if not found_relay_indicators[indicator_key] then
-                delunit(indicator)
-                MF_cleanremove(indicator)
-                relay_indicators[indicator_key] = nil
-            end
-        end
-    end
-    for indicator_key, indicator in pairs(new_relay_indicators) do 
-        relay_indicators[indicator_key] = indicator
-    end
+    return ray_objects_by_tileid, found_relay_indicators, found_blocked_tiles
 end
 
 function check_cond_rules_with_this_noun()
@@ -929,15 +991,63 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
 
     return out_raycast_units, all_redirected_this_units
 end
---@TODO: move curr_phase to before checkblocked
-local function process_this_rules(this_rules, filter_property_func, checkblocked, checkpass, curr_phase, checkrelay)
+
+local function populate_inactive_pnouns()
+    local active_pnouns = {}
+    for pnoun_group, data in pairs(deferred_pnoun_subrules) do
+        for pnoun_unitid in pairs(data.pnoun_units) do
+            active_pnouns[pnoun_unitid] = true
+        end
+    end
+
+    local inactive_pnoun_group = deferred_pnoun_subrules[PNounGroups.OTHER_INACTIVE]
+    for pnoun_unitid, _ in pairs(raycast_data) do
+        if not active_pnouns[pnoun_unitid] then
+            inactive_pnoun_group.pnoun_units[pnoun_unitid] = true
+        end
+    end
+end
+
+local function mark_explicit_raycast_tileids(pnoun_units, property, valid_marked_tile_func_handler)
+    --@TODO(verify) - when calling this, we need to have "transparency mode" enabled, meaning that we dont set checkblocked/checkpass etc to true
+    -- this is what causes "THIS is pass" to not show the indicator
+    for pnoun_unitid in pairs(pnoun_units) do
+        for tileid, ray_objects in pairs(raycast_data[pnoun_unitid].raycast_positions) do
+            for _, ray_object in ipairs(ray_objects) do
+                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                
+                local has_prop = false
+                local has_not_prop = false
+                if ray_unitid == 2 then
+                    has_prop = hasfeature("empty", "is", property, 2, x, y)
+                    has_not_prop = hasfeature("empty", "is", "not "..property, 2, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    local ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
+                    end
+                    has_prop = hasfeature(ray_unit_name, "is", property, ray_unitid)
+                    has_not_prop = hasfeature(ray_unit_name, "is", "not "..property, ray_unitid)
+                end
+                
+                if has_prop and not has_not_prop then
+                    valid_marked_tile_func_handler(tileid)
+                    break
+                end    
+            end
+        end
+    end
+end
+
+local function process_pnoun_features(pnoun_features, pnoun_units, filter_property_func, curr_pnoun_op)
     local final_options = {}
     local this_noun_cond_options_list = {}
-    local processed_this_units = {}
+    local processed_pnouns = {}
     local all_redirected_this_units = {}
 
-    for i=#this_rules,1,-1 do
-        rules = this_rules[i]
+    for i=#pnoun_features,1,-1 do
+        rules = pnoun_features[i]
         local rule, conds, ids, tags = rules[1], rules[2], rules[3], rules[4]
         local target, verb, property = rule[1], rule[2], rule[3]
 
@@ -959,7 +1069,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
-                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, checkblocked, checkpass, checkrelay, verb)
+                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, true, true, true, verb)
                 for _, object in ipairs(raycast_objects) do
                     local unitid = utils.parse_object(object)
                     local ray_unit = mmf.newObject(unitid)
@@ -1024,7 +1134,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     -- Rule display in pause menu
                     if #target_options > 0 and filter_property_func(property) then
                         local ray_names = {}
-                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
+                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, true, true)) do
                             local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                             local ray_name = ""
                             if ray_unitid == 2 then
@@ -1051,7 +1161,7 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
                     end
                 else
                     local ray_names = {}
-                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)) do
+                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, true, true)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
                         if ray_unitid == 2 then
@@ -1079,7 +1189,8 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
 
                             -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
                             -- description for why we do this.
-                            if (curr_phase == "block" or curr_phase == "pass" or curr_phase == "relay" or curr_phase == "ray-block" or curr_phase == "ray-pass" or curr_phase == "ray-relay") and #conds > 0 then
+                            -- @TODO - check on this to see it makes sense
+                            if (curr_pnoun_op ~= "other") and #conds > 0 then
                                 table.insert(this_noun_cond_options_list, {
                                     this_unitid = this_text_unitid,
                                     ray_tileid = ray_tileid,
@@ -1102,14 +1213,14 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
             for i, id in ipairs(ids) do
                 local unit = mmf.newObject(id[1])
                 if is_name_text_this(unit.strings[NAME]) then
-                    processed_this_units[id[1]] = true
+                    processed_pnouns[id[1]] = true
                 end
             end
             for _, unitid in ipairs(all_redirected_this_units) do
-                processed_this_units[unitid] = true
+                processed_pnouns[unitid] = true
             end
 
-            table.remove(this_rules, i)
+            table.remove(pnoun_features, i)
         else
             -- @ Note: this is meant to trick postrules to display the active particles even
             -- though we don't actually call addoption
@@ -1137,193 +1248,188 @@ local function process_this_rules(this_rules, filter_property_func, checkblocked
         table.insert(cond_features_with_this_noun, data)
     end
 
-    return processed_this_units
-end
-
-local function block_filter(name)
-    return name == "block"
-end
-local function pass_filter(name)
-    return name == "pass"
-end
-local function relay_filter(name)
-    return name == "relay"
-end
-local function other_filter(name)
-    return name ~= "block" and name ~= "pass"
-end
-
-function do_subrule_this()
-    blocked_tiles = {}
-    explicit_passed_tiles = {}
-    explicit_relayed_tiles = {}
-
-    -- Used for preventing certain this texts from updating their raycast units in later phases.
-    -- This is used for this texts found in "pass" phase. 
-    -- The policy is that "this is block" will apply to all this texts including the "this" in the original rule. While
-    -- "this is pass" will apply to all this texts *other* than the "this" in the original rule.
-    -- The idea is that "block" will be "active" in enforcing its effect while "pass" will be "passive" in doing the same thing.
-    local all_processed_this_units = {}
-
-    --[[ 
-        Notes:
-        - update_raycast_units considers block/pass rules in the current featureindex at that time
-            - checkblocked/checkpass in update_raycast_units means whether or not to consider the existing block/pass rules in featureindex when updating rayunits
-            - it also calls hasfeature to check if a unit is blocked/pass, which calls testcond, which if there is a rule with block/pass that also has THIS, would also call get_raycast_units()
-        - process_this_rules
-            - checkblocked/checkpass in process_this_rules is mainly a proxy for calling the same in get_raycast_units()
-                - checkblocked/checkpass in get_raycast_units means whether or not to consider if the raycast position is marked as block or pass (see set_blocked_tile(), set_passed_tile())
-    ]]
-
-    if THIS_LOGGING then
-        print("block phase---------")
+    for pnoun in pairs(processed_pnouns) do
+        pnoun_units[pnoun] = nil
     end
-    update_raycast_units(true, true, false, {}, true) -- @TODO: not sure if I like setting the last param to true. This would rely on the update_raycast_units() call in {{mod_injections}} to clear the relay indicators
-    local processed_block_this_units = process_this_rules(deferred_rules_with_this, block_filter, true, false, "block", true)
 
-    for unit, _ in pairs(processed_block_this_units) do
+    return processed_pnouns, pnoun_units, pnoun_features
+end
+
+-- Starting point where all pnoun processing is. This is like what grouprules() is to all group processing.
+function do_subrule_pnouns()
+    populate_inactive_pnouns()
+
+    local raycast_settings = {
+        checkblocked = true,
+        checkrelay = true,
+        checkpass = true,
+    }
+    local all_found_relay_indicators = {}
+    local new_relay_indicators = {}
+    for pnoun_group, data in ipairs(deferred_pnoun_subrules) do
         if THIS_LOGGING then
-            print(utils.unitstring(utils.make_object(unit)))
+            print("------ Processing Pnoun Group "..pnoun_group.." ------")
         end
-        all_processed_this_units[unit] = true
-    end
-    
-    if THIS_LOGGING then
-        print("relay phase---------")
-    end
-    update_raycast_units(true, true, false, all_processed_this_units, true)
-    local processed_relay_this_units = process_this_rules(deferred_rules_with_this, relay_filter, true, false, "relay", true)
-    for unit, _ in pairs(processed_relay_this_units) do
-        if THIS_LOGGING then
-            print(utils.unitstring(utils.make_object(unit)))
-        end
-        all_processed_this_units[unit] = true
-    end
-    
-    if THIS_LOGGING then
-        print("pass phase---------")
-    end
-    update_raycast_units(true, true, false, all_processed_this_units, true)
-    local processed_pass_this_units = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "pass", true)
-    for unit, _ in pairs(processed_pass_this_units) do
-        if THIS_LOGGING then
-            print(utils.unitstring(utils.make_object(unit)))
-        end
-        all_processed_this_units[unit] = true
-    end
-    
-    -- @Note (resolve before publish): - I claim that we don't need these phases since the block and pass phase above also covers "X is this(block)" and all variations. Check that this is correct
-    -- print("ray-block phase")
-    -- update_raycast_units(true, true, false, all_processed_this_units)
-    -- local processed_block_this_units2 = process_this_rules(deferred_rules_with_this, block_filter, true, false, "ray-block")
-    
-    -- for unit, _ in pairs(processed_block_this_units2) do
-    --     print(utils.unitstring(unit))
-    --     all_processed_this_units[unit] = true
-    --     processed_block_this_units[unit] = true
-    -- end
-    
-    -- print("ray-pass phase")
-    -- update_raycast_units(true, true, false, all_processed_this_units)
-    -- local processed_pass_this_units2 = process_this_rules(deferred_rules_with_this, pass_filter, true, false, "ray-pass")
-    -- for unit, _ in pairs(processed_pass_this_units2) do
-    --     print(utils.unitstring(unit))
-    --     all_processed_this_units[unit] = true
-    --     processed_pass_this_units[unit] = true
-    -- end
-
-    for this_unitid, _ in pairs(processed_block_this_units) do
-        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-            for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                
-                local has_block = false
-                local has_not_block = false
-                if ray_unitid == 2 then
-                    has_block = hasfeature("empty", "is", "block", 2, x, y)
-                    has_not_block = hasfeature("empty", "is", "not block", 2, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    local ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
-                    end
-                    has_block = hasfeature(ray_unit_name, "is", "block", ray_unitid)
-                    has_not_block = hasfeature(ray_unit_name, "is", "not block", ray_unitid)
+        for _, op in ipairs(Pnoun_Group_Lookup[pnoun_group].ops) do
+            if THIS_LOGGING then
+                print(" > New filter ")
+            end
+            
+            -- Main action 1: Update the raycast units for each pnoun
+            for pnoun_unitid in pairs(data.pnoun_units) do
+                if THIS_LOGGING then
+                    print("-> Updating raycast units of "..utils.real_unitstring(pnoun_unitid))
                 end
-                
-                if has_block and not has_not_block then
+
+                local curr_raycast_data = raycast_data[pnoun_unitid]
+                local raycast_objects_by_tileid, found_relay_indicators, found_blocked_tiles = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+
+                local raycast_objects = {}
+                local raycast_objects_dict = {}
+                for tileid, ray_objects in pairs(raycast_objects_by_tileid) do
+                    for _, ray_object in ipairs(ray_objects) do
+                        if not raycast_objects_dict[ray_object] then
+                            raycast_objects_dict[ray_object] = true
+                            table.insert(raycast_objects, ray_object)
+                        end
+                    end
+                end
+
+                for indicator_key, data in pairs(found_relay_indicators) do
+                    all_found_relay_indicators[indicator_key] = true
+                    if new_relay_indicators[indicator_key] == nil then
+                        new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
+                    end
+                end
+
+                for tileid, _ in pairs(found_blocked_tiles) do
                     set_blocked_tile(tileid)
-                    break
-                end    
-            end
-        end
-    end
+                end
 
-    for this_unitid, _ in pairs(processed_relay_this_units) do
-        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-            for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                local has_relay = false
-                local has_not_relay = false
-                if ray_unitid == 2 then
-                    has_relay = hasfeature("empty", "is", "relay", 2, x, y)
-                    has_not_relay = hasfeature("empty", "is", "not relay", 2, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    local ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
+                curr_raycast_data.raycast_unitids = raycast_objects
+                curr_raycast_data.raycast_positions = raycast_objects_by_tileid
+
+
+                -- Add/Update/Remove cursors based on how many raycast positions we found
+                local new_positions = {}
+                for tileid, _ in pairs(curr_raycast_data.raycast_positions) do
+                    if not curr_raycast_data.cursors[tileid] then
+                        table.insert(new_positions, tileid)
                     end
-                    has_relay = hasfeature(ray_unit_name, "is", "relay", ray_unitid)
-                    has_not_relay = hasfeature(ray_unit_name, "is", "not relay", ray_unitid)
                 end
-                
-                if has_relay and not has_not_relay then
-                    set_relay_tile(tileid)
-                end
-            end
-        end
-    end
 
-    for this_unitid, _ in pairs(processed_pass_this_units) do
-        for tileid, ray_objects in pairs(raycast_data[this_unitid].raycast_positions) do
-            for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
-                local ray_unit_name = ""
-                local has_pass = false
-                local has_not_pass = false
-
-                if ray_unitid == 2 then
-                    ray_unit_name = "empty"
-                    has_pass = hasfeature(ray_unit_name, "is", "pass", ray_unitid, x, y)
-                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass", ray_unitid, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
+                local tileids_to_delete = {}
+                for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
+                    if not curr_raycast_data.raycast_positions[tileid] then
+                        table.insert(tileids_to_delete, tileid)
+                        if #new_positions > 0 then
+                            local new_tileid = table.remove(new_positions)
+                            curr_raycast_data.cursors[new_tileid] = cursor_unitid
+                        else
+                            delunit(cursor_unitid)
+                            MF_cleanremove(cursor_unitid)
+                        end
                     end
-                    has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                    has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid)
+                end
+                for _, tileid in ipairs(tileids_to_delete) do
+                    curr_raycast_data.cursors[tileid] = nil
+                end
+                if #new_positions > 0 then
+                    for _, tileid in ipairs(new_positions) do
+                        local cursor_unitid = make_cursor()
+                        curr_raycast_data.cursors[tileid] = cursor_unitid
+                    end
+                end
+            end
+
+            if THIS_LOGGING then
+                print("-> Processing pnoun features: ")
+                for _, feature in ipairs(data.pnoun_features) do
+                    print("- "..utils.serialize_feature(feature))
+                end
+                print("________________")
+            end
+
+            -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group
+            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun_Subrule_Ops[op].filter_func, op)
+
+            if THIS_LOGGING then
+                print("-> Processed pnoun units: ")
+                for pnoun_unit in pairs(processed_pnoun_units) do
+                    print("- "..utils.real_unitstring(pnoun_unit))
+                end
+                print("________________")
+                print("-> Remaining pnoun units: ")
+                for pnoun_unit in pairs(remaining_pnoun_units) do
+                    print("- "..utils.real_unitstring(pnoun_unit))
+                end
+                print("________________")
+                print("-> Remaining pnoun features: ")
+                for _, feature in ipairs(remaining_pnoun_features) do
+                    print("- "..utils.serialize_feature(feature))
+                end
+                print("________________")
+            end
+
+            data.pnoun_units = remaining_pnoun_units
+            data.pnoun_features = remaining_pnoun_features
+
+            -- mark explicit tiles
+            local explicit_tile_func = Pnoun_Subrule_Ops[op].explicit_tile_func
+            if explicit_tile_func ~= nil then
+                mark_explicit_raycast_tileids(processed_pnoun_units, op, explicit_tile_func)
+            end
+        end
+
+        -- If there are still features to process and pnoun units to update, add both of those to the redirected pnoun group (if defined)
+        -- Otherwise, throw them away
+        local redirected_pnoun_group = Pnoun_Group_Lookup[pnoun_group].redirect_pnoun_group
+        if redirected_pnoun_group ~= nil then
+            for _, pnoun_feature in ipairs(data.pnoun_features) do
+                table.insert(deferred_pnoun_subrules[redirected_pnoun_group].pnoun_features, pnoun_feature)
+            end
+            for pnoun_unit in pairs(data.pnoun_units) do
+                deferred_pnoun_subrules[redirected_pnoun_group].pnoun_units[pnoun_unit] = true
+            end
+        else
+            if THIS_LOGGING then
+                -- Purely for error checking purposes
+                if #deferred_pnoun_subrules[pnoun_group].pnoun_features ~= 0 then
+                    local err_str = "Reached end of processsing Pnoun Group "..tostring(pnoun_group).." but there are still features left that we are throwing out!\nList of features: "
+
+                    local feature_list = {}
+                    for _, feature in ipairs(deferred_pnoun_subrules[pnoun_group].pnoun_features) do
+                        feature_list[#feature_list + 1] = utils.serialize_feature(feature)
+                    end
+
+                    print(err_str..table.concat(feature_list))
                 end
 
-                if has_pass and not has_not_pass then
-                    set_passed_tile(tileid)
-                    break
+                local discarded_pnoun_units = {}
+                local err_str = "Reached end of processsing Pnoun Group "..tostring(pnoun_group).." but there are still pnoun units left that we are throwing out!\nList of pnoun units: "
+                for pnoun_unit in pairs(deferred_pnoun_subrules[pnoun_group].pnoun_units) do
+                    found_pnoun = true
+                    for pnoun_unit in pairs(data.pnoun_units) do
+                        discarded_pnoun_units[#discarded_pnoun_units + 1] = utils.real_unitstring(pnoun_unit)
+                    end 
+                end
+                if #discarded_pnoun_units > 0 then
+                    print(err_str..table.concat(discarded_pnoun_units))
                 end
             end
         end
     end
 
-    if THIS_LOGGING then
-        print("other phase---------")
-    end
-    update_raycast_units(true, true, false, all_processed_this_units, true)
-    process_this_rules(deferred_rules_with_this, other_filter, true, true, "other", true)
 
-    deferred_rules_with_this = {}
-    if THIS_LOGGING then
-        print("end---------")
+    -- Updating the set of relay indicators
+    for indicator_key, indicator in pairs(relay_indicators) do
+        if not all_found_relay_indicators[indicator_key] then
+            delunit(indicator)
+            MF_cleanremove(indicator)
+            relay_indicators[indicator_key] = nil
+        end
+    end
+    for indicator_key, indicator in pairs(new_relay_indicators) do 
+        relay_indicators[indicator_key] = indicator
     end
 end

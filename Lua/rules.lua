@@ -1485,7 +1485,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 		local rule = {option,conds,ids,tags}
 		--[[ 
 			Defer processing any sentences with "this" as target or effect.
-			The reason that we do this is if we insert "not this is blue" into featureindex before we call do_subrule_this(), it will evaluate as "anything that isn't the non-text object called "this" is blue".
+			The reason that we do this is if we insert "not this is blue" into featureindex before we call do_subrule_pnouns(), it will evaluate as "anything that isn't the non-text object called "this" is blue".
 			This would make everything blue, since everything on the level isn't this hypothetical-non-text-THIS-object. 
 		]]
 		if is_name_text_this(option[1]) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
@@ -1665,7 +1665,7 @@ end
 
 function code(alreadyrun_)
 	--[[ 
-		@mods(this) - Override reason: provide hook for do_subrule_this
+		@mods(this) - Override reason: provide hook for do_subrule_pnouns
 		@mods(omni text) - Override reason: when checking for the first round of firstwords, we need to adjust which spaces to check for pivot text to be an initial firstword
 		@mods(stable) - Override reason: provide hook for update_stable_state()
 	 ]]
@@ -1823,7 +1823,7 @@ function code(alreadyrun_)
 					print("<<<<<<<<<<<<<end>")
 				end
 				subrules()
-				do_subrule_this()
+				do_subrule_pnouns()
 				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
