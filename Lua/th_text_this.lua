@@ -1,103 +1,3 @@
-table.insert(editor_objlist_order, "text_this")
-table.insert(editor_objlist_order, "text_that")
-table.insert(editor_objlist_order, "text_these")
-table.insert(editor_objlist_order, "text_those")
-table.insert(editor_objlist_order, "text_block")
-table.insert(editor_objlist_order, "text_relay")
-table.insert(editor_objlist_order, "text_pass")
-
-editor_objlist["text_this"] = 
-{
-	name = "text_this",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_noun"},
-	tiling = 0,
-	type = 0,
-	layer = 20,
-	colour = {0, 1},
-    colour_active = {0, 3},
-}
-editor_objlist["text_that"] = 
-{
-	name = "text_that",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_noun"},
-	tiling = 0,
-	type = 0,
-	layer = 20,
-	colour = {0, 1},
-    colour_active = {0, 3},
-}
-editor_objlist["text_these"] = 
-{
-	name = "text_these",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_noun"},
-	tiling = 0,
-	type = 0,
-	layer = 20,
-	colour = {0, 1},
-    colour_active = {0, 3},
-}
-editor_objlist["text_those"] = 
-{
-	name = "text_those",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_noun"},
-	tiling = 0,
-	type = 0,
-	layer = 20,
-	colour = {0, 1},
-    colour_active = {0, 3},
-}
-editor_objlist["text_block"] = 
-{
-	name = "text_block",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_quality"},
-	tiling = -1,
-	type = 2,
-	layer = 20,
-	colour = {2, 1},
-    colour_active = {2, 2},
-}
-editor_objlist["text_pass"] = 
-{
-	name = "text_pass",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_quality"},
-	tiling = -1,
-	type = 2,
-	layer = 20,
-	colour = {4, 3},
-    colour_active = {4, 4},
-}
-editor_objlist["text_relay"] = 
-{
-	name = "text_relay",
-	sprite_in_root = false,
-	unittype = "text",
-	tags = {"plasma's mods", "text", "abstract", "text_quality"},
-	tiling = -1,
-	type = 2,
-	layer = 20,
-	colour = {5, 2},
-    colour_active = {5, 4},
-}
-
-formatobjlist()
-
-register_directional_text_prefix("this")
-register_directional_text_prefix("that")
-register_directional_text_prefix("these")
-register_directional_text_prefix("those")
-
 this_mod_globals = {}
 local function reset_this_mod_globals()
     this_mod_globals = {
@@ -109,6 +9,11 @@ reset_this_mod_globals()
 
 local utils = plasma_utils
 
+local DirTextDisplay = PlasmaModules.load_module("general/directional_text_display")
+local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer") 
+local RaycastTrace = PlasmaModules.load_module("this/pnoun_raycast_trace")
+local Pnoun = PlasmaModules.load_module("this/pnoun_group_defs")
+
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
@@ -116,16 +21,6 @@ local cond_features_with_this_noun = {} -- list of all condition rules with "thi
 local on_level_start = false
 local NO_POSITION = -1
 local THIS_LOGGING = false
-
-local PNounGroups = {
-    THIS_IS_BLOCK =     1, -- All "THIS is block" rules
-    THIS_IS_RELAY =     2, -- All "THIS is relay" rules
-    THIS_IS_PASS =      3, -- All "THIS is pass" rules
-    X_IS_VAR =          4, -- All "X is THIS" rules
-    THIS_IS_VAR =       5, -- All "THIS is THIS" rules
-    OTHER_ACTIVE =      6, -- All other active rules with THIS as either rule[1] or rule[3]
-    OTHER_INACTIVE =    7, -- This should have no features. Only pnouns not part of an active rule. This is populated only when calling populate_inactive_pnouns()
-}
 
 local function set_blocked_tile(tileid)
     if tileid then
@@ -143,51 +38,12 @@ local function set_passed_tile(tileid)
     end
 end
 
-local Pnoun_Subrule_Ops = {
-    block = {
-        filter_func = function(name) return name == "block" end,
-        explicit_tile_func = set_blocked_tile
-    },
-    relay = {
-        filter_func = function(name) return name == "relay" end,
-        explicit_tile_func = set_relay_tile
-    },
-    pass = {
-        filter_func = function(name) return name == "pass" end,
-        explicit_tile_func = set_passed_tile
-    },
-    other = {
-        filter_func = function(name) return name ~= "block" and name ~= "pass" and name ~= "relay" end,
-        explicit_tile_func = nil
-    },
+local Pnoun_Op_To_Explicit_Tile_Func = {
+    block = set_blocked_tile,
+    relay = set_relay_tile,
+    pass = set_passed_tile,
 }
 
-
-local Pnoun_Group_Lookup = {
-    [PNounGroups.THIS_IS_BLOCK] = {
-        ops = {"block"}
-    },
-    [PNounGroups.THIS_IS_RELAY] = {
-        ops = {"relay"}
-    },
-    [PNounGroups.THIS_IS_PASS] = {
-        ops = {"pass"}
-    },
-    [PNounGroups.OTHER_ACTIVE] = {
-        ops = {"other"}
-    },
-    [PNounGroups.OTHER_INACTIVE] = {
-        ops = {"other"}
-    },
-    [PNounGroups.X_IS_VAR] = {
-        ops = {"block", "relay", "pass"},
-        redirect_pnoun_group = PNounGroups.OTHER_ACTIVE,
-    },
-    [PNounGroups.THIS_IS_VAR] = {
-        ops = {"block", "relay", "pass"},
-        redirect_pnoun_group = PNounGroups.OTHER_ACTIVE,
-    },
-}
 --[[ 
     local deferred_pnoun_subrules = {
         <Pnoun_Group> = {
@@ -236,6 +92,8 @@ local pnoun_subrule_data = {}
  ]]
 local raycast_data = {}
 
+local raycast_trace_tracker = RaycastTrace:new()
+
 --[[ 
     local relay_indicators = {
         <tileid + dir> = <unitid of indicator>,
@@ -261,6 +119,9 @@ local function reset_this_mod_locals()
     relay_indicators = {}
     deferred_pnoun_subrules = {}
     pnoun_subrule_data = {}
+
+    raycast_trace_tracker:clear()
+    pf_undo_analyzer:reset()
 end
 
 local make_cursor, update_all_cursors, make_relay_indicator
@@ -286,10 +147,6 @@ table.insert(mod_hook_functions["level_start"],
 
 table.insert( mod_hook_functions["undoed_after"],
     function()
-        for i,unitid in ipairs(codeunits) do
-            local unit = mmf.newObject(unitid)
-            set_tt_display_direction(unit)
-        end
         blocked_tiles = {}
         this_mod_globals.undoed_after_called = true
     end
@@ -302,11 +159,12 @@ table.insert(mod_hook_functions["rule_update"],
         explicit_passed_tiles = {}
         explicit_relayed_tiles = {}
         cond_features_with_this_noun = {}
+        raycast_trace_tracker:clear()
         pnoun_subrule_data = {
             pnoun_to_groups = {},
         }
         deferred_pnoun_subrules = {}
-        for pnoun_group, value in pairs(PNounGroups) do
+        for pnoun_group, value in pairs(Pnoun.Groups) do
             deferred_pnoun_subrules[value] = {
                 pnoun_features = {},
                 pnoun_units = {},
@@ -327,9 +185,22 @@ table.insert(mod_hook_functions["rule_update_after"],
             this_mod_globals.undoed_after_called = false
         end
 
+        pf_undo_analyzer:reset()
+
         if THIS_LOGGING then
             print("<<<<<<<<<<<<<< rule_update end")
         end
+    end
+)
+
+table.insert( mod_hook_functions["command_given"],
+    function()
+        pf_undo_analyzer:reset()
+    end
+)
+table.insert( mod_hook_functions["turn_end"],
+    function()
+        pf_undo_analyzer:reset()
     end
 )
 
@@ -405,15 +276,10 @@ local function get_rays_from_pointer_noun(name, x, y, dir, pnoun_unitid)
                 dir = dir_vec,
             })
         elseif pointer_noun == "those" then
-            for pnoun in pairs(raycast_data) do
-                if pnoun ~= pnoun_unitid then
-                    local remote_pnoun = mmf.newObject(pnoun)
-                    table.insert(out_rays, {
-                        pos = {remote_pnoun.values[XPOS], remote_pnoun.values[YPOS]},
-                        dir = dir_vec,
-                    })
-                end
-            end
+            table.insert(out_rays, {
+                pos = {x, y},
+                dir = dir_vec,
+            })
         end
     end
 
@@ -476,22 +342,22 @@ function defer_addoption_with_this(rule)
     local pnoun_group = nil
     if target_is_pnoun and not property_is_pnoun then
         if property == "block" then
-            pnoun_group = PNounGroups.THIS_IS_BLOCK
+            pnoun_group = Pnoun.Groups.THIS_IS_BLOCK
         elseif property == "relay" then
-            pnoun_group = PNounGroups.THIS_IS_RELAY
+            pnoun_group = Pnoun.Groups.THIS_IS_RELAY
         elseif property == "pass" then
-            pnoun_group = PNounGroups.THIS_IS_PASS
+            pnoun_group = Pnoun.Groups.THIS_IS_PASS
         end
     elseif property_is_pnoun then
         if target_is_pnoun then
-            pnoun_group = PNounGroups.THIS_IS_VAR
+            pnoun_group = Pnoun.Groups.THIS_IS_VAR
         else
-            pnoun_group = PNounGroups.X_IS_VAR
+            pnoun_group = Pnoun.Groups.X_IS_VAR
         end
     end
     
     if pnoun_group == nil then
-        pnoun_group = PNounGroups.OTHER_ACTIVE
+        pnoun_group = Pnoun.Groups.OTHER_ACTIVE
     end
     
     -- A pnoun feature can only be in one pnoun group. There is no need to check for priority since
@@ -662,12 +528,13 @@ function make_relay_indicator(x, y, dir)
     return unitid
 end
 
-local function this_raycast(ray, checkemptyblock)
+local function this_raycast(ray, checkemptyblock, raycast_trace, curr_cast_extradata)
     -- return values: ray_pos, is_emptyblock, select_empty, emptyrelay_dir
     local ox = ray.pos[1] + ray.dir[1]
     local oy = ray.pos[2] + ray.dir[2]
     while inbounds(ox,oy,1) do
         local tileid = ox + oy * roomsizex
+        raycast_trace:add_tileid(tileid)
 
         if unitmap[tileid] == nil then
             local empty_dir = emptydir(ox, oy)
@@ -687,8 +554,12 @@ local function this_raycast(ray, checkemptyblock)
             return {ox, oy}, false, false, nil
         end
 
-        ox = ox + ray.dir[1]
-        oy = oy + ray.dir[2]
+        if curr_cast_extradata.flood_fill_mode then
+            break
+        else
+            ox = ox + ray.dir[1]
+            oy = oy + ray.dir[2]
+        end
     end
 
     return nil
@@ -712,6 +583,7 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
     local found_relay_indicators = {} -- indicator ids -> true
     local found_blocked_tiles = {}
     local found_ending_these_texts = {}
+    local raycast_trace = RaycastTrace:new()
 
     local all_block = false
     local all_pass = false
@@ -732,6 +604,9 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 ray = ray, 
                 extradata = {
                     these_ray_objects_by_tileid = {},
+                    flood_fill_mode = false,
+                    flood_fill_object_names = nil,
+                    flood_fill_object_name_count = 0
                 }
             } 
         }
@@ -740,7 +615,7 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
         while #stack > 0 do
             local curr_cast_data = table.remove(stack)
             
-            local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_cast_data.ray, raycast_settings.checkblocked)
+            local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_cast_data.ray, raycast_settings.checkblocked, raycast_trace, curr_cast_data.extradata)
             if not ray_pos then
                 -- Do nothing for now
             elseif pointer_noun == "that" and ray_pos[1] == pointer_unit.values[XPOS] and ray_pos[2] == pointer_unit.values[YPOS] then
@@ -752,6 +627,7 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 local ray_objects = {}
                 local tileid = ray_pos[1] + ray_pos[2] * roomsizex
                 local found_ending_these = false
+                local found_flood_fill_object = false
 
                 if pointer_noun == "these" then
                     -- If we found another THESE pointing in the opposite direction, terminate early
@@ -784,8 +660,20 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                             table.insert(new_stack_entries, {ray = ray, extradata = curr_cast_data.extradata})
                         end
                     elseif select_empty then
-                        local object = utils.make_object(2, ray_pos[1], ray_pos[2])
-                        table.insert(ray_objects, object)
+                        local add_to_rayunits = true
+                        if pointer_noun == "those" and curr_cast_data.extradata.flood_fill_mode then
+                            -- If we are in flood fill mode, only add units of the same type
+                            if curr_cast_data.extradata.flood_fill_object_names["empty"] then
+                                found_flood_fill_object = true
+                            else
+                                add_to_rayunits = false
+                            end
+                        end
+
+                        if add_to_rayunits then
+                            local object = utils.make_object(2, ray_pos[1], ray_pos[2])
+                            table.insert(ray_objects, object)
+                        end
                     else
                         local total_pass_unit_count = 0
                         local found_relay = false
@@ -841,6 +729,15 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                 end
                             end
 
+                            if pointer_noun == "those" and not blocked and curr_cast_data.extradata.flood_fill_mode and add_to_rayunits then
+                                -- If we are in flood fill mode, only add units of the same type
+                                if curr_cast_data.extradata.flood_fill_object_names[ray_unit_name] then
+                                    found_flood_fill_object = true
+                                else
+                                    add_to_rayunits = false
+                                end
+                            end
+
                             if add_to_rayunits then
                                 local object = utils.make_object(ray_unitid, ray_pos[1], ray_pos[2])
                                 table.insert(ray_objects, object)
@@ -856,12 +753,15 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                     end
                                 end
                             elseif raycast_settings.checkpass and total_pass_unit_count >= #unitmap[tileid] then
-                                local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
-                                table.insert(new_stack_entries, {ray = new_ray, extradata = curr_cast_data.extradata})
+                                if curr_cast_data.extradata.flood_fill_mode and not found_flood_fill_object then
+                                    -- When we are in flood fill mode, if all the units in the tile are pass, do not re-reycast
+                                else
+                                    local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
+                                    table.insert(new_stack_entries, {ray = new_ray, extradata = curr_cast_data.extradata})
+                                end
                             end
                         end
                     end
-                    
                 end
 
                 if found_ending_these then
@@ -872,7 +772,15 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                     end
                 elseif blocked then
                     found_blocked_tiles[tileid] = true
-                    ray_objects_by_tileid[tileid] = {}
+
+                    local add_block_cursor = true
+                    if curr_cast_data.extradata.flood_fill_mode and not found_flood_fill_object then
+                        add_block_cursor = false
+                    end
+
+                    if add_block_cursor then
+                        ray_objects_by_tileid[tileid] = {}
+                    end
                     -- If we find that the current tileid has a blocked unit, don't submit anything
                 elseif #new_stack_entries > 0 then
                     -- If we inserted into the stack, we intend to re-raycast. Don't submit the found ray objects.
@@ -894,13 +802,61 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                         local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
                         table.insert(stack, {ray = new_ray, extradata = new_extradata})
+                    elseif pointer_noun == "those" and curr_cast_data.extradata.flood_fill_mode and not found_flood_fill_object then
                     else
                         if ray_objects_by_tileid[tileid] == nil then
-                            ray_objects_by_tileid[tileid] = ray_objects --@Todo: if two cursors found units on the same tileid, what do we do?
+                            -- @NOTE: for now we are assuming one cursor per cast (excluding relays). If there's a need
+                            -- to distinguish between two cursors, and they both land on the same tileid, then we would
+                            -- need to store this set of ray objects multiple times
+                            ray_objects_by_tileid[tileid] = ray_objects
                         end
                     end
                     for indicator_key in pairs(new_relay_indicators) do
                         found_relay_indicators[indicator_key] = data
+                    end
+
+                    if pointer_noun == "those" then
+                        if curr_cast_data.extradata.flood_fill_mode == false or (curr_cast_data.extradata.flood_fill_mode and found_flood_fill_object) then
+                            local ray_names = {}
+                            local ray_name_count = 0
+                            for _, ray_object in ipairs(ray_objects) do
+                                local unitid = utils.parse_object(ray_object)
+                                local ray_name = ""
+                                if unitid == 2 then
+                                    ray_name = "empty"
+                                else
+                                    local unit = mmf.newObject(unitid)
+                                    ray_name = getname(unit)
+                                end
+
+                                if ray_names[ray_name] == nil then
+                                    ray_names[ray_name] = true
+                                    ray_name_count = ray_name_count + 1
+                                end
+                            end
+
+                            local insert_front = ray_name_count < curr_cast_data.extradata.flood_fill_object_name_count
+
+                            for i = 0, 3 do
+                                local new_dir = dirs[i+1]
+
+                                -- Ensure that we are not raycasting in the direction that we just came
+                                if (-new_dir[1] ~= curr_cast_data.ray.dir[1]) or (-new_dir[2] ~= curr_cast_data.ray.dir[2]) then
+                                    local new_ray = {pos = ray_pos, dir = new_dir}
+
+                                    local new_extradata = utils.deep_copy_table(curr_cast_data.extradata)
+                                    new_extradata.flood_fill_mode = true
+                                    new_extradata.flood_fill_object_names = ray_names
+                                    new_extradata.flood_fill_object_name_count = ray_name_count
+
+                                    if insert_front then
+                                        table.insert(stack, 1, {ray = new_ray, extradata = new_extradata})
+                                    else
+                                        table.insert(stack, {ray = new_ray, extradata = new_extradata})
+                                    end
+                                end
+                            end
+                        end
                     end
                 end
             end
@@ -913,7 +869,17 @@ function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
         found_ending_these_texts = found_ending_these_texts,
     }
 
-    return ray_objects_by_tileid, extra_raycast_data
+    return ray_objects_by_tileid, extra_raycast_data, raycast_trace
+end
+
+function check_updatecode_status_from_raycasting()
+    --@TODO: check changes to block/pass/relay
+    for tileid in pairs(pf_undo_analyzer.tileids_updated) do
+        if raycast_trace_tracker:is_tileid_recorded(tileid) then
+            return true
+        end
+    end
+    return false
 end
 
 function check_cond_rules_with_this_noun()
@@ -940,7 +906,7 @@ function get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay
 
     local raycast_units = raycast_data[this_text_unitid].raycast_unitids
     if raycast_units ~= nil and #raycast_units > 0 then
-        if checkblocked or checkpass then
+        if checkblocked or checkpass or checkrelay then
             local unitid, x, y, tileid = utils.parse_object(raycast_units[1])
             if checkblocked then
                 if blocked_tiles[tileid] then
@@ -997,7 +963,10 @@ condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
         -- @TODO: @mods(this) deciding on when to check block and/or pass when calling get_raycast_units() is currently janky. It depends on 
         -- whether or not do_subrule_this() is being called and weird update order shennanigans somehow makes this all work out
         -- in the end. Clean this up when we revisit THIS mod.
-        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, false)) do
+        -- @Note - I set the checkblocked param of get_raycast_units to false. Is this incorrect? 
+        --   - update: believe it of not, I think it is actually correct. I think its because of the revamp to do_subrule_this() that made the
+        --   order of operations more deterministic and orderly. Still, look into this later
+        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
             local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
             if ray_unit == 2 then
                 local tileid = x + y * roomsizex
@@ -1104,7 +1073,7 @@ local function populate_inactive_pnouns()
         end
     end
 
-    local inactive_pnoun_group = deferred_pnoun_subrules[PNounGroups.OTHER_INACTIVE]
+    local inactive_pnoun_group = deferred_pnoun_subrules[Pnoun.Groups.OTHER_INACTIVE]
     for pnoun_unitid, _ in pairs(raycast_data) do
         if not active_pnouns[pnoun_unitid] then
             inactive_pnoun_group.pnoun_units[pnoun_unitid] = true
@@ -1117,8 +1086,9 @@ local function mark_explicit_raycast_tileids(pnoun_units, property, valid_marked
     -- this is what causes "THIS is pass" to not show the indicator
     for pnoun_unitid in pairs(pnoun_units) do
         for tileid, ray_objects in pairs(raycast_data[pnoun_unitid].raycast_positions) do
+            local x, y = utils.coords_from_tileid(tileid)
             for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid, x, y, tileid = utils.parse_object(ray_object)
+                local ray_unitid = utils.parse_object(ray_object)
                 
                 local has_prop = false
                 local has_not_prop = false
@@ -1374,7 +1344,7 @@ function do_subrule_pnouns()
         if THIS_LOGGING then
             print("------ Processing Pnoun Group "..pnoun_group.." ------")
         end
-        for _, op in ipairs(Pnoun_Group_Lookup[pnoun_group].ops) do
+        for _, op in ipairs(Pnoun.Pnoun_Group_Lookup[pnoun_group].ops) do
             if THIS_LOGGING then
                 print(" > New filter ")
             end
@@ -1388,7 +1358,7 @@ function do_subrule_pnouns()
                 end
 
                 local curr_raycast_data = raycast_data[pnoun_unitid]
-                local raycast_objects_by_tileid, extradata = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+                local raycast_objects_by_tileid, extradata, raycast_trace = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                 local raycast_objects = {}
                 local raycast_objects_dict = {}
@@ -1412,7 +1382,9 @@ function do_subrule_pnouns()
                     set_blocked_tile(tileid)
                 end
 
-                if pnoun_group ~= PNounGroups.OTHER_INACTIVE then
+                raycast_trace_tracker:add_traces(raycast_trace)
+
+                if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
                     for these_unitid in pairs(extradata.found_ending_these_texts) do
                         this_mod_globals.active_this_property_text[these_unitid] = true
                     end
@@ -1463,7 +1435,7 @@ function do_subrule_pnouns()
             end
 
             -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group
-            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun_Subrule_Ops[op].filter_func, op)
+            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
 
             if THIS_LOGGING then
                 print("-> Processed pnoun units: ")
@@ -1487,7 +1459,7 @@ function do_subrule_pnouns()
             data.pnoun_features = remaining_pnoun_features
 
             -- mark explicit tiles
-            local explicit_tile_func = Pnoun_Subrule_Ops[op].explicit_tile_func
+            local explicit_tile_func = Pnoun_Op_To_Explicit_Tile_Func[op]
             if explicit_tile_func ~= nil then
                 mark_explicit_raycast_tileids(processed_pnoun_units, op, explicit_tile_func)
             end
@@ -1495,7 +1467,7 @@ function do_subrule_pnouns()
 
         -- If there are still features to process and pnoun units to update, add both of those to the redirected pnoun group (if defined)
         -- Otherwise, throw them away
-        local redirected_pnoun_group = Pnoun_Group_Lookup[pnoun_group].redirect_pnoun_group
+        local redirected_pnoun_group = Pnoun.Pnoun_Group_Lookup[pnoun_group].redirect_pnoun_group
         if redirected_pnoun_group ~= nil then
             for _, pnoun_feature in ipairs(data.pnoun_features) do
                 table.insert(deferred_pnoun_subrules[redirected_pnoun_group].pnoun_features, pnoun_feature)

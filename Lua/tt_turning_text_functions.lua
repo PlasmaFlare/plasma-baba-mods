@@ -1,6 +1,7 @@
 -- collects all turning text unit at the start of every turn. Also keeps track of their starting direction + if they have any directional rules applied to them
 local turning_units = {}
 local is_sound_played = false
+local DirTextDisplay = PlasmaModules.load_module("general/directional_text_display")
 
 turning_text_mod_globals = {}
 
@@ -18,9 +19,8 @@ local function clear_turning_text_mod()
 end
 clear_turning_text_mod()
 
-
 for name,_ in pairs(turning_word_names) do
-    register_directional_text("turning_"..name)
+    pf_dir_text_display:register_directional_text("turning_"..name)
 end
 
 

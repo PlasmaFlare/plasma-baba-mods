@@ -1,4 +1,5 @@
 local utils = {}
+
 utils = {
     debug_assert = function(expr, err_msg)
         if not expr then
@@ -192,6 +193,13 @@ utils = {
             tokens[#tokens + 1] = ")"
         end
         return table.concat(tokens)
+    end,
+
+    tileid_from_coords = function(x, y)
+        return x + y * roomsizex
+    end,
+    coords_from_tileid = function(tileid)
+        return math.floor(tileid % roomsizex), math.floor(tileid / roomsizex)
     end,
 }
 

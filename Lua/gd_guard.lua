@@ -356,11 +356,12 @@ local function evaluate_typedata_for_update_criteria(typedata)
             elseif COND_CATEGORIES.existence[condtype] then
                 local data = COND_CATEGORIES.existence[condtype]
                 if type(data) == "table" and data.check == "condparam" then
-                    local check_name = params[1]
-                    local s = get_table_value(guard_update_criteria, "create")
-                    s[check_name] = true
-                    s = get_table_value(guard_update_criteria, "remove")
-                    s[check_name] = true  
+                    for _, check_name in ipairs(params) do
+                        local s = get_table_value(guard_update_criteria, "create")
+                        s[check_name] = true
+                        s = get_table_value(guard_update_criteria, "remove")
+                        s[check_name] = true
+                    end
                 end
             elseif COND_CATEGORIES.update[condtype] then
                 local data = COND_CATEGORIES.existence[condtype]

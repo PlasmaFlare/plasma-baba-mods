@@ -8,6 +8,9 @@ pf_filler_text_type = 11
 
 dirfeaturemap = {"right", "up", "left", "down"}
 
+local str = debug.getinfo(1).source:sub(2)
+pf_lua_dir = str:match("(.*/)")
+
 arrow_properties = {
     you=true,
     you2=true,

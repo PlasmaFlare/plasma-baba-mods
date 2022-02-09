@@ -30,6 +30,7 @@ editor_objlist["text_pack"] =
 formatobjlist()
 
 local utils = plasma_utils
+local cut_pack_word_verify = PlasmaModules.load_module("cutpack/word_verify")
 -- Global variables
 
 splice_mod_globals = {}
@@ -134,7 +135,7 @@ function check_text_cutting(cutterunitid, textunitid, pulling, cutter_pushed_aga
 
     -- check that all characters in the text are valid
     local name = textunit.strings[NAME]
-    if not get_cut_text(name, textunit.values[DIR]) then 
+    if not cut_pack_word_verify:get_cut_text(name, textunit.values[DIR]) then 
         return false 
     end
 
@@ -423,7 +424,7 @@ function check_text_packing(packerunitid, textunitid, dir, pulling, packer_pushe
     local length = #found_letters
     local packed_text_name = ""
     for i=1,length do
-        packed_text_name = get_pack_text(found_letters, dir)
+        packed_text_name = cut_pack_word_verify:get_pack_text(found_letters, dir)
         if #found_letters > 1 and is_text_in_palette(packed_text_name)then
             -- Commented out due to error when "X is all". This isn't the direct cause, but might cause other cases. But is there a need to add this to the objectlist
             -- objectlist["text_"..packed_text_name] = 1

@@ -1,3 +1,5 @@
+local CutPackWordVerify = {}
+
 local function get_special_cut_mappings()
     local cut_mappings = {
         fallright =      "fall",
@@ -137,7 +139,7 @@ table.insert(mod_hook_functions["level_start"],
     Given a name of a text that will be cut, return the output text that will be produced. Normally this will be the text name
     itself. But special cases are defined in special_cut_mappings.
  ]]
-function get_cut_text(name, text_dir, cut_direction)
+function CutPackWordVerify:get_cut_text(name, text_dir, cut_direction)
     -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction
 
     local t = special_cut_mappings[name]
@@ -180,7 +182,7 @@ end
 
     Note that the output is not guaranteed to be in the palette.
  ]]
-function get_pack_text(name, dir)
+function CutPackWordVerify:get_pack_text(name, dir)
     -- Note: dir is currently not used, but keeping it here just in case I want the cutting to depend on direction
 
     --[[
@@ -230,3 +232,5 @@ function get_pack_text(name, dir)
 
     return name
 end
+
+return CutPackWordVerify

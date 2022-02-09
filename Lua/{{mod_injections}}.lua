@@ -16,12 +16,16 @@ function code(alreadyrun_, ...)
     local alreadyrun = alreadyrun_ or false
     if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
-			update_raycast_units(true, true, true)
+            updatecode = 1 --@todo - training wheels for now. Need to optimize figuring out when to set updatecode = 1 for pnouns
 		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
-			update_raycast_units(true, true, true)
-			if updatecode == 0 then
-				check_cond_rules_with_this_noun()
-			end
+            updatecode = 1 --@todo - training wheels for now. Need to optimize figuring out when to set updatecode = 1 for pnouns
+            -- print("check_updatecode_status_from_raycasting: ", check_updatecode_status_from_raycasting())
+            -- updatecode = 1
+            if check_updatecode_status_from_raycasting() then
+                updatecode = 1
+            else
+                check_cond_rules_with_this_noun()
+            end
 		end
 	end
 
@@ -123,8 +127,11 @@ end
     @mods(guard) - Injection reason: detect all changes to units on the level in order to determine whether or not to recalculate guards
 ]]
 local old_addundo = addundo
+local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer")
 function addundo(line,...)
     local ret = table.pack(old_addundo(line, ...))
+
+    UndoAnalyzer.analyze_undo_line(line, {pf_undo_analyzer})
     check_undo_data_for_updating_guards(line)
     return table.unpack(ret)
 end
