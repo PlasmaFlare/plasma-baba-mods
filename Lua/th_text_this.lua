@@ -1406,23 +1406,19 @@ function do_subrule_pnouns()
                 for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
                     if not curr_raycast_data.raycast_positions[tileid] then
                         table.insert(tileids_to_delete, tileid)
-                        if #new_positions > 0 then
-                            local new_tileid = table.remove(new_positions)
-                            curr_raycast_data.cursors[new_tileid] = cursor_unitid
-                        else
-                            delunit(cursor_unitid)
-                            MF_cleanremove(cursor_unitid)
-                        end
+                        delunit(cursor_unitid)
+                        MF_cleanremove(cursor_unitid)
+                        -- @Note: apparently we have to delete then remake all cursors to avoid a visual glitch with multiple cursors.
+                        -- Reassigning cursor positions without deleting causes the visual glitch for which I have no idea why it happens
+                        -- It isn't a race condition with the "always" modhook. But ehh. Reinvestigate if we need to optimize.
                     end
                 end
                 for _, tileid in ipairs(tileids_to_delete) do
                     curr_raycast_data.cursors[tileid] = nil
                 end
-                if #new_positions > 0 then
-                    for _, tileid in ipairs(new_positions) do
-                        local cursor_unitid = make_cursor()
-                        curr_raycast_data.cursors[tileid] = cursor_unitid
-                    end
+                for _, tileid in ipairs(new_positions) do
+                    local cursor_unitid = make_cursor()
+                    curr_raycast_data.cursors[tileid] = cursor_unitid
                 end
             end
 
