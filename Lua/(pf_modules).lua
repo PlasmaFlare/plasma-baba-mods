@@ -28,8 +28,7 @@ function PlasmaModules.load_module(module)
     return all_modules[module]
 end
 
-local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer")
-pf_undo_analyzer = UndoAnalyzer:new()
+-- @TODO: maybe we can do a similar thing in undo analyzer where the singleton is defined in the module itself
 pf_dir_text_display = PlasmaModules.load_module("general/directional_text_display")
 
 --[[ 

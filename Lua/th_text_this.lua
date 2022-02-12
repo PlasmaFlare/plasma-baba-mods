@@ -14,17 +14,19 @@ local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer")
 local RaycastTrace = PlasmaModules.load_module("this/pnoun_raycast_trace")
 local Pnoun = PlasmaModules.load_module("this/pnoun_group_defs")
 
+local raycast_trace_tracker = RaycastTrace:new()
+local raycast_analyzer = UndoAnalyzer.analyzers.raycast_analyzer
+
 local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
-local cond_features_with_this_noun = {} -- list of all condition rules with "this" as a noun and "block/pass" as properties. Used to check if updatecode should be set to 1 to recalculate which units are blocked/pass
 local on_level_start = false
 local NO_POSITION = -1
 local THIS_LOGGING = false
 
 local indicator_layer_timer = 0 -- Used mainly for cycling through indicators if they are stacked
-local TIMER_PERIOD = 180 -- Used mainly for changing color on stablerule display
-local TIMER_CYCLE_PERIOD = TIMER_PERIOD/2 -- Used mainly for changing color on stablerule display
+local TIMER_PERIOD = 180
+local TIMER_CYCLE_PERIOD = TIMER_PERIOD/2
 
 local function set_blocked_tile(tileid)
     if tileid then
@@ -96,8 +98,6 @@ local pnoun_subrule_data = {}
  ]]
 local raycast_data = {}
 
-local raycast_trace_tracker = RaycastTrace:new()
-
 --[[ 
     local relay_indicators = {
         <tileid + dir> = <unitid of indicator>,
@@ -118,7 +118,6 @@ local function reset_this_mod_locals()
     blocked_tiles = {}
     explicit_passed_tiles = {}
     explicit_relayed_tiles = {}
-    cond_features_with_this_noun = {}
     raycast_data = {}
     relay_indicators = {}
     deferred_pnoun_subrules = {}
@@ -126,7 +125,7 @@ local function reset_this_mod_locals()
     indicator_layer_timer = 0
 
     raycast_trace_tracker:clear()
-    pf_undo_analyzer:reset()
+    raycast_analyzer:reset()
 end
 
 local make_cursor, update_all_cursors, make_relay_indicator
@@ -167,7 +166,6 @@ table.insert(mod_hook_functions["rule_update"],
         blocked_tiles = {}
         explicit_passed_tiles = {}
         explicit_relayed_tiles = {}
-        cond_features_with_this_noun = {}
         raycast_trace_tracker:clear()
         pnoun_subrule_data = {
             pnoun_to_groups = {},
@@ -194,7 +192,7 @@ table.insert(mod_hook_functions["rule_update_after"],
             this_mod_globals.undoed_after_called = false
         end
 
-        pf_undo_analyzer:reset()
+        raycast_analyzer:reset()
         indicator_layer_timer = 0 -- Used for immediate feedback when making "THIS is pass/block/relay"
 
         if THIS_LOGGING then
@@ -205,12 +203,12 @@ table.insert(mod_hook_functions["rule_update_after"],
 
 table.insert( mod_hook_functions["command_given"],
     function()
-        pf_undo_analyzer:reset()
+        raycast_analyzer:reset()
     end
 )
 table.insert( mod_hook_functions["turn_end"],
     function()
-        pf_undo_analyzer:reset()
+        raycast_analyzer:reset()
     end
 )
 
@@ -566,11 +564,11 @@ local function this_raycast(ray, checkemptyblock, raycast_trace, curr_cast_extra
             --     empty_dir = fixedrandom(0,3)
             -- end
 
-            if checkemptyblock and hasfeature("empty", "is", "block", 2, ox, oy) and not hasfeature("empty", "is", "not block", 2, ox, oy) then
+            if checkemptyblock and raycast_trace:evaluate_raycast_property("empty", "block", 2, ox, oy) then
                 return {ox, oy}, true, false, nil
-            elseif hasfeature("empty", "is", "relay", 2, ox, oy) and not hasfeature("empty", "is", "not relay", 2, ox, oy) and empty_dir ~= 4 then
+            elseif raycast_trace:evaluate_raycast_property("empty", "relay", 2, ox, oy) and empty_dir ~= 4 then
                 return {ox, oy}, false, false, empty_dir
-            elseif hasfeature("empty", "is", "not pass", 2, ox, oy) then
+            elseif not raycast_trace:evaluate_raycast_property("empty", "pass", 2, ox, oy) then
                 return {ox, oy}, false, true, nil
             end
         elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
@@ -612,13 +610,13 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
     local all_pass = false
     local all_relay = false
     if raycast_settings.checkblocked then
-        all_block = findfeature("all", "is", "block") ~= nil
+        all_block = raycast_trace:call_findfeature_with_trace({"all", "is", "block"})
     end
     if raycast_settings.checkrelay then
-        all_relay = findfeature("all", "is", "relay") ~= nil
+        all_relay = raycast_trace:call_findfeature_with_trace({"all", "is", "relay"})
     end
     if raycast_settings.checkpass then
-        all_pass = findfeature("all", "is", "pass") ~= nil
+        all_pass = raycast_trace:call_findfeature_with_trace({"all", "is", "pass"})
     end
 
     for i, ray in ipairs(rays) do
@@ -703,7 +701,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                             if raycast_settings.checkblocked then
                                 if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
                                     blocked = true
-                                elseif hasfeature(ray_unit_name, "is", "block",ray_unitid) and not hasfeature(ray_unit_name, "is", "not block",ray_unitid) then
+                                elseif raycast_trace:evaluate_raycast_property(ray_unit_name, "block", ray_unitid) then
                                     blocked = true
                                 end
 
@@ -714,7 +712,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                             -- relay logic
                             if raycast_settings.checkrelay and not blocked then
-                                if all_relay or hasfeature(ray_unit_name, "is", "relay", ray_unitid) then
+                                if all_relay or raycast_trace:evaluate_raycast_property(ray_unit_name, "relay", ray_unitid) then
                                     found_relay = true
                                     add_to_rayunits = false
                                     relay_dirs[ray_unit.values[DIR]] = true
@@ -734,9 +732,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                     total_pass_unit_count = total_pass_unit_count + 1
                                     add_to_rayunits = false
                                 else
-                                    local has_pass = hasfeature(ray_unit_name, "is", "pass",ray_unitid)
-                                    local has_not_pass = hasfeature(ray_unit_name, "is", "not pass",ray_unitid) 
-                                    if has_pass and not has_not_pass then
+                                    if raycast_trace:evaluate_raycast_property(ray_unit_name, "pass", ray_unitid) then
                                         total_pass_unit_count = total_pass_unit_count + 1
                                         add_to_rayunits = false
                                     end
@@ -844,29 +840,15 @@ end
 
 function check_updatecode_status_from_raycasting()
     --@TODO: check changes to block/pass/relay
-    for tileid in pairs(pf_undo_analyzer.tileids_updated) do
+    for tileid in pairs(raycast_analyzer.tileids_updated) do
         if raycast_trace_tracker:is_tileid_recorded(tileid) then
             return true
         end
     end
-    return false
-end
-
-function check_cond_rules_with_this_noun()
-    for _, data in ipairs(cond_features_with_this_noun) do
-        local checkcond = nil
-        if data.ray_unitid == 2 then
-            local x = math.floor(data.ray_tileid % roomsizex)
-            local y = math.floor(data.ray_tileid / roomsizex)
-            checkcond = testcond(data.conds, data.ray_unitid, x, y)
-        else
-            checkcond = testcond(data.conds, data.ray_unitid)
-        end
-        if checkcond ~= data.last_testcond_result then
-            updatecode = 1
-            break
-        end
+    if raycast_trace_tracker:retest_features_for_testcond_change() then
+        return true
     end
+    return false
 end
 
 function get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)
@@ -1086,7 +1068,6 @@ end
 
 local function process_pnoun_features(pnoun_features, pnoun_units, filter_property_func, curr_pnoun_op)
     local final_options = {}
-    local this_noun_cond_options_list = {}
     local processed_pnouns = {}
     local all_redirected_this_units = {}
 
@@ -1230,19 +1211,6 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                             end
 
                             table.insert(target_options, {rule = newrule, conds = newconds, notrule = false, showrule = true})
-
-                            -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
-                            -- description for why we do this.
-                            -- @TODO - check on this to see it makes sense
-                            if (curr_pnoun_op ~= "other") and #conds > 0 then
-                                table.insert(this_noun_cond_options_list, {
-                                    this_unitid = this_text_unitid,
-                                    ray_tileid = ray_tileid,
-                                    ray_unitid = ray_unitid,
-                                    conds = conds,
-                                    last_testcond_result = nil
-                                })
-                            end
                         end
                     end
                 end
@@ -1274,26 +1242,6 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
 
     for _, option in ipairs(final_options) do
         addoption(option.rule,option.conds,option.ids,option.showrule,nil,option.tags)
-    end
-
-    -- Watch sentences in the form "this <infix condition> is pass/block". See cond_features_with_this_noun 
-    -- description for why we do this.
-    for _, data in ipairs(this_noun_cond_options_list) do
-        local checkcond = nil
-        if data.ray_unitid == 2 then
-            local x = math.floor(data.ray_tileid % roomsizex)
-            local y = math.floor(data.ray_tileid / roomsizex)
-            checkcond = testcond(data.conds, data.ray_unitid, x, y)
-        else
-            checkcond = testcond(data.conds, data.ray_unitid)
-        end
-        data.last_testcond_result = checkcond
-
-        table.insert(cond_features_with_this_noun, data)
-    end
-
-    for pnoun in pairs(processed_pnouns) do
-        pnoun_units[pnoun] = nil
     end
 
     return processed_pnouns, pnoun_units, pnoun_features

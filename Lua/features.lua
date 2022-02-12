@@ -129,6 +129,15 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 	if (ignorebroken_ ~= nil) then
 		ignorebroken = ignorebroken_
 	end
+
+	--[[ 
+		@mods(THIS) - Override reason - add "is_nontrivial_check", which is set to true if the call to hasfeature() evaluated conditions.
+		This is used for the raycast tracer, which records all calls to hasfeature() when we are determining raycast units. If for instance
+		hasfeature("baba", "is", "block") is called and the featureindex does not have a "baba is block" rule, it would be counted as trivial,
+		and therefore not worthy of recording for the raycast tracer. This is especially important for performance since we look at the raycast trace
+		data every time we call code().
+	]]
+	local is_nontrivial_check = false
 	--[[ 
 		@Mods(turning text) - Override reason: when looking for "X is stop", if 
 			"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc as part of the
@@ -142,8 +151,11 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
+					if #conds > 0 then
+						is_nontrivial_check = true
+					end
 					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
-						return true
+						return true, is_nontrivial_check
 					end
 				end
 			end
@@ -157,8 +169,11 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
+					if #conds > 0 then
+						is_nontrivial_check = true
+					end
 					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
-						return true
+						return true, is_nontrivial_check
 					end
 				end
 			end
@@ -175,6 +190,9 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
                     
                     if (conds[1] ~= "never") then
                         if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3..dirfeature) then
+							if #conds > 0 then
+								is_nontrivial_check = true
+							end
                             if testcond(conds,unitid,x,y,nil,nil,checkedconds) then
                                 return true
                             end
@@ -203,6 +221,9 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 					end
 					
 					if (rule[1] == rule1) and (rule[2] == rule2) and usable then
+						if #conds > 0 then
+							is_nontrivial_check = true
+						end
 						if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
 							return true
 						end
@@ -212,7 +233,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 		end
 	end
 	
-	return nil
+	return nil, is_nontrivial_check
 end
 
 function getunitswitheffect(rule3,nolevels_,ignorethese_)

@@ -16,15 +16,11 @@ function code(alreadyrun_, ...)
     local alreadyrun = alreadyrun_ or false
     if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
-            updatecode = 1 --@todo - training wheels for now. Need to optimize figuring out when to set updatecode = 1 for pnouns
+            updatecode = 1 -- Just set updatecode = 1. No need to perform checks when we are undoing. (I think)
 		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
-            updatecode = 1 --@todo - training wheels for now. Need to optimize figuring out when to set updatecode = 1 for pnouns
-            -- print("check_updatecode_status_from_raycasting: ", check_updatecode_status_from_raycasting())
-            -- updatecode = 1
+            print("check_updatecode_status_from_raycasting: ", check_updatecode_status_from_raycasting())
             if check_updatecode_status_from_raycasting() then
                 updatecode = 1
-            else
-                check_cond_rules_with_this_noun()
             end
 		end
 	end
@@ -33,6 +29,7 @@ function code(alreadyrun_, ...)
 		update_stable_state()
 	end
 
+    -- print("running code() with updatecode = ", updatecode)
     local ret = table.pack(old_code(alreadyrun_, ...))
     guard_checkpoint("code")
     return table.unpack(ret)
@@ -131,7 +128,7 @@ local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer")
 function addundo(line,...)
     local ret = table.pack(old_addundo(line, ...))
 
-    UndoAnalyzer.analyze_undo_line(line, {pf_undo_analyzer})
+    UndoAnalyzer.analyze_undo_line(line)
     check_undo_data_for_updating_guards(line)
     return table.unpack(ret)
 end
