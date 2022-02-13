@@ -356,16 +356,10 @@ function defer_addoption_with_this(rule)
         elseif property == "pass" then
             pnoun_group = Pnoun.Groups.THIS_IS_PASS
         end
-    elseif property_is_pnoun then
-        if target_is_pnoun then
-            pnoun_group = Pnoun.Groups.THIS_IS_VAR
-        else
-            pnoun_group = Pnoun.Groups.X_IS_VAR
-        end
     end
     
     if pnoun_group == nil then
-        pnoun_group = Pnoun.Groups.OTHER_ACTIVE
+        pnoun_group = Pnoun.Groups.VARIABLE
     end
     
     -- A pnoun feature can only be in one pnoun group. There is no need to check for priority since
@@ -1019,7 +1013,7 @@ local function populate_inactive_pnouns()
         end
     end
 
-    local inactive_pnoun_group = deferred_pnoun_subrules[Pnoun.Groups.OTHER_INACTIVE]
+    local inactive_pnoun_group = deferred_pnoun_subrules[Pnoun.Groups.VARIABLE]
     for pnoun_unitid, _ in pairs(raycast_data) do
         if not active_pnouns[pnoun_unitid] then
             inactive_pnoun_group.pnoun_units[pnoun_unitid] = true
@@ -1027,36 +1021,6 @@ local function populate_inactive_pnouns()
     end
 end
 
-local function mark_explicit_raycast_tileids(pnoun_units, property, valid_marked_tile_func_handler)
-    for pnoun_unitid in pairs(pnoun_units) do
-        for tileid, ray_objects in pairs(raycast_data[pnoun_unitid].raycast_positions) do
-            local x, y = utils.coords_from_tileid(tileid)
-            for _, ray_object in ipairs(ray_objects) do
-                local ray_unitid = utils.parse_object(ray_object)
-                
-                local has_prop = false
-                local has_not_prop = false
-                if ray_unitid == 2 then
-                    has_prop = hasfeature("empty", "is", property, 2, x, y)
-                    has_not_prop = hasfeature("empty", "is", "not "..property, 2, x, y)
-                else
-                    local ray_unit = mmf.newObject(ray_unitid)
-                    local ray_unit_name = ray_unit.strings[NAME]
-                    if ray_unit.strings[UNITTYPE] == "text" then
-                        ray_unit_name = "text"
-                    end
-                    has_prop = hasfeature(ray_unit_name, "is", property, ray_unitid)
-                    has_not_prop = hasfeature(ray_unit_name, "is", "not "..property, ray_unitid)
-                end
-                
-                if has_prop and not has_not_prop then
-                    valid_marked_tile_func_handler(tileid)
-                    break
-                end    
-            end
-        end
-    end
-end
 
 local function process_pnoun_features(pnoun_features, pnoun_units, filter_property_func, curr_pnoun_op)
     local final_options = {}
@@ -1239,6 +1203,81 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
     return processed_pnouns, pnoun_units, pnoun_features
 end
 
+local function commit_raycast_data(curr_raycast_data, raycast_simulation_data, pnoun_group, op)
+    local raycast_objects_by_tileid = raycast_simulation_data.raycast_objects_by_tileid
+    local extradata = raycast_simulation_data.extradata
+    local raycast_trace = raycast_simulation_data.raycast_trace
+
+    for tileid in pairs(extradata.found_blocked_tiles) do
+        set_blocked_tile(tileid)
+    end
+
+    raycast_trace_tracker:add_traces(raycast_trace)
+
+    if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
+        for these_unitid in pairs(extradata.found_ending_these_texts) do
+            this_mod_globals.active_this_property_text[these_unitid] = true
+        end
+    end
+
+    local new_positions = {}
+
+    -- Mark explicit block/pass/relay tiles
+    local explicit_tile_func = Pnoun_Op_To_Explicit_Tile_Func[op]
+    for tileid, ray_objects in pairs(curr_raycast_data.raycast_positions) do
+        if explicit_tile_func ~= nil then
+            local x, y = utils.coords_from_tileid(tileid)
+            for _, ray_object in ipairs(ray_objects) do
+                local ray_unitid = utils.parse_object(ray_object)
+                
+                local has_prop = false
+                local has_not_prop = false
+                if ray_unitid == 2 then
+                    has_prop = hasfeature("empty", "is", op, 2, x, y)
+                    has_not_prop = hasfeature("empty", "is", "not "..op, 2, x, y)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    local ray_unit_name = ray_unit.strings[NAME]
+                    if ray_unit.strings[UNITTYPE] == "text" then
+                        ray_unit_name = "text"
+                    end
+                    has_prop = hasfeature(ray_unit_name, "is", op, ray_unitid)
+                    has_not_prop = hasfeature(ray_unit_name, "is", "not "..op, ray_unitid)
+                end
+                
+                if has_prop and not has_not_prop then
+                    explicit_tile_func(tileid)
+                    break
+                end    
+            end
+
+        end
+        -- Add/Update/Remove cursors based on how many raycast positions we found
+        if not curr_raycast_data.cursors[tileid] then
+            table.insert(new_positions, tileid)
+        end
+    end
+    
+    local tileids_to_delete = {}
+    for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
+        if not curr_raycast_data.raycast_positions[tileid] then
+            table.insert(tileids_to_delete, tileid)
+            delunit(cursor_unitid)
+            MF_cleanremove(cursor_unitid)
+            -- @Note: apparently we have to delete then remake all cursors to avoid a visual glitch with multiple cursors.
+            -- Reassigning cursor positions without deleting causes the visual glitch for which I have no idea why it happens
+            -- It isn't a race condition with the "always" modhook. But ehh. Reinvestigate if we need to optimize.
+        end
+    end
+    for _, tileid in ipairs(tileids_to_delete) do
+        curr_raycast_data.cursors[tileid] = nil
+    end
+    for _, tileid in ipairs(new_positions) do
+        local cursor_unitid = make_cursor()
+        curr_raycast_data.cursors[tileid] = cursor_unitid
+    end
+end
+
 -- Starting point where all pnoun processing is. This is like what grouprules() is to all group processing.
 function do_subrule_pnouns()
     populate_inactive_pnouns()
@@ -1255,13 +1294,11 @@ function do_subrule_pnouns()
             print("------ Processing Pnoun Group "..pnoun_group.." ------")
         end
         for _, op in ipairs(Pnoun.Pnoun_Group_Lookup[pnoun_group].ops) do
-            if THIS_LOGGING then
-                print(" > New filter ")
-            end
-
+            local recorded_raycast_simulations = {}
             local found_these_ending_texts = {}
             
-            -- Main action 1: Update the raycast units for each pnoun
+            -- Main action 1: Simulate a raycasting for every pnoun in the current group. Submit the raycast objects to be used in
+            -- process_pnoun_features(), but DON'T commit the results yet.
             for pnoun_unitid in pairs(data.pnoun_units) do
                 if THIS_LOGGING then
                     print("-> Updating raycast units of "..utils.real_unitstring(pnoun_unitid))
@@ -1269,6 +1306,11 @@ function do_subrule_pnouns()
 
                 local curr_raycast_data = raycast_data[pnoun_unitid]
                 local raycast_objects_by_tileid, extradata, raycast_trace = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+                recorded_raycast_simulations[pnoun_unitid] = {
+                    raycast_objects_by_tileid = raycast_objects_by_tileid,
+                    extradata = extradata,
+                    raycast_trace = raycast_trace,
+                }
 
                 local raycast_objects = {}
                 local raycast_objects_dict = {}
@@ -1281,55 +1323,8 @@ function do_subrule_pnouns()
                     end
                 end
 
-                for indicator_key, data in pairs(extradata.found_relay_indicators) do
-                    all_found_relay_indicators[indicator_key] = true
-                    if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
-                        new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
-                    end
-                end
-
-                for tileid in pairs(extradata.found_blocked_tiles) do
-                    set_blocked_tile(tileid)
-                end
-
-                raycast_trace_tracker:add_traces(raycast_trace)
-
-                if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
-                    for these_unitid in pairs(extradata.found_ending_these_texts) do
-                        this_mod_globals.active_this_property_text[these_unitid] = true
-                    end
-                end
-
                 curr_raycast_data.raycast_unitids = raycast_objects
                 curr_raycast_data.raycast_positions = raycast_objects_by_tileid
-
-
-                -- Add/Update/Remove cursors based on how many raycast positions we found
-                local new_positions = {}
-                for tileid, _ in pairs(curr_raycast_data.raycast_positions) do
-                    if not curr_raycast_data.cursors[tileid] then
-                        table.insert(new_positions, tileid)
-                    end
-                end
-
-                local tileids_to_delete = {}
-                for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
-                    if not curr_raycast_data.raycast_positions[tileid] then
-                        table.insert(tileids_to_delete, tileid)
-                        delunit(cursor_unitid)
-                        MF_cleanremove(cursor_unitid)
-                        -- @Note: apparently we have to delete then remake all cursors to avoid a visual glitch with multiple cursors.
-                        -- Reassigning cursor positions without deleting causes the visual glitch for which I have no idea why it happens
-                        -- It isn't a race condition with the "always" modhook. But ehh. Reinvestigate if we need to optimize.
-                    end
-                end
-                for _, tileid in ipairs(tileids_to_delete) do
-                    curr_raycast_data.cursors[tileid] = nil
-                end
-                for _, tileid in ipairs(new_positions) do
-                    local cursor_unitid = make_cursor()
-                    curr_raycast_data.cursors[tileid] = cursor_unitid
-                end
             end
 
             if THIS_LOGGING then
@@ -1340,8 +1335,16 @@ function do_subrule_pnouns()
                 print("________________")
             end
 
-            -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group
-            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
+            -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group. Return a list of all pnouns that were
+            -- processed as part of a sentence, and the remaining pnouns and features to process
+            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = nil, nil, nil
+            if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
+                processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
+            else
+                processed_pnoun_units = data.pnoun_units
+                remaining_pnoun_units = {}
+                remaining_pnoun_features = {}
+            end
 
             if THIS_LOGGING then
                 print("-> Processed pnoun units: ")
@@ -1361,14 +1364,26 @@ function do_subrule_pnouns()
                 print("________________")
             end
 
+            -- Main action 3: Of the processed pnouns, commit their raycast simulation data to the system.
+            -- The other pnouns that weren't processed will go to the next action
+            for pnoun_unitid in pairs(processed_pnoun_units) do
+                if THIS_LOGGING then
+                    print("-> Committing pnoun: "..utils.real_unitstring(pnoun_unit))
+                end
+                local simulation_data = recorded_raycast_simulations[pnoun_unitid]
+                commit_raycast_data(raycast_data[pnoun_unitid], simulation_data, pnoun_group, op)
+
+                for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
+                    all_found_relay_indicators[indicator_key] = true
+                    if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
+                        new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
+                    end
+                end
+            end
+
+            -- Main action 4: Of the non-processed pnouns, update the current group's set of pnoun units and features. These 
             data.pnoun_units = remaining_pnoun_units
             data.pnoun_features = remaining_pnoun_features
-
-            -- mark explicit tiles
-            local explicit_tile_func = Pnoun_Op_To_Explicit_Tile_Func[op]
-            if explicit_tile_func ~= nil then
-                mark_explicit_raycast_tileids(processed_pnoun_units, op, explicit_tile_func)
-            end
         end
 
         -- If there are still features to process and pnoun units to update, add both of those to the redirected pnoun group (if defined)
