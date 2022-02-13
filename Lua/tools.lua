@@ -53,7 +53,14 @@ function writerules(parent,name,x_,y_)
 				for a,cond in ipairs(conds) do
 					if cond[1] == "this" or cond[1] == "not this" then
 						num_this_conds = num_this_conds + 1
-						this_cond = cond[1]
+						local pnoun_unitid = parse_this_unit_from_param_id(cond[2][1])
+						local pnoun_unit = mmf.newObject(pnoun_unitid)
+
+						if cond[1] == "this" then
+							this_cond = pnoun_unit.strings[NAME]
+						else
+							this_cond = "not "..pnoun_unit.strings[NAME]
+						end
 					end
 				end
 				if num_this_conds > 0 then

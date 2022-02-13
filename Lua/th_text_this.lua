@@ -66,6 +66,7 @@ local deferred_pnoun_subrules = {}
             <pnoun unitid> = <Pnoun_Group>
             ...    
         }
+        active_pnouns = (<pnoun unitid>, <pnoun unitid> ...)
     }    
 ]]
 local pnoun_subrule_data = {}
@@ -169,6 +170,7 @@ table.insert(mod_hook_functions["rule_update"],
         raycast_trace_tracker:clear()
         pnoun_subrule_data = {
             pnoun_to_groups = {},
+            active_pnouns = {},
         }
         deferred_pnoun_subrules = {}
         for pnoun_group, value in pairs(Pnoun.Groups) do
@@ -387,10 +389,12 @@ function defer_addoption_with_this(rule)
             deferred_pnoun_subrules[prev_pnoun_group].pnoun_units[pnoun] = nil
             deferred_pnoun_subrules[pnoun_group].pnoun_units[pnoun] = true
             pnoun_subrule_data.pnoun_to_groups[pnoun] = pnoun_group
+            pnoun_subrule_data.active_pnouns[pnoun] = true
         elseif prev_pnoun_group == nil then
             -- Assign the pnoun group to the pnoun unit
             deferred_pnoun_subrules[pnoun_group].pnoun_units[pnoun] = true
             pnoun_subrule_data.pnoun_to_groups[pnoun] = pnoun_group
+            pnoun_subrule_data.active_pnouns[pnoun] = true
         end
     end
 end
@@ -637,18 +641,22 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 local ray_objects = {}
                 local tileid = ray_pos[1] + ray_pos[2] * roomsizex
                 local found_ending_these = false
-                local found_flood_fill_object = false
+                local found_valid_ending_these = false
 
                 if pointer_noun == "these" then
                     -- If we found another THESE pointing in the opposite direction, terminate early
                     if unitmap[tileid] ~= nil then
                         for _, ray_unitid in ipairs(unitmap[tileid]) do
                             local ray_unit = mmf.newObject(ray_unitid)
-                            if ray_unit.strings[NAME] == "these" and ray_unitid ~= pnoun_unitid then
-                                local ray_dir_value = dir_vec_to_dir_value(curr_cast_data.ray.dir)
-                                if rotate(ray_dir_value) == ray_unit.values[DIR] then
-                                    found_ending_these_texts[ray_unitid] = true
-                                    found_ending_these = true
+                            if ray_unit.strings[NAME] == "these" then
+                                found_ending_these = true
+
+                                if ray_unitid ~= pnoun_unitid then
+                                    local ray_dir_value = dir_vec_to_dir_value(curr_cast_data.ray.dir)
+                                    if rotate(ray_dir_value) == ray_unit.values[DIR] then
+                                        found_ending_these_texts[ray_unitid] = true
+                                        found_valid_ending_these = true
+                                    end
                                 end
                             end
                         end
@@ -758,9 +766,11 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 end
 
                 if found_ending_these then
-                    for tileid, ray_objects in pairs(curr_cast_data.extradata.these_ray_objects_by_tileid) do
-                        if ray_objects_by_tileid[tileid] == nil then
-                            ray_objects_by_tileid[tileid] = ray_objects
+                    if found_valid_ending_these then
+                        for tileid, ray_objects in pairs(curr_cast_data.extradata.these_ray_objects_by_tileid) do
+                            if ray_objects_by_tileid[tileid] == nil then
+                                ray_objects_by_tileid[tileid] = ray_objects
+                            end
                         end
                     end
                 elseif blocked then
@@ -1200,10 +1210,15 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
         addoption(option.rule,option.conds,option.ids,option.showrule,nil,option.tags)
     end
 
+    for pnoun in pairs(processed_pnouns) do
+        pnoun_units[pnoun] = nil
+    end
+
     return processed_pnouns, pnoun_units, pnoun_features
 end
 
-local function commit_raycast_data(curr_raycast_data, raycast_simulation_data, pnoun_group, op)
+local function commit_raycast_data(pnoun_unitid, raycast_simulation_data, pnoun_group, op)
+    local curr_raycast_data = raycast_data[pnoun_unitid]
     local raycast_objects_by_tileid = raycast_simulation_data.raycast_objects_by_tileid
     local extradata = raycast_simulation_data.extradata
     local raycast_trace = raycast_simulation_data.raycast_trace
@@ -1214,7 +1229,7 @@ local function commit_raycast_data(curr_raycast_data, raycast_simulation_data, p
 
     raycast_trace_tracker:add_traces(raycast_trace)
 
-    if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
+    if pnoun_subrule_data.active_pnouns[pnoun_unitid] then
         for these_unitid in pairs(extradata.found_ending_these_texts) do
             this_mod_globals.active_this_property_text[these_unitid] = true
         end
@@ -1371,7 +1386,7 @@ function do_subrule_pnouns()
                     print("-> Committing pnoun: "..utils.real_unitstring(pnoun_unit))
                 end
                 local simulation_data = recorded_raycast_simulations[pnoun_unitid]
-                commit_raycast_data(raycast_data[pnoun_unitid], simulation_data, pnoun_group, op)
+                commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
 
                 for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
                     all_found_relay_indicators[indicator_key] = true
