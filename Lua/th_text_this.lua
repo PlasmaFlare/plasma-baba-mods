@@ -557,12 +557,8 @@ local function this_raycast(ray, checkemptyblock, raycast_trace, curr_cast_extra
         local tileid = ox + oy * roomsizex
         raycast_trace:add_tileid(tileid)
 
-        if unitmap[tileid] == nil then
+        if unitmap[tileid] == nil or #unitmap[tileid] == 0 then
             local empty_dir = emptydir(ox, oy)
-            --@TODO: should empty have a random direction? It would lead to dumb tesla coil levels
-            -- if empty_dir == 4 then
-            --     empty_dir = fixedrandom(0,3)
-            -- end
 
             if checkemptyblock and raycast_trace:evaluate_raycast_property("empty", "block", 2, ox, oy) then
                 return {ox, oy}, true, false, nil
@@ -626,6 +622,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                 extradata = {
                     pointer_noun = pointer_noun,
                     these_ray_objects_by_tileid = {},
+                    original_cast_pos = {pointer_unit.values[XPOS], pointer_unit.values[YPOS]}
                 }
             } 
         }
@@ -637,7 +634,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
             local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_cast_data.ray, raycast_settings.checkblocked, raycast_trace, curr_cast_data.extradata)
             if not ray_pos then
                 -- Do nothing for now
-            elseif pointer_noun == "that" and ray_pos[1] == pointer_unit.values[XPOS] and ray_pos[2] == pointer_unit.values[YPOS] then
+            elseif pointer_noun == "that" and ray_pos[1] == curr_cast_data.extradata.original_cast_pos[1] and ray_pos[2] == curr_cast_data.extradata.original_cast_pos[2] then
                 -- Do nothing. THAT cannot refer to itself
             else
                 local blocked = false
@@ -748,6 +745,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                         -- Consolidate findings from scanning all units in a single position.
                         if not blocked then
                             if found_relay then
+                                curr_cast_data.extradata.original_cast_pos = {ray_pos[1], ray_pos[2]}
                                 for dir, _ in pairs(relay_dirs) do
                                     for _, ray in ipairs(get_rays_from_pointer_noun(pointer_noun, ray_pos[1], ray_pos[2], dir)) do
                                         table.insert(new_stack_entries, {ray = ray, extradata = curr_cast_data.extradata})
@@ -839,7 +837,6 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 end
 
 function check_updatecode_status_from_raycasting()
-    --@TODO: check changes to block/pass/relay
     for tileid in pairs(raycast_analyzer.tileids_updated) do
         if raycast_trace_tracker:is_tileid_recorded(tileid) then
             return true
@@ -908,18 +905,15 @@ end
 condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
     if #params == 1 then
         valid = true
-        local unitid = cdata.unitid
+        local unitid, x, y = cdata.unitid, cdata.x, cdata.y
         local this_text_unitid = parse_this_unit_from_param_id(params[1])
         
         local pass = false
-        -- @TODO: @mods(this) deciding on when to check block and/or pass when calling get_raycast_units() is currently janky. It depends on 
-        -- whether or not do_subrule_this() is being called and weird update order shennanigans somehow makes this all work out
-        -- in the end. Clean this up when we revisit THIS mod.
         -- @Note - I set the checkblocked param of get_raycast_units to false. Is this incorrect? 
         --   - update: believe it of not, I think it is actually correct. I think its because of the revamp to do_subrule_this() that made the
         --   order of operations more deterministic and orderly. Still, look into this later
         for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
-            local ray_unit, x, y, ray_tileid = plasma_utils.parse_object(ray_object)
+            local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
             if ray_unit == 2 then
                 local tileid = x + y * roomsizex
                 if ray_tileid == tileid then
@@ -1034,8 +1028,6 @@ local function populate_inactive_pnouns()
 end
 
 local function mark_explicit_raycast_tileids(pnoun_units, property, valid_marked_tile_func_handler)
-    --@TODO(verify) - when calling this, we need to have "transparency mode" enabled, meaning that we dont set checkblocked/checkpass etc to true
-    -- this is what causes "THIS is pass" to not show the indicator
     for pnoun_unitid in pairs(pnoun_units) do
         for tileid, ray_objects in pairs(raycast_data[pnoun_unitid].raycast_positions) do
             local x, y = utils.coords_from_tileid(tileid)
@@ -1159,7 +1151,7 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                     -- Rule display in pause menu
                     if #target_options > 0 and filter_property_func(property) then
                         local ray_names = {}
-                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, true, true)) do
+                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
                             local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                             local ray_name = ""
                             if ray_unitid == 2 then
@@ -1186,7 +1178,7 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                     end
                 else
                     local ray_names = {}
-                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, true, true, true)) do
+                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
                         if ray_unitid == 2 then
