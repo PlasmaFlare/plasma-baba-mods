@@ -21,12 +21,14 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local on_level_start = false
-local NO_POSITION = -1
 local THIS_LOGGING = false
 
 local indicator_layer_timer = 0 -- Used mainly for cycling through indicators if they are stacked
 local TIMER_PERIOD = 180
 local TIMER_CYCLE_PERIOD = TIMER_PERIOD/2
+
+local checking_updatecode_status_flag = false
+local checking_updatecode_curr_pnoun_ref = {}
 
 local function set_blocked_tile(tileid)
     if tileid then
@@ -66,7 +68,10 @@ local deferred_pnoun_subrules = {}
             <pnoun unitid> = <Pnoun_Group>
             ...    
         }
-        active_pnouns = (<pnoun unitid>, <pnoun unitid> ...)
+        active_pnouns = (<pnoun unitid>, <pnoun unitid> ...),
+        process_order = {
+            <pnoun unitid> = <int>
+        },
     }    
 ]]
 local pnoun_subrule_data = {}
@@ -171,6 +176,7 @@ table.insert(mod_hook_functions["rule_update"],
         pnoun_subrule_data = {
             pnoun_to_groups = {},
             active_pnouns = {},
+            process_order = {},
         }
         deferred_pnoun_subrules = {}
         for pnoun_group, value in pairs(Pnoun.Groups) do
@@ -410,60 +416,55 @@ function update_all_cursors(timer)
             local x = wordunit.values[XPOS]
             local y = wordunit.values[YPOS]
 
-            if tileid ~= NO_POSITION then
-                local nx = math.floor(tileid % roomsizex)
-                local ny = math.floor(tileid / roomsizex)
-                local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
-                cursorunit.values[XPOS] = nx * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
-                cursorunit.values[YPOS] = ny * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
+            local nx = math.floor(tileid % roomsizex)
+            local ny = math.floor(tileid / roomsizex)
+            local cursor_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+            cursorunit.values[XPOS] = nx * cursor_tilesize + Xoffset + (cursor_tilesize / 2)
+            cursorunit.values[YPOS] = ny * cursor_tilesize + Yoffset + (cursor_tilesize / 2)
 
-                local c1 = 0
-                local c2 = 0
-                cursorunit.layer = 2
-                if blocked_tiles[tileid] then
-                    if order_explicit_indicators_on_top then
-                        cursorunit.values[ZLAYER] = 30
-                    else
-                        cursorunit.values[ZLAYER] = 25
-                    end
-                    cursorunit.direction = 30
-                    MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
-                    c1,c2 = getuicolour("blocked")
-                elseif explicit_relayed_tiles[tileid] then
-                    if order_explicit_indicators_on_top then
-                        cursorunit.values[ZLAYER] = 29
-                    else
-                        cursorunit.values[ZLAYER] = 24
-                    end
-                    cursorunit.direction = 29
-                    MF_loadsprite(cursorunit.fixed,"this_cursor_relay_0",29,true)
-                    c1,c2 = 5, 4
-                elseif explicit_passed_tiles[tileid] then
-                    if order_explicit_indicators_on_top then
-                        cursorunit.values[ZLAYER] = 28
-                    else
-                        cursorunit.values[ZLAYER] = 23
-                    end
-                    cursorunit.direction = 31
-                    MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
-                    c1,c2 = 4, 4
+            local c1 = 0
+            local c2 = 0
+            cursorunit.layer = 2
+            if blocked_tiles[tileid] then
+                if order_explicit_indicators_on_top then
+                    cursorunit.values[ZLAYER] = 30
                 else
-                    if ruleids[wordunit.fixed] then
-                        cursorunit.values[ZLAYER] = 27 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
-                    else
-                        cursorunit.values[ZLAYER] = 26
-                    end
-                    cursorunit.direction = 28
-                    MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
-                    -- MF_loadsprite(cursorunit.fixed,"stable_indicator_0",28,true)
-                    c1,c2 = wordunit.colour[1],wordunit.colour[2]
+                    cursorunit.values[ZLAYER] = 25
                 end
-            
-                MF_setcolour(cursorunit.fixed,c1,c2)
-                cursorunit.visible = true
+                cursorunit.direction = 30
+                MF_loadsprite(cursorunit.fixed,"this_cursor_blocked_0",30,true)
+                c1,c2 = getuicolour("blocked")
+            elseif explicit_relayed_tiles[tileid] then
+                if order_explicit_indicators_on_top then
+                    cursorunit.values[ZLAYER] = 29
+                else
+                    cursorunit.values[ZLAYER] = 24
+                end
+                cursorunit.direction = 29
+                MF_loadsprite(cursorunit.fixed,"this_cursor_relay_0",29,true)
+                c1,c2 = 5, 4
+            elseif explicit_passed_tiles[tileid] then
+                if order_explicit_indicators_on_top then
+                    cursorunit.values[ZLAYER] = 28
+                else
+                    cursorunit.values[ZLAYER] = 23
+                end
+                cursorunit.direction = 31
+                MF_loadsprite(cursorunit.fixed,"this_cursor_pass_0",31,true)
+                c1,c2 = 4, 4
             else
-                cursorunit.visible = false
+                if ruleids[wordunit.fixed] then
+                    cursorunit.values[ZLAYER] = 27 -- Note: the game only actually processes Zlayers between 0-30. We don't know what it does with layers outside of this range, but it seems
+                else
+                    cursorunit.values[ZLAYER] = 26
+                end
+                cursorunit.direction = 28
+                MF_loadsprite(cursorunit.fixed,"this_cursor_0",28,true)
+                -- MF_loadsprite(cursorunit.fixed,"stable_indicator_0",28,true)
+                c1,c2 = wordunit.colour[1],wordunit.colour[2]
             end
+        
+            MF_setcolour(cursorunit.fixed,c1,c2)
             cursorunit.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             cursorunit.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
             
@@ -554,15 +555,16 @@ local function this_raycast(ray, checkemptyblock, raycast_trace, curr_cast_extra
     while inbounds(ox,oy,1) do
         local tileid = ox + oy * roomsizex
         raycast_trace:add_tileid(tileid)
-
+        
         if unitmap[tileid] == nil or #unitmap[tileid] == 0 then
+            local pnoun_unitid = curr_cast_extradata.pnoun_unitid
             local empty_dir = emptydir(ox, oy)
 
-            if checkemptyblock and raycast_trace:evaluate_raycast_property("empty", "block", 2, ox, oy) then
+            if checkemptyblock and raycast_trace:evaluate_raycast_property(pnoun_unitid, "empty", "block", 2, ox, oy) then
                 return {ox, oy}, true, false, nil
-            elseif raycast_trace:evaluate_raycast_property("empty", "relay", 2, ox, oy) and empty_dir ~= 4 then
+            elseif raycast_trace:evaluate_raycast_property(pnoun_unitid, "empty", "relay", 2, ox, oy) and empty_dir ~= 4 then
                 return {ox, oy}, false, false, empty_dir
-            elseif not raycast_trace:evaluate_raycast_property("empty", "pass", 2, ox, oy) then
+            elseif not raycast_trace:evaluate_raycast_property(pnoun_unitid, "empty", "pass", 2, ox, oy) then
                 return {ox, oy}, false, true, nil
             end
         elseif unitmap[tileid] ~= nil and #unitmap[tileid] > 0 then
@@ -618,6 +620,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
             {
                 ray = ray, 
                 extradata = {
+                    pnoun_unitid = pnoun_unitid,
                     pointer_noun = pointer_noun,
                     these_ray_objects_by_tileid = {},
                     original_cast_pos = {pointer_unit.values[XPOS], pointer_unit.values[YPOS]}
@@ -700,7 +703,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                             if raycast_settings.checkblocked then
                                 if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
                                     blocked = true
-                                elseif raycast_trace:evaluate_raycast_property(ray_unit_name, "block", ray_unitid) then
+                                elseif raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "block", ray_unitid) then
                                     blocked = true
                                 end
 
@@ -711,7 +714,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                             -- relay logic
                             if raycast_settings.checkrelay and not blocked then
-                                if all_relay or raycast_trace:evaluate_raycast_property(ray_unit_name, "relay", ray_unitid) then
+                                if all_relay or raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "relay", ray_unitid) then
                                     found_relay = true
                                     add_to_rayunits = false
                                     relay_dirs[ray_unit.values[DIR]] = true
@@ -731,7 +734,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                     total_pass_unit_count = total_pass_unit_count + 1
                                     add_to_rayunits = false
                                 else
-                                    if raycast_trace:evaluate_raycast_property(ray_unit_name, "pass", ray_unitid) then
+                                    if raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "pass", ray_unitid) then
                                         total_pass_unit_count = total_pass_unit_count + 1
                                         add_to_rayunits = false
                                     end
@@ -846,10 +849,21 @@ function check_updatecode_status_from_raycasting()
             return true
         end
     end
-    if raycast_trace_tracker:retest_features_for_testcond_change() then
-        return true
-    end
-    return false
+
+    --[[ 
+        This is part of a hack to prevent any rules involving THIS + block/pass/relay from constantly setting updatecode = 1
+        when checking data from the raycast tracer. Since retest_features_for_testcond_change() can call testcond(),  
+        setting checking_updatecode_status_flag == true signals to the condition function for "this" to run special logic.
+        (see "condlist["this"]" for more info).
+
+        Note: JAAANKY way of setting parameters of testcond without actually overriding testcond or hasfeature.
+        Literally counting on the raycast tracer to update checking_updatecode_curr_pnoun_ref every time it checks a set of conditions
+    ]]
+    checking_updatecode_status_flag = true
+    local result = raycast_trace_tracker:retest_features_for_testcond_change(checking_updatecode_curr_pnoun_ref)
+    checking_updatecode_status_flag = false
+
+    return result
 end
 
 function get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)
@@ -911,6 +925,21 @@ condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
         valid = true
         local unitid, x, y = cdata.unitid, cdata.x, cdata.y
         local this_text_unitid = parse_this_unit_from_param_id(params[1])
+
+        if checking_updatecode_status_flag then
+            --[[ 
+                When checking updatecode status with the raycast tracer, we want to emulate the same enviornment that
+                was present when simulate_raycast_with_pnoun() was called with ref_pnoun below. This means the order that
+                ref_pnoun was processed matters, since each process_round adds new features to the featureindex on the fly.
+                To emulate this enviornment, we automatically return false for all "this" conditions that were generated by
+                a pnoun processed later than or at the same time as ref_pnoun. This is because in the perspective of
+                ref_pnoun, the only features that are relevant are the onces added before ref_pnoun was processed.
+            ]]
+            local ref_pnoun = checking_updatecode_curr_pnoun_ref[0]
+            if pnoun_subrule_data.process_order[this_text_unitid] >= pnoun_subrule_data.process_order[ref_pnoun] then
+                return false, checkedconds
+            end
+        end
         
         local pass = false
         -- @Note - I set the checkblocked param of get_raycast_units to false. Is this incorrect? 
@@ -1304,101 +1333,138 @@ function do_subrule_pnouns()
     }
     local all_found_relay_indicators = {}
     local new_relay_indicators = {}
+    local process_round = 0
     for pnoun_group, data in ipairs(deferred_pnoun_subrules) do
         if THIS_LOGGING then
             print("------ Processing Pnoun Group "..pnoun_group.." ------")
         end
-        for _, op in ipairs(Pnoun.Pnoun_Group_Lookup[pnoun_group].ops) do
-            local recorded_raycast_simulations = {}
-            local found_these_ending_texts = {}
-            
-            -- Main action 1: Simulate a raycasting for every pnoun in the current group. Submit the raycast objects to be used in
-            -- process_pnoun_features(), but DON'T commit the results yet.
-            for pnoun_unitid in pairs(data.pnoun_units) do
+        local recorded_raycast_simulations = {}
+        local added_features_in_this_group = true
+        local added_features_during_last_op = true
+        local op_round = 0
+
+        while added_features_in_this_group do
+            added_features_in_this_group = false
+            op_round = op_round + 1
+
+            if op_round >= 1000 then
+                -- Wow. First time I found a reason to add a too complex case.
+                destroylevel("toocomplex")
+                return
+            end
+
+            for _, op in ipairs(Pnoun.Pnoun_Group_Lookup[pnoun_group].ops) do
                 if THIS_LOGGING then
-                    print("-> Updating raycast units of "..utils.real_unitstring(pnoun_unitid))
+                    print("------ Doing operation "..op.." Round "..op_round.." ------")
                 end
 
-                local curr_raycast_data = raycast_data[pnoun_unitid]
-                local raycast_objects_by_tileid, extradata, raycast_trace = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
-                recorded_raycast_simulations[pnoun_unitid] = {
-                    raycast_objects_by_tileid = raycast_objects_by_tileid,
-                    extradata = extradata,
-                    raycast_trace = raycast_trace,
-                }
+                process_round = process_round + 1
 
-                local raycast_objects = {}
-                local raycast_objects_dict = {}
-                for tileid, ray_objects in pairs(raycast_objects_by_tileid) do
-                    for _, ray_object in ipairs(ray_objects) do
-                        if not raycast_objects_dict[ray_object] then
-                            raycast_objects_dict[ray_object] = true
-                            table.insert(raycast_objects, ray_object)
+                local found_these_ending_texts = {}
+                
+                -- Main action 1: Simulate a raycasting for every pnoun in the current group. Submit the raycast objects to be used in
+                -- process_pnoun_features(), but DON'T commit the results yet.
+                if added_features_during_last_op then
+                    recorded_raycast_simulations = {}
+                    for pnoun_unitid in pairs(data.pnoun_units) do
+                        if THIS_LOGGING then
+                            print("-> Updating raycast units of "..utils.real_unitstring(pnoun_unitid))
+                        end
+
+                        local curr_raycast_data = raycast_data[pnoun_unitid]
+                        local raycast_objects_by_tileid, extradata, raycast_trace = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
+                        recorded_raycast_simulations[pnoun_unitid] = {
+                            raycast_objects_by_tileid = raycast_objects_by_tileid,
+                            extradata = extradata,
+                            raycast_trace = raycast_trace,
+                        }
+
+                        local raycast_objects = {}
+                        local raycast_objects_dict = {}
+                        for tileid, ray_objects in pairs(raycast_objects_by_tileid) do
+                            for _, ray_object in ipairs(ray_objects) do
+                                if not raycast_objects_dict[ray_object] then
+                                    raycast_objects_dict[ray_object] = true
+                                    table.insert(raycast_objects, ray_object)
+                                end
+                            end
+                        end
+
+                        curr_raycast_data.raycast_unitids = raycast_objects
+                        curr_raycast_data.raycast_positions = raycast_objects_by_tileid
+                    end
+                end
+
+                if THIS_LOGGING then
+                    print("-> Processing pnoun features: ")
+                    for _, feature in ipairs(data.pnoun_features) do
+                        print("- "..utils.serialize_feature(feature))
+                    end
+                    print("________________")
+                end
+
+                -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group. Return a list of all pnouns that were
+                -- processed as part of a sentence, and the remaining pnouns and features to process
+                local prev_pnoun_feature_count = #data.pnoun_features
+                local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = nil, nil, nil
+                if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
+                    processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
+                else
+                    processed_pnoun_units = data.pnoun_units
+                    remaining_pnoun_units = {}
+                    remaining_pnoun_features = {}
+                end
+
+                if THIS_LOGGING then
+                    print("-> Processed pnoun units: ")
+                    for pnoun_unit in pairs(processed_pnoun_units) do
+                        print("- "..utils.real_unitstring(pnoun_unit))
+                    end
+                    print("________________")
+                    print("-> Remaining pnoun units: ")
+                    for pnoun_unit in pairs(remaining_pnoun_units) do
+                        print("- "..utils.real_unitstring(pnoun_unit))
+                    end
+                    print("________________")
+                    print("-> Remaining pnoun features: ")
+                    for _, feature in ipairs(remaining_pnoun_features) do
+                        print("- "..utils.serialize_feature(feature))
+                    end
+                    print("________________")
+                end
+
+                -- Main action 3: Of the processed pnouns, commit their raycast simulation data to the system.
+                -- The other pnouns that weren't processed will go to the next action
+                for pnoun_unitid in pairs(processed_pnoun_units) do
+                    if THIS_LOGGING then
+                        print("-> Committing pnoun: "..utils.real_unitstring(pnoun_unitid))
+                    end
+                    local simulation_data = recorded_raycast_simulations[pnoun_unitid]
+                    commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
+
+                    pnoun_subrule_data.process_order[pnoun_unitid] = process_round
+
+                    for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
+                        all_found_relay_indicators[indicator_key] = true
+                        if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
+                            new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
                         end
                     end
                 end
 
-                curr_raycast_data.raycast_unitids = raycast_objects
-                curr_raycast_data.raycast_positions = raycast_objects_by_tileid
-            end
+                -- Main action 4: Of the non-processed pnouns, update the current group's set of pnoun units and features. These 
+                data.pnoun_units = remaining_pnoun_units
+                data.pnoun_features = remaining_pnoun_features
 
-            if THIS_LOGGING then
-                print("-> Processing pnoun features: ")
-                for _, feature in ipairs(data.pnoun_features) do
-                    print("- "..utils.serialize_feature(feature))
-                end
-                print("________________")
-            end
-
-            -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group. Return a list of all pnouns that were
-            -- processed as part of a sentence, and the remaining pnouns and features to process
-            local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = nil, nil, nil
-            if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
-                processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
-            else
-                processed_pnoun_units = data.pnoun_units
-                remaining_pnoun_units = {}
-                remaining_pnoun_features = {}
-            end
-
-            if THIS_LOGGING then
-                print("-> Processed pnoun units: ")
-                for pnoun_unit in pairs(processed_pnoun_units) do
-                    print("- "..utils.real_unitstring(pnoun_unit))
-                end
-                print("________________")
-                print("-> Remaining pnoun units: ")
-                for pnoun_unit in pairs(remaining_pnoun_units) do
-                    print("- "..utils.real_unitstring(pnoun_unit))
-                end
-                print("________________")
-                print("-> Remaining pnoun features: ")
-                for _, feature in ipairs(remaining_pnoun_features) do
-                    print("- "..utils.serialize_feature(feature))
-                end
-                print("________________")
-            end
-
-            -- Main action 3: Of the processed pnouns, commit their raycast simulation data to the system.
-            -- The other pnouns that weren't processed will go to the next action
-            for pnoun_unitid in pairs(processed_pnoun_units) do
-                if THIS_LOGGING then
-                    print("-> Committing pnoun: "..utils.real_unitstring(pnoun_unit))
-                end
-                local simulation_data = recorded_raycast_simulations[pnoun_unitid]
-                commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
-
-                for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
-                    all_found_relay_indicators[indicator_key] = true
-                    if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
-                        new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
-                    end
+                added_features_during_last_op = #remaining_pnoun_features < prev_pnoun_feature_count
+                if added_features_during_last_op then
+                    added_features_in_this_group = true
                 end
             end
 
-            -- Main action 4: Of the non-processed pnouns, update the current group's set of pnoun units and features. These 
-            data.pnoun_units = remaining_pnoun_units
-            data.pnoun_features = remaining_pnoun_features
+            if not Pnoun.Pnoun_Group_Lookup[pnoun_group].repeat_until_no_more_processing then
+                break
+            end
         end
 
         -- If there are still features to process and pnoun units to update, add both of those to the redirected pnoun group (if defined)

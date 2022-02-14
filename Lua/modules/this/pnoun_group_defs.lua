@@ -5,7 +5,8 @@ PNoun.Groups = {
     THIS_IS_RELAY =     2, -- All "THIS is relay" rules
     THIS_IS_PASS =      3, -- All "THIS is pass" rules
     VARIABLE =          4,
-    OTHER_INACTIVE =    5, -- This should have no features. Only pnouns not part of an active rule. This is populated only when calling populate_inactive_pnouns()
+    OTHER_ACTIVE =      5, -- This should have no features. Only pnouns not part of an active rule. This is populated only when calling populate_inactive_pnouns()
+    OTHER_INACTIVE =    6, -- This should have no features. Only pnouns not part of an active rule. This is populated only when calling populate_inactive_pnouns()
 }
 
 PNoun.Ops = {
@@ -34,7 +35,12 @@ PNoun.Pnoun_Group_Lookup = {
         ops = {"pass"}
     },
     [PNoun.Groups.VARIABLE] = {
-        ops = {"block", "relay", "pass", "other"},
+        ops = {"block", "relay", "pass"},
+        repeat_until_no_more_processing = true,
+        redirect_pnoun_group = PNoun.Groups.OTHER_ACTIVE,
+    },
+    [PNoun.Groups.OTHER_ACTIVE] = {
+        ops = {"other"},
         redirect_pnoun_group = PNoun.Groups.OTHER_INACTIVE,
     },
     [PNoun.Groups.OTHER_INACTIVE] = {

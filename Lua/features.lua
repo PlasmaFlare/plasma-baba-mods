@@ -136,6 +136,9 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 		hasfeature("baba", "is", "block") is called and the featureindex does not have a "baba is block" rule, it would be counted as trivial,
 		and therefore not worthy of recording for the raycast tracer. This is especially important for performance since we look at the raycast trace
 		data every time we call code().
+
+		Another note: for the purposes of reducing the amount of hasfeature checks in raycast tracer, 
+		we also consider any features with only the THIS condition to be "trivial".
 	]]
 	local is_nontrivial_check = false
 	--[[ 
@@ -151,7 +154,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
-					if #conds > 0 then
+					if #conds > 0 and not (#conds == 1 and (conds[1][1] == "this" or conds[1][1] == "not this")) then
 						is_nontrivial_check = true
 					end
 					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
@@ -169,7 +172,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 			
 			if (conds[1] ~= "never") then
 				if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3) then
-					if #conds > 0 then
+					if #conds > 0 and not (#conds == 1 and (conds[1][1] == "this" or conds[1][1] == "not this")) then
 						is_nontrivial_check = true
 					end
 					if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then
@@ -190,7 +193,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
                     
                     if (conds[1] ~= "never") then
                         if (rule[1] == rule1) and (rule[2] == rule2) and (rule[3] == rule3..dirfeature) then
-							if #conds > 0 then
+							if #conds > 0 and not (#conds == 1 and (conds[1][1] == "this" or conds[1][1] == "not this")) then
 								is_nontrivial_check = true
 							end
                             if testcond(conds,unitid,x,y,nil,nil,checkedconds) then
@@ -221,7 +224,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 					end
 					
 					if (rule[1] == rule1) and (rule[2] == rule2) and usable then
-						if #conds > 0 then
+						if #conds > 0 and not (#conds == 1 and (conds[1][1] == "this" or conds[1][1] == "not this")) then
 							is_nontrivial_check = true
 						end
 						if testcond(conds,unitid,x,y,nil,nil,checkedconds,ignorebroken) then

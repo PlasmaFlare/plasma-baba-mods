@@ -44,9 +44,10 @@ function RaycastTrace:add_tileid(tileid)
     self.tileids[tileid] = true
 end
 
-function RaycastTrace:add_hasfeature_check(params, last_result, is_nontrivial)
+function RaycastTrace:add_hasfeature_check(pnoun_unitid, params, last_result, is_nontrivial)
     if is_nontrivial then
         table.insert(self.hasfeature_checks, {
+            pnoun_unitid = pnoun_unitid,
             params = params,
             last_result = last_result
         })
@@ -76,20 +77,23 @@ function RaycastTrace:is_tileid_recorded(tileid)
     return self.tileids[tileid] ~= nil
 end
 
-function RaycastTrace:retest_features_for_testcond_change()
+function RaycastTrace:retest_features_for_testcond_change(curr_pnoun_ref)
     for _, featurecheck in ipairs(self.all_is_feature_checks) do
         local new_result = findfeature(table.unpack(featurecheck.params)) ~= nil
         if new_result ~= featurecheck.last_result then
+            -- print(table.concat(featurecheck.params, " "), featurecheck.last_result, new_result)
             return true
         end
     end
 
     for _, featurecheck in ipairs(self.hasfeature_checks) do
+        curr_pnoun_ref[0] = featurecheck.pnoun_unitid
         local new_result = hasfeature(table.unpack(featurecheck.params))
         if new_result == nil then
             new_result = false
         end
         if new_result ~= featurecheck.last_result then
+            -- print(table.concat(featurecheck.params, " ")..plasma_utils.real_unitstring(featurecheck.params[4]), featurecheck.last_result, new_result)
             return true
         end
     end
@@ -97,12 +101,12 @@ function RaycastTrace:retest_features_for_testcond_change()
     return false
 end
 
-function RaycastTrace:call_hasfeature_with_trace(params)
+function RaycastTrace:call_hasfeature_with_trace(pnoun_unitid, params)
     local result, is_nontrivial = hasfeature(table.unpack(params))
     if result == nil then
         result = false
     end
-    self:add_hasfeature_check(params, result, is_nontrivial)
+    self:add_hasfeature_check(pnoun_unitid, params, result, is_nontrivial)
     return result
 end
 
@@ -112,9 +116,9 @@ function RaycastTrace:call_findfeature_with_trace(params)
     return result
 end
 
-function RaycastTrace:evaluate_raycast_property(name, property, unitid, x, y)
-    local is_x = self:call_hasfeature_with_trace({name, "is", property, unitid, x, y}, raycast_trace)
-    local is_not_x = self:call_hasfeature_with_trace({name, "is", "not "..property, unitid, x, y}, raycast_trace)
+function RaycastTrace:evaluate_raycast_property(pnoun_unitid, name, property, unitid, x, y)
+    local is_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", property, unitid, x, y}, raycast_trace)
+    local is_not_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", "not "..property, unitid, x, y}, raycast_trace)
 
     return is_x and not is_not_x
 end
