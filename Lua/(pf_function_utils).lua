@@ -46,7 +46,7 @@ utils = {
         end
     end,
 
-    unitstring = function(object)
+    objectstring = function(object)
         local unitid, x, y = utils.parse_object(object)
         if unitid == 1 then
             return "(Level)"
@@ -58,12 +58,11 @@ utils = {
         end
     end,
 
-    --@TODO - this should be the ORIGINAL unitstring(). The other unitstring is pissing me off and should be named objectstring()
-    real_unitstring = function(unitid)
+    unitstring = function(unitid)
         local unit = mmf.newObject(unitid)
         utils.debug_assert(unit)
 
-        return utils.unitstring(utils.make_object(unitid, unit.values[XPOS], unit.values[YPOS]))
+        return utils.objectstring(utils.make_object(unitid, unit.values[XPOS], unit.values[YPOS]))
     end,
 
     deep_copy_table = function(table)
@@ -214,7 +213,7 @@ if false then
             local unitid = MF_getfixed(id)
             local object = utils.make_object(unitid)
             local changed_unitid = utils.parse_object(object)
-            utils.debug_assert(unitid == changed_unitid, utils.unitstring(utils.make_object(unitid)).." failed the object check")
+            utils.debug_assert(unitid == changed_unitid, utils.objectstring(utils.make_object(unitid)).." failed the object check")
 
             utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(unitid).." Unit 2:"..tostring(all_test_objects[object]))
             all_test_objects[object] = unitid
@@ -226,8 +225,8 @@ if false then
                 local object = utils.make_object(2, i, j)
                 local unitid, x, y = utils.parse_object(object)
 
-                utils.debug_assert(unitid == 2, utils.unitstring(object).." failed the object check")
-                utils.debug_assert(x == i and y == j, utils.unitstring(object).." failed the object check through different coords: "..x..","..y)
+                utils.debug_assert(unitid == 2, utils.objectstring(object).." failed the object check")
+                utils.debug_assert(x == i and y == j, utils.objectstring(object).." failed the object check through different coords: "..x..","..y)
 
                 utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[object]))
                 all_test_objects[object] = 2
@@ -236,7 +235,7 @@ if false then
 
         local levelobject = utils.make_object(1)
         local level_unitid = utils.parse_object(levelobject)
-        utils.debug_assert(level_unitid == 1, utils.unitstring(levelobject).." failed the object check")
+        utils.debug_assert(level_unitid == 1, utils.objectstring(levelobject).." failed the object check")
 
         utils.debug_assert(all_test_objects[levelobject] == nil, "Found two units that map to the same object: "..levelobject..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[levelobject]))
         all_test_objects[levelobject] = 1

@@ -1368,7 +1368,7 @@ function do_subrule_pnouns()
                     recorded_raycast_simulations = {}
                     for pnoun_unitid in pairs(data.pnoun_units) do
                         if THIS_LOGGING then
-                            print("-> Updating raycast units of "..utils.real_unitstring(pnoun_unitid))
+                            print("-> Updating raycast units of "..utils.unitstring(pnoun_unitid))
                         end
 
                         local curr_raycast_data = raycast_data[pnoun_unitid]
@@ -1418,12 +1418,12 @@ function do_subrule_pnouns()
                 if THIS_LOGGING then
                     print("-> Processed pnoun units: ")
                     for pnoun_unit in pairs(processed_pnoun_units) do
-                        print("- "..utils.real_unitstring(pnoun_unit))
+                        print("- "..utils.unitstring(pnoun_unit))
                     end
                     print("________________")
                     print("-> Remaining pnoun units: ")
                     for pnoun_unit in pairs(remaining_pnoun_units) do
-                        print("- "..utils.real_unitstring(pnoun_unit))
+                        print("- "..utils.unitstring(pnoun_unit))
                     end
                     print("________________")
                     print("-> Remaining pnoun features: ")
@@ -1437,7 +1437,7 @@ function do_subrule_pnouns()
                 -- The other pnouns that weren't processed will go to the next action
                 for pnoun_unitid in pairs(processed_pnoun_units) do
                     if THIS_LOGGING then
-                        print("-> Committing pnoun: "..utils.real_unitstring(pnoun_unitid))
+                        print("-> Committing pnoun: "..utils.unitstring(pnoun_unitid))
                     end
                     local simulation_data = recorded_raycast_simulations[pnoun_unitid]
                     commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
@@ -1496,7 +1496,7 @@ function do_subrule_pnouns()
                 for pnoun_unit in pairs(deferred_pnoun_subrules[pnoun_group].pnoun_units) do
                     found_pnoun = true
                     for pnoun_unit in pairs(data.pnoun_units) do
-                        discarded_pnoun_units[#discarded_pnoun_units + 1] = utils.real_unitstring(pnoun_unit)
+                        discarded_pnoun_units[#discarded_pnoun_units + 1] = utils.unitstring(pnoun_unit)
                     end 
                 end
                 if #discarded_pnoun_units > 0 then

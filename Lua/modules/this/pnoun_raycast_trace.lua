@@ -93,7 +93,7 @@ function RaycastTrace:retest_features_for_testcond_change(curr_pnoun_ref)
             new_result = false
         end
         if new_result ~= featurecheck.last_result then
-            -- print(table.concat(featurecheck.params, " ")..plasma_utils.real_unitstring(featurecheck.params[4]), featurecheck.last_result, new_result)
+            -- print(table.concat(featurecheck.params, " ")..plasma_utils.unitstring(featurecheck.params[4]), featurecheck.last_result, new_result)
             return true
         end
     end

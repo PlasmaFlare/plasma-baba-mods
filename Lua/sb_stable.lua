@@ -953,7 +953,6 @@ condlist["stable"] = function(params,checkedconds,checkedconds_,cdata)
         local cond_ruleid = params[1]
 
         local result = stableunit_has_ruleid(unitid, cond_ruleid, x, y)
-        -- print(result, cond_ruleid, utils.unitstring(utils.make_object(unitid)))
 
         return result, checkedconds
     end

@@ -173,17 +173,17 @@ function handle_guard_delete_call(unitid, x, y, caller_func)
     local is_guarded = ack_endangered_unit(object)
     if is_guarded then
         if GUARD_LOGGING then
-            print("Endangered unit is guarded: "..utils.unitstring(object))
+            print("Endangered unit is guarded: "..utils.objectstring(object))
         end
         return true
     elseif processed_destroyed_units[object] then
         if GUARD_LOGGING then
-            print("handle_guard_delete_call: Already destroyed "..utils.unitstring(object))
+            print("handle_guard_delete_call: Already destroyed "..utils.objectstring(object))
         end
         return true
     else
         if GUARD_LOGGING then
-            print("Normal destroy "..utils.unitstring(object))
+            print("Normal destroy "..utils.objectstring(object))
         end
         processed_destroyed_units[object] = true
         return false
@@ -193,7 +193,7 @@ end
 function ack_endangered_unit(object)
     if all_saved_units[object] then
         if GUARD_LOGGING then
-            print("Endangered unit is already saved: ", utils.unitstring(object))
+            print("Endangered unit is already saved: ", utils.objectstring(object))
         end 
         return true
     end
@@ -211,7 +211,7 @@ function ack_endangered_unit(object)
         for unitid, _ in pairs(get_guard_units(unitname)) do
             units_to_guard_destroy[unitid] = true
             if GUARD_LOGGING then
-                print("Marking guard unit to destroy: ", utils.unitstring(unitid))
+                print("Marking guard unit to destroy: ", utils.objectstring(unitid))
             end 
         end
         units_to_save[object] = true
@@ -243,7 +243,7 @@ local function handle_guard_dels()
                 end
             else
                 if GUARD_LOGGING then
-                    print("- Destroying unit: ", utils.unitstring(guard))
+                    print("- Destroying unit: ", utils.objectstring(guard))
                 end
 
                 local unit = mmf.newObject(unitid)
@@ -264,7 +264,7 @@ local function handle_guard_dels()
             processed_destroyed_units[guard] = true
         else
             if GUARD_LOGGING then
-                print("- Already destroyed unit: ", utils.unitstring(guard))
+                print("- Already destroyed unit: ", utils.objectstring(guard))
             end
         end
     end
@@ -718,7 +718,7 @@ local function recalculate_guards()
                     end
                     for guard_unit, _ in pairs(found_guards) do
                         if GUARD_LOGGING and not final_guard_units[guard_unit] then
-                            print(string.format("%s => %s", guardee_name, utils.unitstring(guard_unit)))
+                            print(string.format("%s => %s", guardee_name, utils.objectstring(guard_unit)))
                         end
 
                         final_guard_units[guard_unit] = true 
