@@ -163,7 +163,7 @@ local function get_stableunit_key(unitid)
         However, I forgot what was the original reason for needing that condition in the first place. The only comment I have is found below.
         It might actually refer to the DEAD condition and we accidently forgot to update the comment.
     ]]
-    if unit and not unit.flags[CONVERTED] and not unit.flags[DEAD] then
+    if unit and not unit.flags[DEAD] then
         return unit.values[ID]
     else
         return nil
