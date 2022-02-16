@@ -15,7 +15,6 @@ editor_objlist["text_stable"] =
 
 formatobjlist()
 
-local utils = plasma_utils
 --[[ 
     Some semantics/definitions:
     - su_key: stableunit key - equal to unit.values[ID]. An ID for identifying units to apply "stable" to. We use unit.values[ID] since it is persistent across undos
@@ -109,7 +108,10 @@ local prev_undobuffer_len = 0
     Emphasis on "hacky". Be wary if this fix causes something else to break.-- (10/31/21)
  ]]
 local allow_stablerule_display = false
-local enable_stablerule_display_setting = not get_toggle_setting("disable_stable_display")
+
+local utils = PlasmaModules.load_module("general/utils")
+local PlasmaSettings = PlasmaModules.load_module("general/gui")
+local enable_stablerule_display_setting = not PlasmaSettings.get_toggle_setting("disable_stable_display")
 
 local print_stable_state, make_stable_indicator
 
@@ -659,7 +661,7 @@ table.insert(mod_hook_functions["level_start"],
 
         allow_stablerule_display = true
 
-        enable_stablerule_display_setting = not get_toggle_setting("disable_stable_display")
+        enable_stablerule_display_setting = not PlasmaSettings.get_toggle_setting("disable_stable_display")
     end
 )
 table.insert( mod_hook_functions["level_restart"],

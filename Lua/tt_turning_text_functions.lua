@@ -20,7 +20,7 @@ end
 clear_turning_text_mod()
 
 for name,_ in pairs(turning_word_names) do
-    pf_dir_text_display:register_directional_text("turning_"..name)
+    DirTextDisplay:register_directional_text("turning_"..name)
 end
 
 

@@ -1,3 +1,5 @@
+local plasma_utils = PlasmaModules.load_module("general/utils")
+
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction

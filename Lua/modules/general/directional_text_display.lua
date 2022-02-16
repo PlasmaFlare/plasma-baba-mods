@@ -30,6 +30,7 @@ function DirTextDisplay:set_tt_display_direction(unit, dir)
     end
 end
 
+-- @TODO(Optimize): maybe we can optimize having to loop through all of codeunits just to find texts with a specific name
 table.insert( mod_hook_functions["level_start"],
     function()
         for i,unitid in ipairs(codeunits) do

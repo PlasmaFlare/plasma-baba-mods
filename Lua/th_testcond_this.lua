@@ -1,3 +1,5 @@
+local plasma_utils = PlasmaModules.load_module("general/utils")
+
 function get_this_parms_in_conds(conds, ids)
     local id_index = 4 -- start at 4 since 1-3 ids is target, verb, property
     local conds_with_this_as_param = {} -- cond object -> {index -> unitid}

@@ -62,9 +62,10 @@ local guard_update_criteria = {}
 -- Note: Saved units can still be destroyed from guarding other units
 local all_saved_units = {}
 
-local enable_guard_chaining = not get_toggle_setting("disable_guard_chain") 
+local utils = PlasmaModules.load_module("general/utils")
+local PlasmaSettings = PlasmaModules.load_module("general/gui")
 
-local utils = plasma_utils
+local enable_guard_chaining = not PlasmaSettings.get_toggle_setting("disable_guard_chain") 
 
 local GUARD_LOGGING = false
 local GUARD_ALG_LOGGING = false
@@ -110,7 +111,7 @@ end
 table.insert(mod_hook_functions["level_start"],
     function()
         clear_guard_mod()
-        enable_guard_chaining = not get_toggle_setting("disable_guard_chain")
+        enable_guard_chaining = not PlasmaSettings.get_toggle_setting("disable_guard_chain")
 
         update_guards = true -- On start, set up guard_relation_map
         guard_checkpoint("level_start")

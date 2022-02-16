@@ -1,4 +1,4 @@
-local utils = plasma_utils
+local utils = PlasmaModules.load_module("general/utils")
 BRANCHING_TEXT_LOGGING = false
 
 function is_branching_text_defined(name)

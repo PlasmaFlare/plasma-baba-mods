@@ -1,25 +1,16 @@
 PlasmaModules = {}
 
-local all_modules = {
-    ["general/undo_analyzer"] = true,
-    ["general/gui"] = true,
-    ["general/directional_text_display"] = true,
-    ["cutpack/word_verify"] = true,
-    ["this/pnoun_group_defs"] = true,
-    ["this/pnoun_raycast_trace"] = true,
+local all_modules = {}
+local module_load_order = {
+    "general/utils",
+    "general/gui",
+    "general/undo_analyzer",
+    "general/directional_text_display",
+    "cutpack/word_verify",
+    "this/pnoun_group_defs",
+    "this/pnoun_raycast_trace",
 }
 local pf_module_dir = pf_lua_dir.."modules/"
-
-local function reload_module(module)
-    local module_path = pf_module_dir..module
-    return dofile(module_path..".lua")
-end
-
-for module in pairs(all_modules) do
-    print("[Plasma Modpack] Loading module "..module)
-    all_modules[module] = reload_module(module)
-end
-print("[Plasma Modpack] Finished loading all modules")
 
 function PlasmaModules.load_module(module)
     if all_modules[module] == nil then
@@ -28,8 +19,16 @@ function PlasmaModules.load_module(module)
     return all_modules[module]
 end
 
--- @TODO: maybe we can do a similar thing in undo analyzer where the singleton is defined in the module itself
-pf_dir_text_display = PlasmaModules.load_module("general/directional_text_display")
+local function reload_module(module)
+    local module_path = pf_module_dir..module
+    return dofile(module_path..".lua")
+end
+
+for _, module in ipairs(module_load_order) do
+    print("[Plasma Modpack] Loading module "..module)
+    all_modules[module] = reload_module(module)
+end
+print("[Plasma Modpack] Finished loading all modules")
 
 --[[ 
     This module system is a start. But it is still a bit flawed if I want to maintain robustness in the long term. I don't know if that is going to be a goal

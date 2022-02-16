@@ -7,8 +7,7 @@ local function reset_this_mod_globals()
 end   
 reset_this_mod_globals()
 
-local utils = plasma_utils
-
+local utils = PlasmaModules.load_module("general/utils")
 local DirTextDisplay = PlasmaModules.load_module("general/directional_text_display")
 local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer") 
 local RaycastTrace = PlasmaModules.load_module("this/pnoun_raycast_trace")
@@ -946,7 +945,7 @@ condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
         --   - update: believe it of not, I think it is actually correct. I think its because of the revamp to do_subrule_this() that made the
         --   order of operations more deterministic and orderly. Still, look into this later
         for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
-            local ray_unit, _, _, ray_tileid = plasma_utils.parse_object(ray_object)
+            local ray_unit, _, _, ray_tileid = utils.parse_object(ray_object)
             if ray_unit == 2 then
                 local tileid = x + y * roomsizex
                 if ray_tileid == tileid then

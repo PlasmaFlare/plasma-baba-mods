@@ -94,7 +94,7 @@ editor_objlist["text_pass"] =
 formatobjlist()
 
 local DirTextDisplay = PlasmaModules.load_module("general/directional_text_display")
-pf_dir_text_display:register_directional_text_prefix("this")
-pf_dir_text_display:register_directional_text_prefix("that")
-pf_dir_text_display:register_directional_text_prefix("these")
-pf_dir_text_display:register_directional_text_prefix("those")
+DirTextDisplay:register_directional_text_prefix("this")
+DirTextDisplay:register_directional_text_prefix("that")
+DirTextDisplay:register_directional_text_prefix("these")
+DirTextDisplay:register_directional_text_prefix("those")

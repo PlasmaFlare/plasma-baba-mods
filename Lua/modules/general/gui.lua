@@ -1,5 +1,6 @@
 local modpack_name = string.format("Plasmaflare's Mods V%s", plasma_modpack_version)
 local modpack_name_with_color = string.format("$1,4Plasma$3,4flare$0,3's Mods V%s", plasma_modpack_version)
+local PlasmaSettings = {}
 
 local function write_modpack_version()
     local x = screenw - (baba_font_consts.total_letter_w * (#modpack_name - 2))
@@ -30,7 +31,7 @@ local plasma_modpack_settings = {
 local settings_order = {"disable_dir_shift", "disable_stable_display", "disable_guard_chain"}
 
 local gd = nil
-function get_toggle_setting(setting)
+function PlasmaSettings.get_toggle_setting(setting)
     if not plasma_modpack_settings[setting] then
         error(string.format("Plasma modpack: setting not defined %s", setting))
     end
@@ -179,3 +180,5 @@ end
 --         writetext(display, -1, mouse_x, mouse_y, "mousecoordstest", true, 1, true)
 --     end
 -- )
+
+return PlasmaSettings

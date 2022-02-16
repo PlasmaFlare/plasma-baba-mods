@@ -1,4 +1,5 @@
-enable_directional_shift = not get_toggle_setting("disable_dir_shift")
+local PlasmaSettings = PlasmaModules.load_module("general/gui")
+enable_directional_shift = not PlasmaSettings.get_toggle_setting("disable_dir_shift")
 
 for name,display in pairs(arrow_property_display) do
 	word_names[name] = display
@@ -17,7 +18,7 @@ reset_arrow()
 table.insert(mod_hook_functions["level_start"], 
     function()
         reset_arrow()
-		enable_directional_shift = not get_toggle_setting("disable_dir_shift")
+		enable_directional_shift = not PlasmaSettings.get_toggle_setting("disable_dir_shift")
     end
 )
 table.insert(mod_hook_functions["level_end"], 

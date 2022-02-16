@@ -5,6 +5,8 @@ local Undo_Analyzer = {
     analyzers = {}
 }
 
+local plasma_utils = PlasmaModules.load_module("general/utils")
+
 function Undo_Analyzer:new(o)
     o = o or {}
     setmetatable(o, self)

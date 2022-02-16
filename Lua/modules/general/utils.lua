@@ -202,45 +202,4 @@ utils = {
     end,
 }
 
-plasma_utils = utils
-
--- DEBUG STUFF
--- Set to true if you want to test that utils.make_object() and utils.parse_object() work
-if false then
-    local function test_make_parse_object()
-        local all_test_objects = {}
-        for id, _ in pairs(units) do
-            local unitid = MF_getfixed(id)
-            local object = utils.make_object(unitid)
-            local changed_unitid = utils.parse_object(object)
-            utils.debug_assert(unitid == changed_unitid, utils.objectstring(utils.make_object(unitid)).." failed the object check")
-
-            utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(unitid).." Unit 2:"..tostring(all_test_objects[object]))
-            all_test_objects[object] = unitid
-            if unitid > 2 and unitid < 3 then
-            end
-        end
-        for i=0,roomsizex-1 do
-            for j=0,roomsizey-1 do
-                local object = utils.make_object(2, i, j)
-                local unitid, x, y = utils.parse_object(object)
-
-                utils.debug_assert(unitid == 2, utils.objectstring(object).." failed the object check")
-                utils.debug_assert(x == i and y == j, utils.objectstring(object).." failed the object check through different coords: "..x..","..y)
-
-                utils.debug_assert(all_test_objects[object] == nil, "Found two units that map to the same object: "..object..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[object]))
-                all_test_objects[object] = 2
-            end
-        end
-
-        local levelobject = utils.make_object(1)
-        local level_unitid = utils.parse_object(levelobject)
-        utils.debug_assert(level_unitid == 1, utils.objectstring(levelobject).." failed the object check")
-
-        utils.debug_assert(all_test_objects[levelobject] == nil, "Found two units that map to the same object: "..levelobject..". Unit 1:"..tostring(2).." Unit 2:"..tostring(all_test_objects[levelobject]))
-        all_test_objects[levelobject] = 1
-    end
-
-    table.insert(mod_hook_functions["command_given"], test_make_parse_object)
-    table.insert(mod_hook_functions["undoed"], test_make_parse_object)
-end
+return utils
