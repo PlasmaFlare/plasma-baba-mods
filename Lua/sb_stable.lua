@@ -218,7 +218,7 @@ function get_ruleid(id_list, option)
                 ruleid = ruleid..unit.strings[NAME]
                 if is_name_text_this(unit.strings[NAME]) then
                     ruleid = ruleid.."["..tostring(unit.values[ID]).."]"
-                    for _, ray_object in ipairs(get_raycast_units(unitid)) do
+                    for ray_object in pairs(get_raycast_objects(unitid)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         if ray_unitid == 2 then
                             ruleid = ruleid.."-empty{"..ray_tileid.."}"
@@ -300,8 +300,9 @@ local function get_stablerule_display(feature)
                                     text = text .. this_param_name.." "
 
                                     local names = {}
-                                    local raycast_units = get_raycast_units(this_unitid, true, true)
-                                    for _, ray_unitid in ipairs(raycast_units) do
+                                    local raycast_objects, raycast_count = get_raycast_objects(this_unitid)
+                                    for ray_object in pairs(raycast_objects) do
+                                        local ray_unitid = utils.parse_object(ray_object)
                                         if ray_unitid == 2 then
                                             names["empty"] = true
                                         else
@@ -310,7 +311,7 @@ local function get_stablerule_display(feature)
                                         end
                                     end
 
-                                    if #raycast_units > 0 then
+                                    if raycast_count > 0 then
                                         text = text.."("
                                         local first = true
                                         for name, _ in pairs(names) do
@@ -381,7 +382,7 @@ local function get_stablerule_display(feature)
 end
 
 local function register_this_text_in_stablerule(this_unitid)
-    local raycast_objects = get_raycast_units(this_unitid, true, true)
+    local raycast_objects = get_raycast_objects(this_unitid)
     local raycast_tileids = get_raycast_tileid(this_unitid)
 
     local stable_this_id = curr_stable_this_id  
@@ -1096,25 +1097,37 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
         list_width = math.max(list_width, LETTER_WIDTH * #display + LETTER_SPACING * (#display - 1))
 
         for _, stable_this_id in ipairs(stablestate.rules[ruleid].stable_this_ids) do
-            for _, rayunit_id in ipairs(get_stable_this_raycast_units(stable_this_id)) do
-                local ray_unit = mmf.newObject(rayunit_id)
-                found_ray_unit_ids[ray_unit.values[ID]] = true
+            for ray_object in pairs(get_stable_this_raycast_units(stable_this_id)) do
+                local ray_unitid, x, y = utils.parse_object(ray_object)
+                local ind_x, ind_y
                 local indicator_id
-
-                if not stable_this_indicators[ray_unit.values[ID]] then
+                
+                if not stable_this_indicators[ray_object] then
                     indicator_id = make_stable_indicator()
                     MF_setcolour(indicator_id,4,2)
                 else
-                    indicator_id = stable_this_indicators[ray_unit.values[ID]]
+                    indicator_id = stable_this_indicators[ray_object]
                 end
+                found_ray_unit_ids[ray_object] = true
+                stable_this_indicators[ray_object] = indicator_id
+                
+                if ray_unitid == 2 then
+                    local indicator_tilesize = f_tilesize * generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
+                    ind_x = x * indicator_tilesize + Xoffset + (indicator_tilesize / 2)
+                    ind_y = y * indicator_tilesize + Yoffset + (indicator_tilesize / 2)
+                else
+                    local ray_unit = mmf.newObject(ray_unitid)
+                    ind_x = ray_unit.x
+                    ind_y = ray_unit.y
+                end
+                
                 local indicator = mmf.newObject(indicator_id)
-                indicator.values[XPOS] = ray_unit.x
-                indicator.values[YPOS] = ray_unit.y
+                indicator.values[XPOS] = ind_x
+                indicator.values[YPOS] = ind_y
 
                 indicator.scaleX = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
                 indicator.scaleY = generaldata2.values[ZOOM] * spritedata.values[TILEMULT]
 
-                stable_this_indicators[ray_unit.values[ID]] = indicator_id
             end
         end
     end

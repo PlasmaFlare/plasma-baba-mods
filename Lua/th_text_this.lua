@@ -80,7 +80,8 @@ local pnoun_subrule_data = {}
     local raycast_data = {
         <unit id of THIS text> = {
             -- list of all objects that were hit by the raycast
-            raycast_unitids = [<object>, <object>],
+            raycast_objects = (<object>, <object>),
+            raycast_object_count = <int>,
 
             -- Mapping of raycast positions to the objects that are in those objects. Note that these
             -- object lists aren't currently used since we don't need position specific logic. But maybe later
@@ -330,7 +331,8 @@ function on_add_this_text(this_unitid)
     if not raycast_data[this_unitid] then
         local unit = mmf.newObject(this_unitid)
         raycast_data[this_unitid] = {
-            raycast_unitids = {},
+            raycast_objects = {},
+            raycast_object_count = 0,
             raycast_positions = {},
             cursors = {},
         }
@@ -913,50 +915,16 @@ function check_updatecode_status_from_raycasting()
     return result
 end
 
-function get_raycast_units(this_text_unitid, checkblocked, checkpass, checkrelay)
+function get_raycast_objects(this_text_unitid)
     if is_this_unit_in_stablerule(this_text_unitid) then
         return get_stable_this_raycast_units(tonumber(this_text_unitid))
     end
 
-    local raycast_units = raycast_data[this_text_unitid].raycast_unitids
-    if raycast_units ~= nil and #raycast_units > 0 then
-        if checkblocked or checkpass or checkrelay then
-            local unitid, x, y, tileid = utils.parse_object(raycast_units[1])
-            if checkblocked then
-                if blocked_tiles[tileid] then
-                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkblocked = true. And found blocked units at (%d, %d)", x, y)
-                    -- utils.debug_assert(false, dbg_str)
-                    if THIS_LOGGING then
-                        print(dbg_str)
-                    end
-                    return {}
-                end
-            end
-            if checkpass then
-                if explicit_passed_tiles[tileid] then
-                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkpass = true. And found passed units at (%d, %d)", x, y)
-                    -- utils.debug_assert(false, dbg_str)
-                    if THIS_LOGGING then
-                        print(dbg_str)
-                    end
-                    return {}
-                end
-            end
-            
-            if checkrelay then
-                if explicit_relayed_tiles[tileid] then
-                    local dbg_str = string.format("@TODO: We called get_raycast_units with checkrelay = true. And found relayed units at (%d, %d)", x, y)
-                    if THIS_LOGGING then
-                        print(dbg_str)
-                    end
-                    -- utils.debug_assert(false, dbg_str)
-                    return {}
-                end
-            end
-        end
-        return raycast_units
+    if raycast_data[this_text_unitid] == nil then
+        return {}, 0
+    else
+        return raycast_data[this_text_unitid].raycast_objects, raycast_data[this_text_unitid].raycast_object_count
     end
-    return {}
 end
 
 function get_raycast_tileid(this_text_unitid)
@@ -988,20 +956,10 @@ condlist["this"] = function(params,checkedconds,checkedconds_,cdata)
             end
         end
         
-        local pass = false
-        -- @Note - I set the checkblocked param of get_raycast_units to false. Is this incorrect? 
-        --   - update: believe it of not, I think it is actually correct. I think its because of the revamp to do_subrule_this() that made the
-        --   order of operations more deterministic and orderly. Still, look into this later
-        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
-            local ray_unit, _, _, ray_tileid = utils.parse_object(ray_object)
-            if ray_unit == 2 then
-                local tileid = x + y * roomsizex
-                if ray_tileid == tileid then
-                    return true, checkedconds
-                end
-            elseif ray_unit == unitid then
-                return true, checkedconds
-            end
+        local object = utils.make_object(unitid, x, y)
+        local raycast_objects = get_raycast_objects(this_text_unitid)
+        if raycast_objects[object] then
+            return true, checkedconds
         end
     end
     return false, checkedconds
@@ -1032,7 +990,7 @@ local function is_unit_valid_this_property(unitid, verb)
     return false
 end
 
--- Like get_raycast_units, but factors in this redirection
+-- Like get_raycast_objects, but factors in this redirection
 local function get_raycast_property_units(this_text_unitid, checkblocked, checkpass, checkrelay, verb)
     if not raycast_data[this_text_unitid] then
         return {}, {}
@@ -1201,7 +1159,7 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                     -- Rule display in pause menu
                     if #target_options > 0 and filter_property_func(property) then
                         local ray_names = {}
-                        for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
+                        for ray_object in pairs(get_raycast_objects(this_text_unitid)) do
                             local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                             local ray_name = ""
                             if ray_unitid == 2 then
@@ -1228,7 +1186,7 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                     end
                 else
                     local ray_names = {}
-                    for _, ray_object in ipairs(get_raycast_units(this_text_unitid, false, false, false)) do
+                    for ray_object in pairs(get_raycast_objects(this_text_unitid)) do
                         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                         local ray_name = ""
                         if ray_unitid == 2 then
@@ -1427,17 +1385,18 @@ function do_subrule_pnouns()
                         }
 
                         local raycast_objects = {}
-                        local raycast_objects_dict = {}
+                        local count = 0
                         for tileid, ray_objects in pairs(raycast_objects_by_tileid) do
                             for _, ray_object in ipairs(ray_objects) do
-                                if not raycast_objects_dict[ray_object] then
-                                    raycast_objects_dict[ray_object] = true
-                                    table.insert(raycast_objects, ray_object)
+                                if not raycast_objects[ray_object] then
+                                    raycast_objects[ray_object] = true
+                                    count = count + 1
                                 end
                             end
                         end
 
-                        curr_raycast_data.raycast_unitids = raycast_objects
+                        curr_raycast_data.raycast_objects = raycast_objects
+                        curr_raycast_data.raycast_object_count = count
                         curr_raycast_data.raycast_positions = raycast_objects_by_tileid
                     end
                 end

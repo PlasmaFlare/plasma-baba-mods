@@ -142,7 +142,7 @@ utils = {
                 -- Serialization with THIS as a cond
                 -- if is_name_text_this(cond[1]) then
                 --     local this_text_unitid = parse_this_unit_from_param_id(cond[2][1])
-                --     for _, ray_object in ipairs(get_raycast_units(this_text_unitid)) do
+                --     for ray_object in pairs(get_raycast_objects(this_text_unitid)) do
                 --         local ray_unitid, _, _, ray_tileid = utils.parse_object(ray_object)
                 --         if ray_unitid == 2 then
                 --             tokens[#tokens + 1] = "empty{"..tostring(ray_tileid).."}"

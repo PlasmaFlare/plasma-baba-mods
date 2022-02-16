@@ -171,11 +171,14 @@ function testcond(conds, unitid, x_, y_, ...)
 			WARNING: this is a pretty unfounded assumption that can collapse easily.
 	]]
     local found_stablecond = false
+
+    if conds ~= nil then
     for _,cond in ipairs(conds) do
         local condtype = cond[1]
         if condtype == "stable" or condtype == "not stable" then
             found_stablecond = true
             break
+            end
         end
     end
     if not found_stablecond and (not GLOBAL_checking_stable and conds ~= nil and is_stableunit(unitid, x, y)) then

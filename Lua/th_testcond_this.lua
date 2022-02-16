@@ -96,14 +96,12 @@ function parse_this_param_and_get_raycast_units(this_param)
         return false, nil, nil, 0, nil
     end
     
-    local raycast_objects = get_raycast_units(this_unitid, true, true)            
+    local raycast_objects, count = get_raycast_objects(this_unitid)            
     local tileids = get_raycast_tileid(this_unitid)
     local out = {}
-    local count = 0
-    for _, ray_object in ipairs(raycast_objects) do
+    for ray_object in pairs(raycast_objects) do
         local ray_unit = plasma_utils.parse_object(ray_object)
         out[ray_unit] = true
-        count = count + 1
     end
 
     return this_param_name, out, tileids, count, this_unitid

@@ -117,8 +117,8 @@ function RaycastTrace:call_findfeature_with_trace(params)
 end
 
 function RaycastTrace:evaluate_raycast_property(pnoun_unitid, name, property, unitid, x, y)
-    local is_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", property, unitid, x, y}, raycast_trace)
-    local is_not_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", "not "..property, unitid, x, y}, raycast_trace)
+    local is_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", property, unitid, x, y})
+    local is_not_x = self:call_hasfeature_with_trace(pnoun_unitid, {name, "is", "not "..property, unitid, x, y})
 
     return is_x and not is_not_x
 end
