@@ -3,6 +3,7 @@ local function reset_this_mod_globals()
     this_mod_globals = {
         active_this_property_text = {}, -- keep track of texts 
         undoed_after_called = false, -- flag for providing a specific hook of when we call code() after an undo
+        doing_group_rules = false,
     }
 end   
 reset_this_mod_globals()
@@ -346,6 +347,41 @@ function on_delele_this_text(this_unitid)
     end
 end
 
+-- Note: this is directly copied from addoption().
+local function rule_has_group(rule)
+    local baserule = rule[1]
+    local conds = rule[2]
+    local target = baserule[1]
+    local property = baserule[3]
+
+    local groupcond = false
+    if (string.sub(target, 1, 5) == "group") or (string.sub(property, 1, 5) == "group") or (string.sub(target, 1, 9) == "not group") or (string.sub(property, 1, 9) == "not group") then
+        groupcond = true
+    end
+    if groupcond == false then
+        if (#conds > 0) then
+            for i,cond in ipairs(conds) do
+				local condname = cond[1]
+				if (string.sub(condname, 1, 4) == "not ") then
+					condname = string.sub(condname, 5)
+				end
+                if (cond[2] ~= nil) then
+					if (#cond[2] > 0) then
+						for a,b in ipairs(cond[2]) do
+                            if (string.sub(b, 1, 5) == "group") or (string.sub(b, 1, 9) == "not group") then
+								groupcond = true
+                                break
+							end
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    return groupcond
+end
+
 function defer_addoption_with_this(rule)
     local baserule = rule[1]
     local target = baserule[1]
@@ -368,6 +404,18 @@ function defer_addoption_with_this(rule)
     if pnoun_group == nil then
         pnoun_group = Pnoun.Groups.VARIABLE
     end
+
+    -- Even though we've defered the THIS rule, if the rule also has "group", we still need to add it to groupfeatures to allow grouprules()
+    -- to process it before we call do_subrule_pnoun()
+    if pnoun_group == Pnoun.Groups.VARIABLE then
+        if not target_is_pnoun or not property_is_pnoun then
+            if rule_has_group(rule) then
+                table.insert(groupfeatures, rule)
+                return
+            end
+        end
+    end
+
     
     -- A pnoun feature can only be in one pnoun group. There is no need to check for priority since
     -- each pnoun group is meant to be mutually exclusive in terms of features.

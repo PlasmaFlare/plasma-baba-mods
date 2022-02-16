@@ -1825,8 +1825,12 @@ function code(alreadyrun_)
 					print("<<<<<<<<<<<<<end>")
 				end
 				subrules()
-				do_subrule_pnouns()
+				
+				-- @mods(THIS) - this global is to indicate to findnoun() to return false on any pointer noun. (See defer_addoption_with_this for why we do this)
+				this_mod_globals.doing_group_rules = true
 				grouprules()
+				this_mod_globals.doing_group_rules = false
+				do_subrule_pnouns()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
 				
