@@ -684,8 +684,8 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
             local ray_pos, is_emptyblock, select_empty, emptyrelay_dir = this_raycast(curr_cast_data.ray, raycast_settings.checkblocked, raycast_trace, curr_cast_data.extradata)
             if not ray_pos then
                 -- Do nothing for now
-            elseif pointer_noun == "that" and ray_pos[1] == curr_cast_data.extradata.original_cast_pos[1] and ray_pos[2] == curr_cast_data.extradata.original_cast_pos[2] then
-                -- Do nothing. THAT cannot refer to itself
+            elseif (pointer_noun == "that" or pointer_noun == "those") and ray_pos[1] == curr_cast_data.extradata.original_cast_pos[1] and ray_pos[2] == curr_cast_data.extradata.original_cast_pos[2] then
+                -- Do nothing. THAT and THOSE cannot refer to itself, except when it is relayed
             else
                 local blocked = false
                 local new_relay_indicators = {}
