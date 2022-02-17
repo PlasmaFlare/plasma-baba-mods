@@ -146,8 +146,9 @@ function CutPackWordVerify:get_cut_text(name, text_dir, cut_direction)
     if t then return t end
 
     -- THIS
-    if is_name_text_this(name, false) then
-        return "this"
+    local pointer_noun = is_name_text_this(name, false)
+    if pointer_noun then
+        return pointer_noun
     end
 
     -- Turning dir

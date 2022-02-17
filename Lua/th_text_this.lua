@@ -651,19 +651,6 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
     local found_ending_these_texts = {}
     local raycast_trace = RaycastTrace:new()
 
-    local all_block = false
-    local all_pass = false
-    local all_relay = false
-    if raycast_settings.checkblocked then
-        all_block = raycast_trace:call_findfeature_with_trace({"all", "is", "block"})
-    end
-    if raycast_settings.checkrelay then
-        all_relay = raycast_trace:call_findfeature_with_trace({"all", "is", "relay"})
-    end
-    if raycast_settings.checkpass then
-        all_pass = raycast_trace:call_findfeature_with_trace({"all", "is", "pass"})
-    end
-
     for i, ray in ipairs(rays) do
         local stack = {
             {
@@ -750,9 +737,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                             -- block logic
                             if raycast_settings.checkblocked then
-                                if all_block and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
-                                    blocked = true
-                                elseif raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "block", ray_unitid) then
+                                if raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "block", ray_unitid) then
                                     blocked = true
                                 end
 
@@ -763,7 +748,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                             -- relay logic
                             if raycast_settings.checkrelay and not blocked then
-                                if all_relay or raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "relay", ray_unitid) then
+                                if raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "relay", ray_unitid) then
                                     found_relay = true
                                     add_to_rayunits = false
                                     relay_dirs[ray_unit.values[DIR]] = true
@@ -779,14 +764,9 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
 
                             -- pass logic
                             if raycast_settings.checkpass and not blocked then
-                                if all_pass and ray_unit_name ~= "text" and ray_unit_name ~= "empty" then
+                                if raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "pass", ray_unitid) then
                                     total_pass_unit_count = total_pass_unit_count + 1
                                     add_to_rayunits = false
-                                else
-                                    if raycast_trace:evaluate_raycast_property(pnoun_unitid, ray_unit_name, "pass", ray_unitid) then
-                                        total_pass_unit_count = total_pass_unit_count + 1
-                                        add_to_rayunits = false
-                                    end
                                 end
                             end
 

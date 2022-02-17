@@ -179,7 +179,7 @@ function handle_text_cutting(data, cut_direction)
     local ox = dirvec[1]
     local oy = dirvec[2]
 
-    local outstr = get_cut_text(bname, cut_text_unit.values[DIR], cut_direction)
+    local outstr = cut_pack_word_verify:get_cut_text(bname, cut_text_unit.values[DIR], cut_direction)
     if outstr then
         if cut_direction == 1 or cut_direction == 2 then
             outstr = outstr:reverse()
