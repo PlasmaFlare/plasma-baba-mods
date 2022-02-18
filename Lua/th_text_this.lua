@@ -648,6 +648,7 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
     local ray_objects_by_tileid = {}
     local found_relay_indicators = {} -- indicator ids -> true
     local found_blocked_tiles = {}
+    local found_passed_tiles = {} -- Currently only used for THOSE
     local found_ending_these_texts = {}
     local raycast_trace = RaycastTrace:new()
 
@@ -787,7 +788,11 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                 end
                             elseif raycast_settings.checkpass and total_pass_unit_count >= #unitmap[tileid] then
                                 if pointer_noun == "those" then
-                                    -- When processing THOSE, if all units are pass, then stop the re-raycasting
+                                    -- When processing THOSE, if all units are pass, then stop the re-raycasting.
+                                    -- Note that this tileid is pass to indicate at which places stopped a THOSE raycast from
+                                    -- going further.
+                                    found_passed_tiles[tileid] = true
+                                    ray_objects_by_tileid[tileid] = {}
                                 else
                                     local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
                                     table.insert(new_stack_entries, {ray = new_ray, extradata = curr_cast_data.extradata})
@@ -863,9 +868,27 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
         end
     end
 
+    -- For now, we are extending what BLOCK means by saying that if the raycast finds ANY block object, no matter where from,
+    -- the pnoun will not refer to any object at all. This is to balance pnouns that can select multiple objects, like THESE
+    -- and THOSE
+    local found_blocked = false
+    for _,_ in pairs(found_blocked_tiles) do
+        found_blocked = true
+        break
+    end
+
+    if found_blocked then
+        for tileid, _ in pairs(ray_objects_by_tileid) do
+            if not found_blocked_tiles[tileid] then
+                ray_objects_by_tileid[tileid] = nil
+            end
+        end
+    end
+
     local extra_raycast_data = {
         found_relay_indicators = found_relay_indicators, 
         found_blocked_tiles = found_blocked_tiles,
+        found_passed_tiles = found_passed_tiles,
         found_ending_these_texts = found_ending_these_texts,
     }
 
@@ -1239,6 +1262,10 @@ local function commit_raycast_data(pnoun_unitid, raycast_simulation_data, pnoun_
 
     for tileid in pairs(extradata.found_blocked_tiles) do
         set_blocked_tile(tileid)
+    end
+
+    for tileid in pairs(extradata.found_passed_tiles) do
+        set_passed_tile(tileid)
     end
 
     raycast_trace_tracker:add_traces(raycast_trace)
