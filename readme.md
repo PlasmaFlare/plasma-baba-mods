@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You versions: 454 on PC**
+**Current compatable Baba Is You version: 458 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,20 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.0** (2/19/21)
+- Updated for Version 458
+- BIG restructuring of the codebase.
+- BIG refactoring of the underlying system that made THIS work.
+- Added THAT, THESE, THOSE, and RELAY!
+- Added a new "pointer noun" tag to the editor.
+- [THIS] Extended the meaning of BLOCK to balance against THESE and THOSE. If raycasting reaches a BLOCK object at *any* point, raycasting will stop and the pointer noun will not refer to any object.
+- [THIS] Better handling of several edge cases involving mixing rules with THIS + block/pass/relay (I still recommend you avoid them if you don't want confusing results)
+- [THIS] Actually fixed THIS + group + block/pass/relay not working
+- [THIS] If two indicators of different types overlap each other, they will cycle z-layering to clarify which indicator is on which space
+- [THIS] THIS: Fixed `THIS is move` stacking move if two objects are being pointed by THIS
+- [STABLE] Fixed `teeth eat baba` not working when `baba is stable`
+- [STABLE] Fixed `X is stable and flag` making 2 flags
+- [THIS + STABLE] Fixed `idle THIS(empty) make book` and `empty is stable` showing the former rule when hovering over unaffected empties
 - **1.4.0** (1/12/22)
   - Updated for Version 454
   - GUARD rework! (Sorry for the wait)
