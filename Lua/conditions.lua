@@ -600,7 +600,7 @@ condlist.facing = function(params,checkedconds,checkedconds_,cdata)
 	local allfound = 0
 	local alreadyfound = {}
 	
-	local unitid,x,y,dir,extras,surrounds,conds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.extras,cdata.surrounds,cdata.conds
+	local unitid,x,y,dir,extras,surrounds,conds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.extras,cdata.surrounds,tostring(cdata.conds)
 
 	if (unitid == 2) and ((checkedconds_ == nil) or (checkedconds_[conds] == nil)) then
 		dir = emptydir(x,y,checkedconds)
@@ -743,7 +743,7 @@ condlist.seeing = function(params,checkedconds,checkedconds_,cdata)
 	local alreadyfound = {}
 	local targets = {}
 	
-	local unitid,x,y,dir,conds,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.dir,cdata.conds,cdata.surrounds
+	local unitid,x,y,dir,conds,surrounds = cdata.unitid,cdata.x,cdata.y,cdata.dir,tostring(cdata.conds),cdata.surrounds
 	
 	if (unitid == 2) then
 		dir = emptydir(x,y)

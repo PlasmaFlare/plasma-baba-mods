@@ -617,7 +617,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 						solved = false
 						
 						if (state == 0) then
-							if ((data.reason == "move") or (data.reason == "chill")) and (data.unitid == 2) then
+							if (data.unitid == 2) and (((data.reason == "move") and (dir == 4)) or (data.reason == "chill")) then
 								data.dir = fixedrandom(0,3)
 								dir = data.dir
 								
@@ -1174,7 +1174,10 @@ function move(unitid,ox,oy,dir,specials_,instant_,simulate_,x_,y_)
 			local dodge = false
 
 			local bx,by = 0,0
-			if (b ~= 2) and (reason ~= "weak") then
+			if (b ~= 2) and (deleted[b] ~= nil) then
+				MF_alert("Already gone")
+				dodge = true
+			elseif (b ~= 2) and (reason ~= "weak") then
 				local bunit = mmf.newObject(b)
 				bx,by = bunit.values[XPOS],bunit.values[YPOS]
 				

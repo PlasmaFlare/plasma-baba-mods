@@ -1,4 +1,7 @@
-local plasma_utils = PlasmaModules.load_module("general/utils")
+local plasma_utils
+if mmf ~= nil then
+	plasma_utils = PlasmaModules.load_module("general/utils")
+end
 
 function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	--[[ 

@@ -239,7 +239,7 @@ function hasfeature(rule1,rule2,rule3,unitid,x,y,checkedconds,ignorebroken_)
 	return nil, is_nontrivial_check
 end
 
-function getunitswitheffect(rule3,nolevels_,ignorethese_)
+function getunitswitheffect(rule3,nolevels_,ignorethese_,checkedconds)
 	--[[ 
 		@Mods(turning text) - Override reason: when looking for "X is stop", if the global 
 			"arrow_prop_mod_globals.group_arrow_properties" is true, then include stopright, stopleft, etc as part of the 
@@ -274,7 +274,7 @@ function getunitswitheffect(rule3,nolevels_,ignorethese_)
 				
 				if (fgroupmembers ~= nil) and valid then
 					for a,b in ipairs(fgroupmembers) do
-						if testcond(v[2], b) then
+						if testcond(v[2],b,nil,nil,nil,nil,checkedconds) then
 							local unit = mmf.newObject(b)
 							
 							if (unit.flags[DEAD] == false) then
