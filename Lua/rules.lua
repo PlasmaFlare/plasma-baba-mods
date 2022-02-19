@@ -1599,6 +1599,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 
 								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
 								if not is_param_this_formatted and not is_this_unit_in_stablerule(this_param_id) then
+									register_pnoun_in_cond(this_unitid)
 									local param_id = convert_this_unit_to_param_id(this_unitid)
 									table.insert(newconds, make_this_param(b, param_id))
 								else

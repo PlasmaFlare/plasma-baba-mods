@@ -72,6 +72,7 @@ local deferred_pnoun_subrules = {}
         process_order = {
             <pnoun unitid> = <int>
         },
+        pnouns_in_conds = (<pnoun unitid>, <pnoun unitid>, ...),
     }    
 ]]
 local pnoun_subrule_data = {}
@@ -178,6 +179,7 @@ table.insert(mod_hook_functions["rule_update"],
             pnoun_to_groups = {},
             active_pnouns = {},
             process_order = {},
+            pnouns_in_conds = {},
         }
         deferred_pnoun_subrules = {}
         for pnoun_group, value in pairs(Pnoun.Groups) do
@@ -452,6 +454,10 @@ function defer_addoption_with_this(rule)
             pnoun_subrule_data.active_pnouns[pnoun] = true
         end
     end
+end
+
+function register_pnoun_in_cond(pnoun_unitid)
+    pnoun_subrule_data.pnouns_in_conds[pnoun_unitid] = true
 end
 
 -- local
@@ -1270,7 +1276,7 @@ local function commit_raycast_data(pnoun_unitid, raycast_simulation_data, pnoun_
 
     raycast_trace_tracker:add_traces(raycast_trace)
 
-    if pnoun_subrule_data.active_pnouns[pnoun_unitid] then
+    if pnoun_subrule_data.active_pnouns[pnoun_unitid] or pnoun_subrule_data.pnouns_in_conds[pnoun_unitid] then
         for these_unitid in pairs(extradata.found_ending_these_texts) do
             this_mod_globals.active_this_property_text[these_unitid] = true
         end
