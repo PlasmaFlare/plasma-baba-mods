@@ -41,6 +41,10 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.1** (2/19/21)
+- Fixed THIS redirection not working
+- Fixed THESE not lighting up when being referred by X is THIS 
+- Fixed various errors from undo-related functions
 - **1.5.0** (2/19/21)
 - Updated for Version 458
 - BIG restructuring of the codebase.

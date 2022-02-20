@@ -83,7 +83,7 @@ function findnoun(noun, ...)
         if this_mod_globals.doing_group_rules then
             return false
         else
-		return true
+		    return true
         end
 	else
         return old_findnoun(noun, ...)

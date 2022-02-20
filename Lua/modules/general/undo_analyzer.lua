@@ -81,8 +81,7 @@ function Undo_Analyzer.analyze_undo_line(line)
         end
     elseif (style == "backset") then
         local uid = line[3]
-        local unitid = getunitid(uid)
-        local name = unit.strings[UNITNAME]
+        local name = line[2]
 
         add_updated_item("objects_updated", uid, style)
         add_updated_item("names_updated", name, style)
@@ -91,7 +90,7 @@ function Undo_Analyzer.analyze_undo_line(line)
         local name = line[2]
         local tileid = plasma_utils.tileid_from_coords(line[3],line[4])
 
-        self.add_updated_item("objects_updated", uid, style)
+        add_updated_item("objects_updated", uid, style)
         add_updated_item("names_updated", name, style)
         add_updated_item("tileids_updated", tileid, style)
     elseif (style == "float") then
@@ -100,7 +99,6 @@ function Undo_Analyzer.analyze_undo_line(line)
         if (paradox[uid] == nil) then
             local unitid = getunitid(uid)
             
-            -- K�kk� ratkaisu!
             if (unitid ~= nil) and (unitid ~= 0) then
                 local unit = mmf.newObject(unitid)
                 local name = unit.strings[UNITNAME]
@@ -131,22 +129,22 @@ function Undo_Analyzer.analyze_undo_line(line)
     elseif (style == "colour") then
         local uid = line[2]
         local unitid = getunitid(uid)
+        local unit = mmf.newObject(unitid)
         local name = unit.strings[UNITNAME]
 
         add_updated_item("objects_updated", uid, style)
         add_updated_item("names_updated", name, style)
+        print("test")
     elseif (style == "broken") then
         local uid = line[3]
-        local unitid = getunitid(uid)
-        local name = unit.strings[UNITNAME]
+        local name = line[4]
 
         add_updated_item("objects_updated", uid, style)
         add_updated_item("names_updated", name, style)
     elseif (style == "bonus") then
     elseif (style == "followed") then
         local uid = line[3]
-        local unitid = getunitid(uid)
-        local name = unit.strings[UNITNAME]
+        local name = line[5]
 
         add_updated_item("objects_updated", uid, style)
         add_updated_item("names_updated", name, style)
@@ -156,6 +154,7 @@ function Undo_Analyzer.analyze_undo_line(line)
     elseif (style == "holder") then
         local uid = line[2]
         local unitid = getunitid(uid)
+        local unit = mmf.newObject(unitid)
         local name = unit.strings[UNITNAME]
 
         add_updated_item("objects_updated", uid, style)

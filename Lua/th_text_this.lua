@@ -1010,7 +1010,7 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
     local visited_tileids = {}
     visited_tileids[init_tileid] = true
     local out_raycast_units = {}
-    local all_redirected_this_units = {}
+    local redirected_pnouns = {}
     local raycast_this_texts = { this_text_unitid } -- This will be treated as a stack, meaning we are doing DFS instead of BFS
     local lit_up_this_texts = {}
 
@@ -1039,7 +1039,7 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
 
                         if is_name_text_this(ray_unit.strings[NAME]) then
                             table.insert(raycast_this_texts, ray_unitid)
-                            table.insert(all_redirected_this_units, ray_unitid)
+                            table.insert(redirected_pnouns, ray_unitid)
                         elseif is_unit_valid_this_property(ray_unitid, verb) then
                             table.insert(out_raycast_units, ray_object)
                         end
@@ -1049,13 +1049,13 @@ local function get_raycast_property_units(this_text_unitid, checkblocked, checkp
         end
     end
 
-    if #out_raycast_units > 0 then
-        for unitid, _ in pairs(lit_up_this_texts) do
-            this_mod_globals.active_this_property_text[unitid] = true
-        end
-    end
+    -- if #out_raycast_units > 0 then
+    --     for unitid, _ in pairs(lit_up_this_texts) do
+    --         this_mod_globals.active_this_property_text[unitid] = true
+    --     end
+    -- end
 
-    return out_raycast_units, all_redirected_this_units
+    return out_raycast_units, redirected_pnouns
 end
 
 local function populate_inactive_pnouns()
@@ -1075,15 +1075,16 @@ local function populate_inactive_pnouns()
 end
 
 
-local function process_pnoun_features(pnoun_features, pnoun_units, filter_property_func, curr_pnoun_op)
+local function process_pnoun_features(pnoun_features, filter_property_func, curr_pnoun_op)
     local final_options = {}
     local processed_pnouns = {}
-    local all_redirected_this_units = {}
-
+    local all_redirected_pnouns = {}
+    
     for i=#pnoun_features,1,-1 do
         rules = pnoun_features[i]
         local rule, conds, ids, tags = rules[1], rules[2], rules[3], rules[4]
         local target, verb, property = rule[1], rule[2], rule[3]
+        local redirected_pnouns_in_feature = {}
 
         local target_isnot = string.sub(target, 1, 4) == "not "
         if target_isnot then
@@ -1103,7 +1104,8 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
-                local raycast_objects, redirected_this_units = get_raycast_property_units(this_text_unitid, true, true, true, verb)
+                local raycast_objects, redirected_pnouns = get_raycast_property_units(this_text_unitid, true, true, true, verb)
+                redirected_pnouns_in_feature = redirected_pnouns
                 for _, object in ipairs(raycast_objects) do
                     local unitid = utils.parse_object(object)
                     local ray_unit = mmf.newObject(unitid)
@@ -1135,9 +1137,6 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                         end
                         table.insert(property_options, {rule = newrule, conds = newconds, newrule = nil, showrule = nil})
                     end
-                end
-                for _, unitid in ipairs(redirected_this_units) do
-                    table.insert(all_redirected_this_units, unitid)
                 end
             end
         end
@@ -1237,8 +1236,8 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
                     processed_pnouns[id[1]] = true
                 end
             end
-            for _, unitid in ipairs(all_redirected_this_units) do
-                processed_pnouns[unitid] = true
+            for _, unitid in ipairs(redirected_pnouns_in_feature) do
+                all_redirected_pnouns[unitid] = true
             end
 
             table.remove(pnoun_features, i)
@@ -1253,11 +1252,7 @@ local function process_pnoun_features(pnoun_features, pnoun_units, filter_proper
         addoption(option.rule,option.conds,option.ids,option.showrule,nil,option.tags)
     end
 
-    for pnoun in pairs(processed_pnouns) do
-        pnoun_units[pnoun] = nil
-    end
-
-    return processed_pnouns, pnoun_units, pnoun_features
+    return {processed_pnouns, pnoun_features, all_redirected_pnouns}
 end
 
 local function commit_raycast_data(pnoun_unitid, raycast_simulation_data, pnoun_group, op)
@@ -1378,8 +1373,6 @@ function do_subrule_pnouns()
 
                 process_round = process_round + 1
 
-                local found_these_ending_texts = {}
-                
                 -- Main action 1: Simulate a raycasting for every pnoun in the current group. Submit the raycast objects to be used in
                 -- process_pnoun_features(), but DON'T commit the results yet.
                 if added_features_during_last_op then
@@ -1425,31 +1418,27 @@ function do_subrule_pnouns()
                 -- Main action 2: Evaluate and submit all pnoun features under this current pnoun group. Return a list of all pnouns that were
                 -- processed as part of a sentence, and the remaining pnouns and features to process
                 local prev_pnoun_feature_count = #data.pnoun_features
-                local processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = nil, nil, nil
+                local processed_pnoun_units, remaining_pnoun_features, redirected_pnouns = nil, nil, nil
                 if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
-                    processed_pnoun_units, remaining_pnoun_units, remaining_pnoun_features = process_pnoun_features(data.pnoun_features, data.pnoun_units, Pnoun.Ops[op].filter_func, op)
+                    local process_result = process_pnoun_features(data.pnoun_features, Pnoun.Ops[op].filter_func, op)
+                    processed_pnoun_units = process_result[1]
+                    remaining_pnoun_features = process_result[2]
+                    redirected_pnouns = process_result[3]
                 else
                     processed_pnoun_units = data.pnoun_units
                     remaining_pnoun_units = {}
                     remaining_pnoun_features = {}
+                    remaining_pnoun_features = {}
+                    redirected_pnouns = {}
                 end
 
-                if THIS_LOGGING then
-                    print("-> Processed pnoun units: ")
-                    for pnoun_unit in pairs(processed_pnoun_units) do
-                        print("- "..utils.unitstring(pnoun_unit))
+                -- Main action 2.5
+                for pnoun_unit in pairs(redirected_pnouns) do
+                    if data.pnoun_units[pnoun_unit] then
+                        processed_pnoun_units[pnoun_unit] = true
+                        pnoun_subrule_data.active_pnouns[pnoun_unit] = true
+                        this_mod_globals.active_this_property_text[pnoun_unit] = true
                     end
-                    print("________________")
-                    print("-> Remaining pnoun units: ")
-                    for pnoun_unit in pairs(remaining_pnoun_units) do
-                        print("- "..utils.unitstring(pnoun_unit))
-                    end
-                    print("________________")
-                    print("-> Remaining pnoun features: ")
-                    for _, feature in ipairs(remaining_pnoun_features) do
-                        print("- "..utils.serialize_feature(feature))
-                    end
-                    print("________________")
                 end
 
                 -- Main action 3: Of the processed pnouns, commit their raycast simulation data to the system.
@@ -1472,12 +1461,37 @@ function do_subrule_pnouns()
                 end
 
                 -- Main action 4: Of the non-processed pnouns, update the current group's set of pnoun units and features. These 
-                data.pnoun_units = remaining_pnoun_units
+                for pnoun in pairs(processed_pnoun_units) do
+                    data.pnoun_units[pnoun] = nil
+                end
                 data.pnoun_features = remaining_pnoun_features
 
                 added_features_during_last_op = #remaining_pnoun_features < prev_pnoun_feature_count
                 if added_features_during_last_op then
                     added_features_in_this_group = true
+                end
+
+                if THIS_LOGGING then
+                    print("-> Processed pnoun units: ")
+                    for pnoun_unit in pairs(processed_pnoun_units) do
+                        print("- "..utils.unitstring(pnoun_unit))
+                    end
+                    print("________________")
+                    print("-> Redirected pnoun units: ")
+                    for pnoun_unit in pairs(redirected_pnouns) do
+                        print("- "..utils.unitstring(pnoun_unit))
+                    end
+                    print("________________")
+                    print("-> Remaining pnoun units: ")
+                    for pnoun_unit in pairs(data.pnoun_units) do
+                        print("- "..utils.unitstring(pnoun_unit))
+                    end
+                    print("________________")
+                    print("-> Remaining pnoun features: ")
+                    for _, feature in ipairs(remaining_pnoun_features) do
+                        print("- "..utils.serialize_feature(feature))
+                    end
+                    print("________________")
                 end
             end
 
