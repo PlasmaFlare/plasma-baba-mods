@@ -1674,9 +1674,26 @@ function code(alreadyrun_)
 		@mods(this) - Override reason: provide hook for do_subrule_pnouns
 		@mods(omni text) - Override reason: when checking for the first round of firstwords, we need to adjust which spaces to check for pivot text to be an initial firstword
 		@mods(stable) - Override reason: provide hook for update_stable_state()
+    	@mods(guard) - Injection reaon: provide a guard checkpoint
 	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
+
+    if this_mod_has_this_text() then
+		if this_mod_globals.undoed_after_called then
+            updatecode = 1 -- Just set updatecode = 1. No need to perform checks when we are undoing. (I think)
+		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
+            -- print("check_updatecode_status_from_raycasting: ", check_updatecode_status_from_raycasting())
+            if check_updatecode_status_from_raycasting() then
+                updatecode = 1
+            end
+		end
+	end
+
+	if not alreadyrun then
+		update_stable_state()
+	end
+    -- print("running code() with updatecode = ", updatecode)
 
 	if (updatecode == 1) then
 		HACK_INFINITY = HACK_INFINITY + 1
@@ -1888,6 +1905,8 @@ function code(alreadyrun_)
 			MF_playsound(rulename)
 		end
 	end
+
+	guard_checkpoint("code")
 end
 
 function findwordunits()

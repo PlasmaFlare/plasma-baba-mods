@@ -6,35 +6,6 @@
 
  ]]
 
---[[ 
-    @mods(this) - Provide hook for updating raycast units
-    @mods(stable) - Provide hook for updating stable state
-    @mods(guard) - Injection reaon: provide a guard checkpoint
-]]
-local old_code = code
-function code(alreadyrun_, ...)
-    local alreadyrun = alreadyrun_ or false
-    if this_mod_has_this_text() then
-		if this_mod_globals.undoed_after_called then
-            updatecode = 1 -- Just set updatecode = 1. No need to perform checks when we are undoing. (I think)
-		elseif updatecode == 0 and not turning_text_mod_globals.tt_executing_code then
-            -- print("check_updatecode_status_from_raycasting: ", check_updatecode_status_from_raycasting())
-            if check_updatecode_status_from_raycasting() then
-                updatecode = 1
-            end
-		end
-	end
-
-	if not alreadyrun then
-		update_stable_state()
-	end
-
-    -- print("running code() with updatecode = ", updatecode)
-    local ret = table.pack(old_code(alreadyrun_, ...))
-    guard_checkpoint("code")
-    return table.unpack(ret)
-end
-
 
 -- @mods(this), @mods(stable) - Injection reason: provide hook for clearing mod globals/locals
 local old_clearunits = clearunits
