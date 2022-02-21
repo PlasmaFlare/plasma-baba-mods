@@ -21,7 +21,7 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local on_level_start = false
-local THIS_LOGGING = false
+local THIS_LOGGING = true
 
 local indicator_layer_timer = 0 -- Used mainly for cycling through indicators if they are stacked
 local TIMER_PERIOD = 180
@@ -1085,6 +1085,7 @@ local function process_pnoun_features(pnoun_features, filter_property_func, curr
         local rule, conds, ids, tags = rules[1], rules[2], rules[3], rules[4]
         local target, verb, property = rule[1], rule[2], rule[3]
         local redirected_pnouns_in_feature = {}
+        local found_pnouns = {}
 
         local target_isnot = string.sub(target, 1, 4) == "not "
         if target_isnot then
@@ -1104,6 +1105,7 @@ local function process_pnoun_features(pnoun_features, filter_property_func, curr
         else
             local this_text_unitid = get_property_unitid_from_rule(rules)
             if this_text_unitid then
+                table.insert(found_pnouns, this_text_unitid)
                 local raycast_objects, redirected_pnouns = get_raycast_property_units(this_text_unitid, true, true, true, verb)
                 redirected_pnouns_in_feature = redirected_pnouns
                 for _, object in ipairs(raycast_objects) do
@@ -1148,6 +1150,7 @@ local function process_pnoun_features(pnoun_features, filter_property_func, curr
         elseif #property_options > 0 then
             local this_text_unitid = get_target_unitid_from_rule(rules)
             if this_text_unitid then
+                table.insert(found_pnouns, this_text_unitid)
                 local this_unit_as_param_id = convert_this_unit_to_param_id(this_text_unitid)
                 if target_isnot then
                     for i,mat in pairs(objectlist) do
@@ -1230,11 +1233,8 @@ local function process_pnoun_features(pnoun_features, filter_property_func, curr
                 table.insert(final_options, {rule = option.rule, conds=option.conds, ids=ids, tags=tags, notrule = option.notrule, showrule = option.showrule})
             end
             -- For all "this" text in each option, mark it as processed so that future update_raycast_units() calls don't change the raycast units for each "this" text
-            for i, id in ipairs(ids) do
-                local unit = mmf.newObject(id[1])
-                if is_name_text_this(unit.strings[NAME]) then
-                    processed_pnouns[id[1]] = true
-                end
+            for _, pnoun_unitid in ipairs(found_pnouns) do
+                processed_pnouns[pnoun_unitid] = true
             end
             for _, unitid in ipairs(redirected_pnouns_in_feature) do
                 all_redirected_pnouns[unitid] = true
