@@ -1710,6 +1710,8 @@ function code(alreadyrun_)
 			visualfeatures = {}
 			notfeatures = {}
 			groupfeatures = {}
+			poweredstatus = {}
+			
 			local firstwords = {}
 			local alreadyused = {}
 
