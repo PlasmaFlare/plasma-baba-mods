@@ -21,7 +21,7 @@ local blocked_tiles = {} -- all positions where "X is block" is active
 local explicit_passed_tiles = {} -- all positions pointed by a "this is pass" rule. Used for cursor display 
 local explicit_relayed_tiles = {} -- all positions pointed by a "this is relay" rule. Used for cursor display 
 local on_level_start = false
-local THIS_LOGGING = true
+local THIS_LOGGING = false
 
 local indicator_layer_timer = 0 -- Used mainly for cycling through indicators if they are stacked
 local TIMER_PERIOD = 180
@@ -408,12 +408,15 @@ function defer_addoption_with_this(rule)
     if pnoun_group == nil then
         pnoun_group = Pnoun.Groups.VARIABLE
     end
-
+    
     -- Even though we've defered the THIS rule, if the rule also has "group", we still need to add it to groupfeatures to allow grouprules()
     -- to process it before we call do_subrule_pnoun()
     if pnoun_group == Pnoun.Groups.VARIABLE then
         if not target_is_pnoun or not property_is_pnoun then
             if rule_has_group(rule) then
+                table.insert(features, rule)
+                local visualrule = copyrule(rule)
+                table.insert(visualfeatures, visualrule)
                 table.insert(groupfeatures, rule)
                 return
             end
