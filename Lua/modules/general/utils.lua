@@ -197,8 +197,14 @@ utils = {
     tileid_from_coords = function(x, y)
         return x + y * roomsizex
     end,
+
     coords_from_tileid = function(tileid)
         return math.floor(tileid % roomsizex), math.floor(tileid / roomsizex)
+    end,
+
+    real_condtype = function(condtype)
+        local _, _, type = string.find(condtype, "%(*([%a%d%s]+)%)*")
+        return type
     end,
 }
 

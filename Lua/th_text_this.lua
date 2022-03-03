@@ -365,10 +365,6 @@ local function rule_has_group(rule)
     if groupcond == false then
         if (#conds > 0) then
             for i,cond in ipairs(conds) do
-				local condname = cond[1]
-				if (string.sub(condname, 1, 4) == "not ") then
-					condname = string.sub(condname, 5)
-				end
                 if (cond[2] ~= nil) then
 					if (#cond[2] > 0) then
 						for a,b in ipairs(cond[2]) do

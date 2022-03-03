@@ -270,6 +270,7 @@ local function get_stablerule_display(feature)
     end
 
     if (#conds > 0) then
+        local handling_or = false -- Adding logic to ignore all conditions that are in an "or" clause (aka, between parenthesis)
         for a,cond in ipairs(conds) do
             local condtype = cond[1]
 
@@ -277,8 +278,11 @@ local function get_stablerule_display(feature)
             -- parenthesis around the condtype (EX: "(not near)", "(on)" ). So to show the original rule,
             -- ignore the conds with parenthesis
             local is_inverted_cond = string.find(condtype, "%(")
+            if string.find(condtype, "%(") then
+                handling_or = true
+            end
 
-            if not (condtype == "this" or condtype == "not this" or condtype == "never" or is_inverted_cond) then
+            if not (condtype == "this" or condtype == "not this" or condtype == "never" or handling_or) then
                 local middlecond = true
                 
                 if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
@@ -349,6 +353,10 @@ local function get_stablerule_display(feature)
                     end
                 end
             end
+
+            if string.find(condtype, "%)") then
+                handling_or = false
+            end
         end
     end
     
@@ -388,6 +396,8 @@ local function register_this_text_in_stablerule(this_unitid)
     local stable_this_id = curr_stable_this_id  
     curr_stable_this_id = curr_stable_this_id - 1
 
+    print("Registering this text in stablerule: ", utils.unitstring(this_unitid), stable_this_id)
+
     stablestate.stable_this_raycast_units[stable_this_id] = {objects = raycast_objects, tileids = raycast_tileids}
     return stable_this_id
 end
@@ -398,7 +408,7 @@ end
 
 local function remove_stable_this_in_conds(conds)
     for _, cond in ipairs(conds) do
-        local condtype = cond[1]
+        local condtype = utils.real_condtype(cond[1])
         local params = cond[2]
 
         if condtype == "this" or condtype == "not this" then
@@ -479,9 +489,10 @@ local function get_stablefeatures_from_name(name)
             local newcond = {}
             for i, cond in ipairs(dup_feature[2]) do
                 local condtype = cond[1]
+                local real_condtype = utils.real_condtype(condtype)
                 local params = cond[2]
 
-                if condtype == "this" or condtype == "not this" then
+                if real_condtype == "this" or real_condtype == "not this" then
                     local this_unitid = parse_this_unit_from_param_id(params[1])
                     local stable_this_id = register_this_text_in_stablerule(this_unitid)
                     table.insert(newcond, {condtype, { stable_this_id } })
@@ -750,7 +761,7 @@ function update_stable_state(alreadyrun)
                     for ruleid, v in pairs(stable_rules[name]) do
                         local conds_to_test = {}  -- These are special conditions that we have to test before adding the stablerule
                         for _, cond in ipairs(v.feature[2]) do
-                            local condtype = cond[1]
+                            local condtype = utils.real_condtype(cond[1])
                             if condtype == "this" or condtype == "not this" then
                                 table.insert(conds_to_test, cond)
                             end
@@ -886,7 +897,7 @@ function update_stable_state(alreadyrun)
             for ruleid, v in pairs(stable_rules[name]) do
                 local conds_to_test = {} -- These are special conditions that we have to test before adding the stablerule
                 for _, cond in ipairs(v.feature[2]) do
-                    local condtype = cond[1]
+                    local condtype = utils.real_condtype(cond[1])
                     if condtype == "this" or condtype == "not this" then
                         table.insert(conds_to_test, cond)
                     end

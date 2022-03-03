@@ -344,7 +344,7 @@ local function evaluate_typedata_for_update_criteria(typedata)
 
     local has_valid_conds = true
     for _, cond in ipairs(conds) do
-        local condtype = cond[1]
+        local condtype = utils.real_condtype(cond[1])
         local params = cond[2]
 
         if not COND_CATEGORIES.ignore[condtype] then

@@ -17,7 +17,7 @@ function get_this_parms_in_conds(conds, ids)
         end
 
         for i, cond in ipairs(conds) do
-            local condtype = cond[1]
+            local condtype = plasma_utils.real_condtype(cond[1])
             local params = cond[2]
             
             if condtype == "never" then

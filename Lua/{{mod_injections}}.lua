@@ -8,6 +8,8 @@
 
 
 -- @mods(this), @mods(stable) - Injection reason: provide hook for clearing mod globals/locals
+local utils = PlasmaModules.load_module("general/utils")
+
 local old_clearunits = clearunits
 
 function clearunits(...)
@@ -145,7 +147,7 @@ function testcond(conds, unitid, x_, y_, ...)
 
     if conds ~= nil then
     for _,cond in ipairs(conds) do
-        local condtype = cond[1]
+        local condtype = utils.real_condtype(cond[1])
         if condtype == "stable" or condtype == "not stable" then
             found_stablecond = true
             break

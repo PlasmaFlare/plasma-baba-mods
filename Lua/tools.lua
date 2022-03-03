@@ -1,3 +1,8 @@
+local utils = nil
+if mmf ~= nil then
+	utils = PlasmaModules.load_module("general/utils")
+end
+
 function writerules(parent,name,x_,y_)
 	--[[ 
 		@mods(this) - Override reason: Custom "this" rule display. Also remove unitid display when 
@@ -51,12 +56,13 @@ function writerules(parent,name,x_,y_)
 				local num_this_conds = 0
 				local this_cond = ""
 				for a,cond in ipairs(conds) do
-					if cond[1] == "this" or cond[1] == "not this" then
+					local condtype = utils.real_condtype(cond[1])
+					if condtype == "this" or condtype == "not this" then
 						num_this_conds = num_this_conds + 1
 						local pnoun_unitid = parse_this_unit_from_param_id(cond[2][1])
 						local pnoun_unit = mmf.newObject(pnoun_unitid)
 
-						if cond[1] == "this" then
+						if condtype == "this" then
 							this_cond = pnoun_unit.strings[NAME]
 						else
 							this_cond = "not "..pnoun_unit.strings[NAME]
@@ -73,7 +79,9 @@ function writerules(parent,name,x_,y_)
 					if (cond[2] == nil) or ((cond[2] ~= nil) and (#cond[2] == 0)) then
 						middlecond = false
 					end
-					if cond[1] == "this" or cond[1] == "not this" then
+
+					local condtype = utils.real_condtype(cond[1])
+					if condtype == "this" or condtype == "not this" then
 					elseif middlecond then
 						if (#custom == 0) then
 							local target = cond[1]
