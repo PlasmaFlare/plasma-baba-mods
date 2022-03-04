@@ -3,7 +3,7 @@ if mmf ~= nil then
 	plasma_utils = PlasmaModules.load_module("general/utils")
 end
 
-function codecheck(unitid,ox,oy,cdir_,ignore_end_)
+function codecheck(unitid,ox,oy,cdir_,ignore_end_,wordunitresult_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
 	 ]]
@@ -15,6 +15,7 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 	local letters = false
 	local justletters = false
 	local cdir = cdir_ or 0
+	local wordunitresult = wordunitresult_ or {}
 	
 	local ignore_end = false
 	if (ignore_end_ ~= nil) then
@@ -40,10 +41,21 @@ function codecheck(unitid,ox,oy,cdir_,ignore_end_)
 					table.insert(result, {{b}, w, v_name, v.values[TYPE], cdir})
 				else
 					if (#wordunits > 0) then
+						local valid = false
+						
+						if (wordunitresult[b] ~= nil) and (wordunitresult[b] == 1) then
+							valid = true
+						elseif (wordunitresult[b] == nil) then
 						for c,d in ipairs(wordunits) do
 							if (b == d[1]) and testcond(d[2],d[1]) then
-								table.insert(result, {{b}, w, v.strings[UNITNAME], v.values[TYPE], cdir})
+									valid = true
+									break
+								end
 							end
+						end
+						
+						if valid then
+							table.insert(result, {{b}, w, v.strings[UNITNAME], v.values[TYPE], cdir})
 						end
 					end
 				end
@@ -99,6 +111,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	local finals = {}
 	local sentences = {}
 	local sentence_ids = {}
+	local firstwords = {}
 	
 	local sents = {}
 	local done = false
@@ -112,6 +125,8 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	local variantshere = {}
 	local totalvariants = 1
 	local maxpos = 0
+	local prevsharedtype = -1
+	local prevmaxw = 1
 	
 	local limiter = 5000
 	
@@ -144,6 +159,9 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 		end
 		
 		if (totalvariants < limiter) then
+			local sharedtype = -1
+			local maxw = 1
+			
 			if (#words > 0) then
 				local br_text_count = 0
 				sents[step] = {}
@@ -154,6 +172,11 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 					--unitids, width, word, wtype, dir
 					
 					--MF_alert("Step " .. tostring(step) .. ", word " .. v[3] .. " here")
+					if (sharedtype == -1) then
+						sharedtype = v[4]
+					elseif (v[4] ~= sharedtype) then
+						sharedtype = -2
+					end
 					
 					if (v[4] == 1) then
 						verbfound = true
@@ -166,8 +189,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 					if starting and ((v[4] == 0) or (v[4] == 3) or (v[4] == 4) or name_is_branching_text(v[3], true, true)) then
 						starting = false
 					end
-					
-					
+
 					local text_name = v[3]
 					if name_is_branching_text(text_name) then
 						-- Gather all branching texts to do the perp calculatesentences on
@@ -180,110 +202,127 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 
 						if name_is_branching_text(text_name, true, false) then
 							table.insert(sents[step], v)
+							maxw = math.max(maxw, v[2])
 						end	
 					else
 						table.insert(sents[step], v)
+						maxw = math.max(maxw, v[2])
 					end
 				end
-				if starting and not br_calling_calculatesentences_branch then
-					sents[step] = nil
-					step = step - 1
-				else
-					for i,v in ipairs(words) do
-						local text_name = v[3]
-						if name_is_branching_text(text_name, false, true) then
-							br_text_count = br_text_count + 1
-						end
-					end
-					if #words ~= br_text_count then
-						totalvariants = totalvariants * (#words - br_text_count)
-					end
-					variantshere[step] = #words
-					combo[step] = 1
-				
-					if (totalvariants >= limiter) then
-						MF_alert("Level destroyed - too many variants B")
-						destroylevel("toocomplex")
-						return nil
-					end
-					
-					if (#words > 1) then
-						combospots[#combospots + 1] = step
-					end
-					
-					if (totalvariants > #finals) then
-						local limitdiff = totalvariants - #finals
-						for i=1,limitdiff do
-							table.insert(finals, {})
-						end
-					end
-					
-					-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
-					local test_br_unitid = nil
-					if #branching_texts > 0 then
-						test_br_unitid = branching_texts[1][1][1]
-					end
-	
-					found_branch_on_last_word = false
-					if br_dir_vec and test_br_unitid then
-						-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
-						local br_x = x + ox*step + br_dir_vec[1]
-						local br_y = y + oy*step + br_dir_vec[2]
-						local br_tileid = br_x + br_y * roomsizex
-						local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
-						
-	
-						if #br_words > 0 then
-							local br_firstwords = {}
-	
-							--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
-							-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
-							-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
-							--  inside a unit object. Could that be the reason?
-							for _, word in ipairs(br_words) do
-								table.insert(br_firstwords, word[1][1])
-							end
-							for _, br_text in ipairs(branching_texts) do
-								if name_is_branching_and(br_text[3]) then
-									local br_unitid = br_text[1][1]
-									local br_unit = mmf.newObject(br_unitid)
-									br_and_text_with_split_parsing[br_unitid] = true
-								end
-							end
 
-							local lhs_word_slots = {}
-							for s = 1, step-1 do
-								local words = {}
-								lhs_word_slots[s] = {}
-								for _, word in ipairs(sents[s]) do
-									local width = word[2]
-									if s + width <= step then
-										table.insert(words, word)
+				if (sharedtype >= 0) and (prevsharedtype >= 0) and (#words > 0) and (maxw == 1) and (prevmaxw == 1) and not br_calling_calculatesentences_branch then
+					if ((sharedtype == 0) and (prevsharedtype == 0)) or ((sharedtype == 1) and (prevsharedtype == 1)) or ((sharedtype == 2) and (prevsharedtype == 2)) or ((sharedtype == 0) and (prevsharedtype == 2)) then
+						done = true
+						sents[step] = nil
+						--MF_alert("added " .. words[1][3])
+						table.insert(firstwords, {words[1][1], dir, words[1][2], words[1][3], words[1][4], {}})
+					end
+				end
+
+				prevsharedtype = sharedtype
+				prevmaxw = maxw
+				
+				if (done == false) then
+					if starting and not br_calling_calculatesentences_branch then
+						sents[step] = nil
+						step = step - 1
+					else
+						for i,v in ipairs(words) do
+							local text_name = v[3]
+							if name_is_branching_text(text_name, false, true) then
+								br_text_count = br_text_count + 1
+							end
+						end
+						if #words ~= br_text_count then
+							totalvariants = totalvariants * (#words - br_text_count)
+						end
+						variantshere[step] = #words
+						combo[step] = 1
+					
+						if (totalvariants >= limiter) then
+							MF_alert("Level destroyed - too many variants B")
+							destroylevel("toocomplex")
+							return nil
+						end
+						
+						if (#words > 1) then
+							combospots[#combospots + 1] = step
+						end
+						
+						if (totalvariants > #finals) then
+							local limitdiff = totalvariants - #finals
+							for i=1,limitdiff do
+								table.insert(finals, {})
+							end
+						end
+						
+						-- Get a test unit id from branching texts to use in codecheck. (Used to "step" perpendicularly)
+						local test_br_unitid = nil
+						if #branching_texts > 0 then
+							test_br_unitid = branching_texts[1][1][1]
+						end
+		
+						found_branch_on_last_word = false
+						if br_dir_vec and test_br_unitid then
+							-- Step perpendicularly. If there's text there, record essential information needed to parse that branch.
+							local br_x = x + ox*step + br_dir_vec[1]
+							local br_y = y + oy*step + br_dir_vec[2]
+							local br_tileid = br_x + br_y * roomsizex
+							local br_words, br_letters, br_justletters = codecheck(test_br_unitid, br_dir_vec[1], br_dir_vec[2], br_dir, true)
+							
+		
+							if #br_words > 0 then
+								local br_firstwords = {}
+		
+								--@cleanup: Normally we shouldn't need to record an entire list of firstwords, 
+								-- but weirdly enough, directly recording the first element and using it in the later codecheck that steps perpendicularly
+								-- causes a stack overflow error for some reason... Note that this was during setting br_unit.br_detected_splitted_parsing flag
+								--  inside a unit object. Could that be the reason?
+								for _, word in ipairs(br_words) do
+									table.insert(br_firstwords, word[1][1])
+								end
+								for _, br_text in ipairs(branching_texts) do
+									if name_is_branching_and(br_text[3]) then
+										local br_unitid = br_text[1][1]
+										local br_unit = mmf.newObject(br_unitid)
+										br_and_text_with_split_parsing[br_unitid] = true
 									end
 								end
-								lhs_word_slots[s] = words
-							end
-							local t = {
-								lhs_word_slots = lhs_word_slots,
-								branching_texts = branching_texts,
-								step_index = step, 
-								x = br_x,
-								y = br_y,
-								firstwords = br_firstwords,
-								num_combospots = #combospots
-							}
 
-							if BRANCHING_TEXT_LOGGING then 
-								print("inserting branch..") 
+								local lhs_word_slots = {}
+								for s = 1, step-1 do
+									local words = {}
+									lhs_word_slots[s] = {}
+									for _, word in ipairs(sents[s]) do
+										local width = word[2]
+										if s + width <= step then
+											table.insert(words, word)
+										end
+									end
+									lhs_word_slots[s] = words
+								end
+								local t = {
+									lhs_word_slots = lhs_word_slots,
+									branching_texts = branching_texts,
+									step_index = step, 
+									x = br_x,
+									y = br_y,
+									firstwords = br_firstwords,
+									num_combospots = #combospots
+								}
+
+								if BRANCHING_TEXT_LOGGING then 
+									print("inserting branch..") 
+								end
+								table.insert(branches, t)
+								found_branch_on_last_word = true
 							end
-							table.insert(branches, t)
-							found_branch_on_last_word = true
 						end
 					end
-				end
 
-				if br_text_count == #words then
-					done = true
+					if br_text_count == #words then
+						done = true
+					end
 				end
 			else
 				--MF_alert("Step " .. tostring(step) .. ", no words here, " .. tostring(letters) .. ", " .. tostring(jletters))
@@ -330,9 +369,9 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	end
 	
 	if (#branches == 0 and not br_calling_calculatesentences_branch) then
-	if (verbfound == false) or (step < 3) or (objfound == false) then
-		return {},{},0,0,{},{},{}
-	end
+		if (verbfound == false) or (step < 3) or (objfound == false) then
+			return {},{},0,0,{},firstwords,{},{}
+		end
 	end
 	
 	maxpos = step
@@ -467,7 +506,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	end
 	]]--
 	
-	return sentences,finals,maxpos,totalvariants,sentence_ids,br_and_text_with_split_parsing, sentence_metadata
+	return sentences,finals,maxpos,totalvariants,sentence_ids,firstwords,br_and_text_with_split_parsing, sentence_metadata
 end
 
 function docode(firstwords)
@@ -665,6 +704,7 @@ function docode(firstwords)
 				local maxlen = 0
 				local variations = 1
 				local sent_ids = {}
+				local newfirstwords = {}
 				local br_and_text_with_split_parsing = {}
 				local br_sentence_metadata = {}
 
@@ -673,7 +713,7 @@ function docode(firstwords)
 				local and_unitid_to_index = {}
 
 				if (#existing == 0) then
-					sentences,finals,maxlen,variations,sent_ids,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
+					sentences,finals,maxlen,variations,sent_ids,newfirstwords,br_and_text_with_split_parsing,br_sentence_metadata = calculatesentences(unitid,x,y,dir)
 
 					-- @mods(omni text)This is here to handle a too complex situation. The same code is further below just to mostly 
 					-- match the main game code
@@ -737,6 +777,12 @@ function docode(firstwords)
 
 				if (sentences == nil) then
 					return
+				end
+
+				if (#newfirstwords > 0) then
+					for i,v in ipairs(newfirstwords) do
+						table.insert(firstwords, v)
+					end
 				end
 
 				local finals_with_dangling_ands = {} -- list of indexes in finals with dangling branching ands
@@ -979,6 +1025,11 @@ function docode(firstwords)
 							if (prevtiletype ~= 4 and prevtiletype ~= pf_filler_text_type) and (wordid > existing_wordid) then
 								prevsafewordid = wordid - 1
 								prevsafewordtype = prevtiletype
+							end
+							
+							if (prevtiletype == 4) and (tiletype == 6) then
+								stop = true
+								stage = -1
 							end
 							
 							--MF_alert(tilename .. ", " .. tostring(wordid) .. ", " .. tostring(stage) .. ", " .. tostring(#sent) .. ", " .. tostring(tiletype) .. ", " .. tostring(prevtiletype) .. ", " .. tostring(stop) .. ", " .. name .. ", " .. tostring(i))
@@ -1712,11 +1763,15 @@ function code(alreadyrun_)
 			local checkthese = {}
 			local wordidentifier = ""
 			wordunits,wordidentifier,wordrelatedunits = findwordunits()
+			local wordunitresult = {}
 			
 			if (#wordunits > 0) then
 				for i,v in ipairs(wordunits) do
 					if testcond(v[2],v[1]) then
+						wordunitresult[v[1]] = 1
 						table.insert(checkthese, v[1])
+					else
+						wordunitresult[v[1]] = 0
 					end
 				end
 			end
@@ -1783,8 +1838,8 @@ function code(alreadyrun_)
 							
 							--MF_alert("Doing firstwords check for " .. unit.strings[UNITNAME] .. ", dir " .. tostring(i))
 							
-							local hm = codecheck(unitid,ox,oy,i)
-							local hm2 = codecheck(unitid,nox,noy,forward_dir)
+							local hm = codecheck(unitid,ox,oy,i,nil,wordunitresult)
+							local hm2 = codecheck(unitid,nox,noy,forward_dir,nil,wordunitresult)
 							
 							if (#hm == 0) and (#hm2 > 0) then
 								--MF_alert("Added " .. unit.strings[UNITNAME] .. " to firstwords, dir " .. tostring(i))
@@ -2000,7 +2055,7 @@ function findwordunits()
 			identifier = identifier .. v
 		end
 		
-		-- MF_alert("Identifier: " .. identifier)
+		--MF_alert("Identifier: " .. identifier)
 		
 		for a,checkname_ in ipairs(checkrecursion) do
 			local found = false

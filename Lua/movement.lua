@@ -1986,18 +1986,17 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 		end
 		
 		if pulling and (HACK_MOVES < 10000) then
-			if (movedata.pull == 0) then
 				hmlist,hms,specials = check(unitid,x,y,dir,pulling,reason)
 				hm = 0
 			
 				for i,obs in pairs(hmlist) do
 					if (obs < -1) or (obs > 1) then
-						if (obs ~= 2) then
+					local pid = tostring(x - ox + (y - oy) * roomsizex) .. tostring(obs)
+					
+					if (obs ~= 2) and (pushedunits[pid] == nil) then
 							table.insert(movelist, {obs,ox,oy,dir,specials,x,y})
 							pushsound = true
 						end
-						
-						local pid = tostring(x - ox + (y - oy) * roomsizex) .. tostring(obs)
 						
 						if (pushedunits[pid] == nil) then
 							pushedunits[pid] = 1
@@ -2006,6 +2005,7 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 					end
 				end
 				
+			if (movedata.pull == 0) then
 				movedata.pull = hm + 1
 			else
 				hm = movedata.pull - 1
