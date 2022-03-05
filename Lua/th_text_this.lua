@@ -1447,16 +1447,18 @@ function do_subrule_pnouns()
                         print("-> Committing pnoun: "..utils.unitstring(pnoun_unitid))
                     end
                     local simulation_data = recorded_raycast_simulations[pnoun_unitid]
-                    commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
-
-                    pnoun_subrule_data.process_order[pnoun_unitid] = process_round
-
-                    for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
-                        all_found_relay_indicators[indicator_key] = true
-                        if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
-                            new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
+                    if simulation_data then
+                        commit_raycast_data(pnoun_unitid, simulation_data, pnoun_group, op)
+                        
+                        for indicator_key, data in pairs(simulation_data.extradata.found_relay_indicators) do
+                            all_found_relay_indicators[indicator_key] = true
+                            if relay_indicators[indicator_key] == nil and new_relay_indicators[indicator_key] == nil then
+                                new_relay_indicators[indicator_key] = make_relay_indicator(data.x, data.y, data.dir)
+                            end
                         end
                     end
+                    
+                    pnoun_subrule_data.process_order[pnoun_unitid] = process_round
                 end
 
                 -- Main action 4: Of the non-processed pnouns, update the current group's set of pnoun units and features. These 
