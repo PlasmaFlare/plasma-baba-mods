@@ -492,7 +492,13 @@ local function get_stablefeatures_from_name(name)
                 local real_condtype = utils.real_condtype(condtype)
                 local params = cond[2]
 
-                if real_condtype == "this" or real_condtype == "not this" then
+                if real_condtype == "stable" or real_condtype == "not stable" then
+                    -- Don't copy this rule if the rule has stable condition. 
+                    -- @Note: This is a fix to an issue with group where in some cases in grouprules(), tags aren't preserved. (Look for "local newtags = concatenate(tags)") - 3/6/22
+                    copy_this_rule = false
+                    table.insert(feature[4], "stable")
+                    break
+                elseif real_condtype == "this" or real_condtype == "not this" then
                     local this_unitid = parse_this_unit_from_param_id(params[1])
                     local stable_this_id = register_this_text_in_stablerule(this_unitid)
                     table.insert(newcond, {condtype, { stable_this_id } })
@@ -519,20 +525,22 @@ local function get_stablefeatures_from_name(name)
                 end
             end
 
-            table.insert(newcond, {"stable", { ruleid }})
-            dup_feature[2] = newcond
-            dup_feature[3] = {} -- @Note: taking a risk here and see if get_this_parms_in_conds() can respect stable rules with no ids to present.
-            
-            -- Insert "stable" as a tag to indicate this is a stable rule
-            table.insert(dup_feature[4], "stable")
-            
-            
-            stable_features[ruleid] = {feature = dup_feature, display = rule_display, stable_this_ids = stable_this_ids}
-
-            local rule = dup_feature[1]
-
-            if STABLE_LOGGING then
-                print("recorded stable feature for name "..name..": "..utils.serialize_feature(feature))
+            if copy_this_rule then
+                table.insert(newcond, {"stable", { ruleid }})
+                dup_feature[2] = newcond
+                dup_feature[3] = {} -- @Note: taking a risk here and see if get_this_parms_in_conds() can respect stable rules with no ids to present.
+                
+                -- Insert "stable" as a tag to indicate this is a stable rule
+                table.insert(dup_feature[4], "stable")
+                
+                
+                stable_features[ruleid] = {feature = dup_feature, display = rule_display, stable_this_ids = stable_this_ids}
+    
+                local rule = dup_feature[1]
+    
+                if STABLE_LOGGING then
+                    print("recorded stable feature for name "..name..": "..utils.serialize_feature(feature))
+                end
             end
         end
     end
@@ -1176,8 +1184,7 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
     local y_offset = 0
     for ruleid,_ in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
-        local color = nil
-        color = {3,3}
+        local color = {3,3}
 
         -- Create the text "outline". (Hacky but does the job. Though if there's a more supported way to do this I'm all ears)
         for outline_x = -2, 2, 2 do
