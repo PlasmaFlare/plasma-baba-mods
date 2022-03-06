@@ -127,6 +127,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 	local maxpos = 0
 	local prevsharedtype = -1
 	local prevmaxw = 1
+	local currw = 0
 	
 	local limiter = 5000
 	
@@ -171,7 +172,8 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 				for i,v in ipairs(words) do
 					--unitids, width, word, wtype, dir
 					
-					--MF_alert("Step " .. tostring(step) .. ", word " .. v[3] .. " here")
+					--MF_alert("Step " .. tostring(step) .. ", word " .. v[3] .. " here, " .. tostring(v[2]))
+					
 					if (sharedtype == -1) then
 						sharedtype = v[4]
 					elseif (v[4] ~= sharedtype) then
@@ -203,14 +205,27 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						if name_is_branching_text(text_name, true, false) then
 							table.insert(sents[step], v)
 							maxw = math.max(maxw, v[2])
+
+							if (currw == 0) then
+								currw = v[2]
+							end
 						end	
 					else
+						--@mod(Omni text) - these lines in this block were originally outside the current ifelse block. I originally programmed this
+						-- so that these lines don't apply to pivot text. @TODO: Reinvestigate why this is the case and if we need to keep it that way.
+						-- (3/6/22)
 						table.insert(sents[step], v)
 						maxw = math.max(maxw, v[2])
+
+						if (currw == 0) then
+							currw = v[2]
+						end
 					end
 				end
+				
+				currw = math.max(currw - 1, 0)
 
-				if (sharedtype >= 0) and (prevsharedtype >= 0) and (#words > 0) and (maxw == 1) and (prevmaxw == 1) and not br_calling_calculatesentences_branch then
+				if (sharedtype >= 0) and (prevsharedtype >= 0) and (#words > 0) and (maxw == 1) and (prevmaxw == 1) and (currw == 0) and not br_calling_calculatesentences_branch then
 					if ((sharedtype == 0) and (prevsharedtype == 0)) or ((sharedtype == 1) and (prevsharedtype == 1)) or ((sharedtype == 2) and (prevsharedtype == 2)) or ((sharedtype == 0) and (prevsharedtype == 2)) then
 						done = true
 						sents[step] = nil
@@ -1729,6 +1744,7 @@ function code(alreadyrun_)
 	 ]]
 	local playrulesound = false
 	local alreadyrun = alreadyrun_ or false
+	poweredstatus = {}
 
     if this_mod_has_this_text() then
 		if this_mod_globals.undoed_after_called then
@@ -1782,7 +1798,6 @@ function code(alreadyrun_)
 			visualfeatures = {}
 			notfeatures = {}
 			groupfeatures = {}
-			poweredstatus = {}
 			
 			local firstwords = {}
 			local alreadyused = {}

@@ -142,7 +142,7 @@ end
 function do_directional_swap_hasfeature(dir, name, unitid, x, y)
 	if dir ~= nil and dir >= 0 and dir <= 3 then
 		local dirfeature = dirfeaturemap[dir + 1]
-		return hasfeature(name,"is","swap"..dirfeature,unitid,x,y)
+		return hasfeature(name,"is","swap"..dirfeature,unitid,x,y,{"still"})
 	else
 		return false
 	end

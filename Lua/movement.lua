@@ -1783,7 +1783,7 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 	end
 	
 	arrow_prop_mod_globals.group_arrow_properties = false
-	local swaps = findfeatureat(nil,"is","swap",x+ox,y+oy)
+	local swaps = findfeatureat(nil,"is","swap",x+ox,y+oy,{"still"})
 	arrow_prop_mod_globals.group_arrow_properties = true
 	
 	--@Turning Text(SWAP) ------------------------
@@ -1818,7 +1818,7 @@ function dopush(unitid,ox,oy,dir,pulling_,x_,y_,reason,pusherid)
 	
 	if pulling then
 		arrow_prop_mod_globals.group_arrow_properties = false
-		local swap = hasfeature(name,"is","swap",unitid,x,y)
+		local swap = hasfeature(name,"is","swap",unitid,x,y,{"still"})
 		arrow_prop_mod_globals.group_arrow_properties = true
 		
 		--@Turning Text(SWAP) ------------------------
