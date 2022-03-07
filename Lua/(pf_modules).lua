@@ -29,6 +29,7 @@ for _, module in ipairs(module_load_order) do
     all_modules[module] = reload_module(module)
 end
 print("[Plasma Modpack] Finished loading all modules")
+plasma_utils = PlasmaModules.load_module("general/utils")
 
 --[[ 
     This module system is a start. But it is still a bit flawed if I want to maintain robustness in the long term. I don't know if that is going to be a goal

@@ -82,6 +82,10 @@ local stable_indicators = {}
      tileid -> unitid of indicator: unitid
   ]]
 local stable_this_indicators = {}
+
+-- When a stableunit gets deleted, queue its su_key to be deleted in the next call to update_stable_state
+-- @TODO: would it be better if the su_key was deleted instantly?
+local queued_deleted_su_keys = {}
     
 local LEVEL_SU_KEY = -1
 local STABLE_THIS_ID_BASE = -50
@@ -147,6 +151,7 @@ function clear_stable_mod()
     stable_indicators = {}
     stable_this_indicators = {}
     stable_empty_indicators = {}
+    queued_deleted_su_keys = {}
 end
 
 
@@ -198,6 +203,9 @@ end
 function on_delete_stableunit(unitid)
     local su_key = get_stableunit_key(unitid)
     on_delete_stableunit_key(su_key)
+    if su_key ~= nil and not on_stable_undo then
+        table.insert(queued_deleted_su_keys, su_key)
+    end
 end
 
 -- @mods(guard) - GUARD mod uses this to serialize entries from featureindex to support chain guarding.
@@ -734,6 +742,38 @@ function update_stable_state(alreadyrun)
         print("calling update_stable_state() with alreadyrun = "..tostring(alreadyrun))
     end
 
+    -- Deleting items from stablestate.units and rules
+    local deleted_su_key_count = 0
+    for _, su_key, v in ipairs(queued_deleted_su_keys) do
+        local v = stablestate.units[su_key]
+        if v then
+            if STABLE_LOGGING then
+                print("deleting unit with su key: "..tostring(su_key))
+            end
+            on_delete_stableunit_key(su_key)
+            deleted_su_key_count = deleted_su_key_count + 1
+            
+            for _, ruleid in ipairs(v.ruleids) do
+                stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count - 1
+
+                if STABLE_LOGGING then
+                    print("decreasing stablestate rule count for rule id: "..ruleid..". Remaining count: "..tostring(stablestate.rules[ruleid].unit_count))
+                end
+            
+                if stablestate.rules[ruleid].unit_count == 0 then
+                    if STABLE_LOGGING then
+                        print("deleting stableid sentence "..tostring(ruleid))
+                    end
+
+                    remove_stable_this_in_conds(stablestate.rules[ruleid].feature[2])
+                    stablestate.rules[ruleid] = nil
+                end
+            end
+            stablestate.units[su_key] = nil
+        end
+    end
+    queued_deleted_su_keys = {}
+
     GLOBAL_checking_stable = true
     local code_stablestate, code_stableempties = findallfeature(nil, "is", "stable")
     if hasfeature("level", "is", "stable", 1) then
@@ -819,7 +859,6 @@ function update_stable_state(alreadyrun)
     end
 
     -- Deleting items from stablestate.units and rules
-    local deleted_su_key_count = 0
     for su_key, v in pairs(stablestate.units) do
         if not code_stablestate_lookup[su_key] then
             if STABLE_LOGGING then
@@ -828,8 +867,6 @@ function update_stable_state(alreadyrun)
             on_delete_stableunit_key(su_key)
             deleted_su_key_count = deleted_su_key_count + 1
 
-            local deleted_stableid = v.stableid
-            
             for _, ruleid in ipairs(v.ruleids) do
                 stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count - 1
 
@@ -863,8 +900,6 @@ function update_stable_state(alreadyrun)
             deleted_su_key_count = deleted_su_key_count + 1
             
             delete_empty_stable_indicator(tileid)
-            local deleted_stableid = stablestate.empties[tileid].stableid
-            
             for _, ruleid in ipairs(v.ruleids) do
                 stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count - 1
                 
@@ -982,9 +1017,9 @@ condlist["stable"] = function(params,checkedconds,checkedconds_,cdata)
 end
 
 table.insert(mod_hook_functions["rule_baserules"],
-function()
-    add_stable_rules()
-end
+    function()
+        add_stable_rules()
+    end
 )
 
 table.insert(mod_hook_functions["rule_update_after"],
@@ -1058,7 +1093,7 @@ function print_stable_state()
     print("--------Stable State---------")
     print("===stableunits===")
     for k,v in pairs(stablestate.units) do
-        print("su_key: "..k.. " | Name: "..v.name.." | Stable Id: "..v.stableid)
+        print("su_key: "..k.. " | Name: "..v.name.." | Stable Id: "..v.stableid.." | Unit: "..utils.unitstring(MF_getfixed(k)))
         for _, ruleid in ipairs(v.ruleids) do
             print("\t"..ruleid)
         end

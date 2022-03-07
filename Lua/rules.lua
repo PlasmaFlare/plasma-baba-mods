@@ -1,8 +1,3 @@
-local plasma_utils
-if mmf ~= nil then
-	plasma_utils = PlasmaModules.load_module("general/utils")
-end
-
 function codecheck(unitid,ox,oy,cdir_,ignore_end_,wordunitresult_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
@@ -1982,6 +1977,7 @@ end
 function findwordunits()
 	--[[ 
 		@mods(this) - Override reason: make "this is word" and "not this is word" work
+		@mods(stable) - Override reason: change findall() call to convey "I just want to get all wordunits"
 	 ]]
 	local result = {}
 	local alreadydone = {}
@@ -2001,7 +1997,8 @@ function findwordunits()
 			local subid = ""
 			
 			if (objectlist[name] ~= nil) and (name ~= "text") and (alreadydone[name] == nil) then
-				local these = findall({name,{}})
+				-- @mods(stable) originally it was "findall({name, {}})". But we are assuming that passing nil conds = don't test conditions.
+				local these = findall({name})
 				alreadydone[name] = 1
 				
 				if (#these > 0) then
@@ -2262,12 +2259,18 @@ function postrules(alreadyrun_)
 				if (verb == "is") and (neweffect == "text") and (featureindex["write"] ~= nil) then
 					table.insert(targetlists, "write")
 				end
+
+				-- @mods(stable) - to handle cases of "X is X" and "X is not Y" directly modifying the featureindex with conditions,
+				-- the general rule is this: Normal features can only modify other normal features. Stable features can only modify other stable features.
+				-- There cannot be a crisscross between normal and stable features. - 3/6/22
+				local not_rule_has_stable_tag = has_stable_tag(rule[4])
 				
 				for e,g in ipairs(targetlists) do
 					for a,b in ipairs(featureindex[g]) do
 						local same = comparerules(newbaserule,b[1])
+						local target_rule_has_stable_tag = has_stable_tag(b[4])
 						
-						if (same or ((g == "write") and (target == b[1][1]) and (b[1][2] == "write"))) and not has_stable_tag(b[4]) then
+						if (same or ((g == "write") and (target == b[1][1]) and (b[1][2] == "write"))) and (not_rule_has_stable_tag == target_rule_has_stable_tag) then
 							--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
 							local theseconds = b[2]
 							
@@ -2361,13 +2364,19 @@ function postrules(alreadyrun_)
 					end
 				end		
 			
+				-- @mods(stable) - to handle cases of "X is X" and "X is not Y" directly modifying the featureindex with conditions,
+				-- the general rule is this: Normal features can only modify other normal features. Stable features can only modify other stable features.
+				-- There cannot be a crisscross between normal and stable features. - 3/6/22
+				local protect_rule_has_stable_tag = has_stable_tag(rule[4])
 				if (featureindex[target] ~= nil) then
 					for a,rules in ipairs(featureindex[target]) do
 						local targetrule = rules[1]
 						local targetconds = rules[2]
 						local object = targetrule[3]
+
+						local target_rule_has_stable_tag = has_stable_tag(rules[4])
 						
-						if (targetrule[1] == target) and (((targetrule[2] == "is") and (target ~= object)) or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and ((getmat(object) ~= nil) or (object == "revert") or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and (string.sub(object, 1, 5) ~= "group") and not has_stable_tag(rules[4]) then
+						if (targetrule[1] == target) and (((targetrule[2] == "is") and (target ~= object)) or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and ((getmat(object) ~= nil) or (object == "revert") or ((targetrule[2] == "write") and (string.sub(object, 1, 4) ~= "not "))) and (string.sub(object, 1, 5) ~= "group") and (protect_rule_has_stable_tag == target_rule_has_stable_tag) then
 							if (#newconds > 0) then
 								if (newconds[1] == "never") then
 									targetconds = {}
