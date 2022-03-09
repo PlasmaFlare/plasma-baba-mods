@@ -2263,7 +2263,7 @@ function postrules(alreadyrun_)
 				-- @mods(stable) - to handle cases of "X is X" and "X is not Y" directly modifying the featureindex with conditions,
 				-- the general rule is this: Normal features can only modify other normal features. Stable features can only modify other stable features.
 				-- There cannot be a crisscross between normal and stable features. - 3/6/22
-				local not_rule_has_stable_tag = has_stable_tag(rule[4])
+				local not_rule_has_stable_tag = has_stable_tag(tags)
 				
 				for e,g in ipairs(targetlists) do
 					for a,b in ipairs(featureindex[g]) do

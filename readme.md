@@ -41,6 +41,9 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.3** (3/8/22)
+  - [THIS]: Fixed the cursor not updating from THIS is block/pass/relay
+  - Fixed NOT X is NOT Y not working properly
 - **1.5.2** (3/6/22)
   - Updated for Version 462
   - [THIS] Fixed lua error from `THIS above THIS is BLOCK`
