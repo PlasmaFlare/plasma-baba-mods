@@ -1074,7 +1074,7 @@ local function populate_inactive_pnouns()
 end
 
 
-local function process_pnoun_features(pnoun_features, filter_property_func, curr_pnoun_op)
+local function process_pnoun_features(pnoun_features, filter_property_func, curr_pnoun_op, pnoun_group)
     local final_options = {}
     local processed_pnouns = {}
     local all_redirected_pnouns = {}
@@ -1227,23 +1227,31 @@ local function process_pnoun_features(pnoun_features, filter_property_func, curr
             end
         end
 
+        -- If the current pnoun group doesn't have a place to redirect
+        local mark_all_processed = Pnoun.Pnoun_Group_Lookup[pnoun_group].redirect_pnoun_group == nil
+        
         if #target_options > 0 then
+            mark_all_processed = true
+
             for _, option in ipairs(target_options) do
                 table.insert(final_options, {rule = option.rule, conds=option.conds, ids=ids, tags=tags, notrule = option.notrule, showrule = option.showrule})
-            end
-            -- For all "this" text in each option, mark it as processed so that future update_raycast_units() calls don't change the raycast units for each "this" text
-            for _, pnoun_unitid in ipairs(found_pnouns) do
-                processed_pnouns[pnoun_unitid] = true
             end
             for _, unitid in ipairs(redirected_pnouns_in_feature) do
                 all_redirected_pnouns[unitid] = true
             end
-
-            table.remove(pnoun_features, i)
         else
             -- @ Note: this is meant to trick postrules to display the active particles even
             -- though we don't actually call addoption
             table.insert(features, {{"this","is","test"}, conds, ids, tags})
+        end
+
+        if mark_all_processed then
+            -- For all "this" text in each option, mark it as processed so that future update_raycast_units() calls
+            -- don't change the raycast units for each "this" text
+            for _, pnoun_unitid in ipairs(found_pnouns) do
+                processed_pnouns[pnoun_unitid] = true
+            end
+            table.remove(pnoun_features, i)
         end
     end
 
@@ -1419,7 +1427,7 @@ function do_subrule_pnouns()
                 local prev_pnoun_feature_count = #data.pnoun_features
                 local processed_pnoun_units, remaining_pnoun_features, redirected_pnouns = nil, nil, nil
                 if pnoun_group ~= Pnoun.Groups.OTHER_INACTIVE then
-                    local process_result = process_pnoun_features(data.pnoun_features, Pnoun.Ops[op].filter_func, op)
+                    local process_result = process_pnoun_features(data.pnoun_features, Pnoun.Ops[op].filter_func, op, pnoun_group)
                     processed_pnoun_units = process_result[1]
                     remaining_pnoun_features = process_result[2]
                     redirected_pnouns = process_result[3]
