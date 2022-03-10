@@ -911,7 +911,7 @@ condlist.without = function(params,checkedconds,checkedconds_,cdata)
 	local alreadyfound = {}
 	local unitcount = {}
 	
-	local name = cdata.name
+	local name,notcond = cdata.name,cdata.notcond
 			
 	if (#params > 0) then
 		for a,b in ipairs(params) do
@@ -1022,6 +1022,10 @@ condlist.without = function(params,checkedconds,checkedconds_,cdata)
 		return false,checkedconds
 	end
 
+	if notcond then
+		return (allfound > 0),checkedconds
+	end
+			
 	return (allfound == #params),checkedconds
 end
 condlist.above = function(params,checkedconds,checkedconds_,cdata)
