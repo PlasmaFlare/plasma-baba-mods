@@ -715,7 +715,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 
 						--@Turning Text(SWAP)
 						if not swap then
-							swap = do_directional_swap_hasfeature(dir, name, unitid, x, y)
+							swap = do_directional_swap_hasfeature(dir, name, data.unitid, x, y)
 						end
 						------------------------------------
 						
