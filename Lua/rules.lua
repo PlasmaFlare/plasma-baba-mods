@@ -342,7 +342,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 					sents[step] = {}
 					combo[step] = 0
 					
-					if starting then
+					if starting and not br_calling_calculatesentences_branch then
 						sents[step] = nil
 						step = step - 1
 					end
