@@ -708,6 +708,9 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                     end
                 end
 
+                -- If a tile is marked as visited and we did not have this check, we know that any raycasts that 
+                -- stop at the visited tile would get processed the same way everytime. The below check prevents
+                -- this, removing repeated processing and infinite loops .
                 if not visited_tileids[tileid] and not found_ending_these then
                     visited_tileids[tileid] = true
                     
@@ -799,8 +802,14 @@ local function simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                                     found_passed_tiles[tileid] = true
                                     ray_objects_by_tileid[tileid] = {}
                                 else
+                                    -- At this point, we know that all objects at this location are pass. The effect is to re-raycast
+                                    -- in the same direction of the original raycast.
                                     local new_ray = {pos = ray_pos, dir = curr_cast_data.ray.dir}
                                     table.insert(new_stack_entries, {ray = new_ray, extradata = curr_cast_data.extradata})
+
+                                    -- Since the direction of the re-raycast can be different depending on the original raycast, we
+                                    -- don't mark this location as visited.
+                                    visited_tileids[tileid] = false
                                 end
                             end
                         end
