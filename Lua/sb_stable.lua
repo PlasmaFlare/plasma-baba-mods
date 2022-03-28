@@ -692,11 +692,6 @@ table.insert(mod_hook_functions["level_start"],
         enable_stablerule_display_setting = not PlasmaSettings.get_toggle_setting("disable_stable_display")
     end
 )
-table.insert( mod_hook_functions["level_restart"],
-    function()
-        clear_stable_mod()
-    end
-)
 
 function is_stableunit(unitid, x, y)
     if unitid == 2 then

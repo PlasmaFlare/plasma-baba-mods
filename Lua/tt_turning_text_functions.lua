@@ -29,11 +29,6 @@ table.insert( mod_hook_functions["level_start"],
         clear_turning_text_mod()
     end
 )
-table.insert( mod_hook_functions["level_restart"],
-    function()
-        clear_turning_text_mod()
-    end
-)
 
 table.insert( mod_hook_functions["level_end"],
     function()
