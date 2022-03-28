@@ -41,6 +41,11 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.5** (3/28/22)
+  - Updated for Version 464
+  - [OMNI TEXT] Fixed `I T pivot_is R E D and bonus` not working
+  - [THIS] Fixed a THIS raycast stopping on a traversed PASS object after being relayed in the opposite direction
+  - [STABLE] Backing out a restart no longer breaks stable rules
 - **1.5.4** (3/12/22)
   - Updated for Version 462D
   - Fixed "THIS is turning_swap" getting an error
