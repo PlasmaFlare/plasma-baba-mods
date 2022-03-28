@@ -62,10 +62,10 @@ function command(key,player_)
 	
 	if (keyid == 5) then
 		MF_restart(false)
-		do_mod_hook("level_restart", {})
+		--do_mod_hook("level_restart", {})
 	elseif (keyid == 8) then
 		MF_restart(true)
-		do_mod_hook("level_restart", {})
+		--do_mod_hook("level_restart", {})
 	end
 	
 	dolog(key)

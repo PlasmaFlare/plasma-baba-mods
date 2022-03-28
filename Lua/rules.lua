@@ -1996,6 +1996,7 @@ function findwordunits()
 			local name = rule[1]
 			local subid = ""
 			
+			if (rule[2] == "is") then
 			if (objectlist[name] ~= nil) and (name ~= "text") and (alreadydone[name] == nil) then
 				-- @mods(stable) originally it was "findall({name, {}})". But we are assuming that passing nil conds = don't test conditions.
 				local these = findall({name})
@@ -2059,6 +2060,7 @@ function findwordunits()
 			else
 				MF_alert("No ids listed in Word-related rule! rules.lua line 1302 - this needs fixing asap (related to grouprules line 1118)")
 			end
+		end
 		end
 		
 		table.sort(fullid)
