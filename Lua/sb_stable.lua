@@ -27,7 +27,11 @@ local stablestate = {
     --[[ 
         unit.values[ID] (call this stableunit key) -> {
             stableid: int
-            ruleids: [ruleids: string]
+            ruleids: {
+                ruleid: string -> {
+                    stack_count: int
+                }
+            }
         }
      ]]
 
@@ -35,15 +39,20 @@ local stablestate = {
     --[[ 
         ruleids: string -> {
             feature : featureindex item
-            unit_count : int 
+            unit_count : int,
+            max_stack_count : int,
         }
      ]]
 
     empties = {},
     --[[ 
        tileid -> {
-           stableid: int
-           ruleids: [ruleids: string]
+            stableid: int
+            ruleid: {
+                ruleids: string -> {
+                    stack_count: int
+                }
+            }
        }  
      ]]
 
@@ -468,6 +477,7 @@ end
 
 local function get_stablefeatures_from_name(name)
     local stable_features = {}
+    local ruleid_data = {}
     for _, feature in ipairs(featureindex[name]) do
         local rule = feature[1]
         local tags = feature[4]
@@ -534,17 +544,22 @@ local function get_stablefeatures_from_name(name)
             end
 
             if copy_this_rule then
-                table.insert(newcond, {"stable", { ruleid }})
-                dup_feature[2] = newcond
-                dup_feature[3] = {} -- @Note: taking a risk here and see if get_this_parms_in_conds() can respect stable rules with no ids to present.
-                
-                -- Insert "stable" as a tag to indicate this is a stable rule
-                table.insert(dup_feature[4], "stable")
-                
-                
-                stable_features[ruleid] = {feature = dup_feature, display = rule_display, stable_this_ids = stable_this_ids}
-    
-                local rule = dup_feature[1]
+                if stable_features[ruleid] ~= nil then
+                    ruleid_data[ruleid].stack_count = ruleid_data[ruleid].stack_count + 1
+                else
+                    table.insert(newcond, {"stable", { ruleid }})
+                    dup_feature[2] = newcond
+                    dup_feature[3] = {} -- @Note: taking a risk here and see if get_this_parms_in_conds() can respect stable rules with no ids to present.
+                    
+                    -- Insert "stable" as a tag to indicate this is a stable rule
+                    table.insert(dup_feature[4], "stable")
+                    
+                    
+                    stable_features[ruleid] = {feature = dup_feature, display = rule_display, stable_this_ids = stable_this_ids}
+                    ruleid_data[ruleid] = {
+                        stack_count = 1
+                    }
+                end
     
                 if STABLE_LOGGING then
                     print("recorded stable feature for name "..name..": "..utils.serialize_feature(feature))
@@ -553,7 +568,7 @@ local function get_stablefeatures_from_name(name)
         end
     end
 
-    return stable_features
+    return stable_features, ruleid_data
 end
 
 local function record_stable_undo()
@@ -703,7 +718,7 @@ function is_stableunit(unitid, x, y)
     end    
 end
 
-function stableunit_has_ruleid(unitid, ruleid, x, y)
+function stableunit_has_ruleid(unitid, ruleid, x, y, rule_stack_count)
     local ruleid_list = {}
     if unitid == 2 then
         local tileid = x + y * roomsizex
@@ -716,12 +731,9 @@ function stableunit_has_ruleid(unitid, ruleid, x, y)
             ruleid_list = stablestate.units[key].ruleids
         end
     end
-    for _, stable_ruleid in ipairs(ruleid_list) do
-        if ruleid == stable_ruleid then
-            return true
-        end
-    end
-    return false
+
+    -- Second clause handles stacked stable properties per stableunit
+    return (ruleid_list[ruleid] ~= nil) and (ruleid_list[ruleid].stack_count >= rule_stack_count)
 end
 
 --[[ Core logic ]]
@@ -777,6 +789,7 @@ function update_stable_state(alreadyrun)
     GLOBAL_checking_stable = false
     
     local stable_rules = {}
+    local ruleid_data_by_name = {}
     local code_stablestate_lookup = {}
     local new_stableunit_count = 0
     for _, unitid in ipairs(code_stablestate) do
@@ -797,8 +810,11 @@ function update_stable_state(alreadyrun)
 
                     if not stable_rules[name] then
                         -- If we haven't recorded the set of features for this name, get the features
-                        stable_rules[name] = get_stablefeatures_from_name(name)
+                        local stable_features, ruleid_data = get_stablefeatures_from_name(name)
+                        stable_rules[name] = stable_features
+                        ruleid_data_by_name[name] = ruleid_data
                     end
+                    local ruleid_data = ruleid_data_by_name[name]
                     
                     local ruleids = {} -- Get a list of ruleids 
                     for ruleid, v in pairs(stable_rules[name]) do
@@ -820,7 +836,7 @@ function update_stable_state(alreadyrun)
                         end
 
                         if add_ruleid then
-                            table.insert(ruleids, ruleid)
+                            ruleids[ruleid] = ruleid_data[ruleid]
 
                             if not stablestate.rules[ruleid] then
                                 -- @TODO: if in the future we want to add more fields, consider just deepcopying "v" and add unit_count
@@ -829,9 +845,13 @@ function update_stable_state(alreadyrun)
                                     unit_count = 1,
                                     display = v.display,
                                     stable_this_ids = v.stable_this_ids,
+                                    max_stack_count = ruleid_data[ruleid].stack_count,
                                 }
                             else
                                 stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+
+                                local max_stack_count = math.max(stablestate.rules[ruleid].max_stack_count, ruleid_data[ruleid].stack_count)
+                                stablestate.rules[ruleid].max_stack_count = max_stack_count
                             end
                         end
                     end
@@ -928,8 +948,11 @@ function update_stable_state(alreadyrun)
             local name = "empty"
             if not stable_rules[name] then
                 -- If we haven't recorded the set of features for this name, get the features
-                stable_rules[name] = get_stablefeatures_from_name(name)
+                local stable_features, ruleid_data = get_stablefeatures_from_name(name)
+                stable_rules[name] = stable_features
+                ruleid_data_by_name[name] = ruleid_data
             end
+            local ruleid_data = ruleid_data_by_name[name]
             
             local ruleids = {} -- Get a list of ruleids 
             for ruleid, v in pairs(stable_rules[name]) do
@@ -943,17 +966,21 @@ function update_stable_state(alreadyrun)
                 local add_ruleid = testcond(conds_to_test, 2, x, y)
 
                 if add_ruleid then
-                    table.insert(ruleids, ruleid)
+                    ruleids[ruleid] = ruleid_data[ruleid]
 
-                    if not stablestate.rules[ruleid] then
+                    if not stablestate.rules[ruleid] then --@TODO - handle stacking with empty
                         stablestate.rules[ruleid] = {
                             feature = v.feature,
                             unit_count = 1,
                             display = v.display,
                             stable_this_ids = v.stable_this_ids,
+                            max_stack_count = ruleid_data[ruleid].stack_count,
                         }
                     else
                         stablestate.rules[ruleid].unit_count = stablestate.rules[ruleid].unit_count + 1
+
+                        local max_stack_count = math.max(stablestate.rules[ruleid].max_stack_count, ruleid_data[ruleid].stack_count)
+                        stablestate.rules[ruleid].max_stack_count = max_stack_count
                     end
                 end
             end
@@ -983,28 +1010,54 @@ end
 local function add_stable_rules()
     -- adding all stablestate.rules into the featureindex
     for _, v in pairs(stablestate.rules) do
-        -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
-        local feature = utils.deep_copy_table(v.feature)
-        addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
-        
-        if STABLE_LOGGING then
-            local option, conds = feature[1], feature[2]
-            local cond_str = ""
-            for _, cond in ipairs(conds) do
-                cond_str = cond_str.." "..cond[1]
+        for s = 1, v.max_stack_count do
+            -- @note: might be unoptimized since we are deep copying everytime we add a stablerule?
+            local feature = utils.deep_copy_table(v.feature)
+
+            for _, cond in ipairs(feature[2]) do
+                local condtype = cond[1]
+                if condtype == "stable" then
+                    local params = cond[2]
+                    params[2] = s
+
+                    break -- Assuming that each of the rules from stablestate will only have one stable cond
+                end
             end
-            print("inserting stablerule into featureindex: "..utils.serialize_feature(feature))
+
+            addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
+            
+            if STABLE_LOGGING then
+                local option, conds = feature[1], feature[2]
+                local cond_str = ""
+                for _, cond in ipairs(conds) do
+                    cond_str = cond_str.." "..cond[1]
+                end
+                print("inserting stablerule into featureindex: "..utils.serialize_feature(feature), "Stack count: "..s)
+            end
         end
     end
 end
 
 condlist["stable"] = function(params,checkedconds,checkedconds_,cdata)
-    if #params == 1 then
+    utils.debug_assert(#params == 2)
+    if #params == 2 then
         valid = true
         local unitid, x, y = cdata.unitid, cdata.x, cdata.y
-        local cond_ruleid = params[1]
 
-        local result = stableunit_has_ruleid(unitid, cond_ruleid, x, y)
+        --[[ 
+            JANK WARNING: the parameters are actually passed in reverse order due to testcond.
+            For reference, look for this piece of code in testcond:
+
+                if (string.sub(b, 1, 4) == "not ") then
+                    table.insert(params, b)
+                else
+                    table.insert(params, 1, b)
+                end
+         ]]
+        local cond_ruleid = params[2]
+        local stack_count = params[1]
+
+        local result = stableunit_has_ruleid(unitid, cond_ruleid, x, y, stack_count)
 
         return result, checkedconds
     end
@@ -1089,8 +1142,8 @@ function print_stable_state()
     print("===stableunits===")
     for k,v in pairs(stablestate.units) do
         print("su_key: "..k.. " | Name: "..v.name.." | Stable Id: "..v.stableid.." | Unit: "..utils.unitstring(MF_getfixed(k)))
-        for _, ruleid in ipairs(v.ruleids) do
-            print("\t"..ruleid)
+        for ruleid, ruleid_data in pairs(v.ruleids) do
+            print("\t"..ruleid, ", Stack Count: "..ruleid_data.stack_count)
         end
     end
     print("===stablerules===")
@@ -1099,6 +1152,7 @@ function print_stable_state()
         print("ruleid = "..k)
         print("unit_count = "..v.unit_count)
         print("feature: "..utils.serialize_feature(v.feature))
+        print("max_stack_count: "..v.max_stack_count)
         print("}")
     end
     
@@ -1120,11 +1174,11 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
     local ruleids = {}
     local ruleid_count = 0
     for _, su_key in ipairs(su_key_list) do
-        for i,ruleid in ipairs(stablestate.units[su_key].ruleids) do
+        for ruleid, ruleid_data in pairs(stablestate.units[su_key].ruleids) do
             if not ruleids[ruleid] then
                 ruleid_count = ruleid_count + 1
             end
-            ruleids[ruleid] = true
+            ruleids[ruleid] = ruleid_data.stack_count
         end
     end
     if empty_tileid then
@@ -1132,17 +1186,24 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
         local level_y = empty_tileid / roomsizex
         utils.debug_assert(stablestate.empties[empty_tileid], "Stable empty at ("..tostring(level_x)..","..tostring(level_y)..") is not in stablestate")
 
-        for i,ruleid in ipairs(stablestate.empties[empty_tileid].ruleids) do
-            ruleids[ruleid] = true
-            ruleid_count = ruleid_count + 1
+        for ruleid, ruleid_data in pairs(stablestate.empties[empty_tileid].ruleids) do
+            if not ruleids[ruleid] then
+                ruleid_count = ruleid_count + 1
+            end
+            ruleids[ruleid] = ruleid_data.stack_count
         end
     end
 
     -- Determine final X
     local list_width = 0
     local found_ray_unit_ids = {}
-    for ruleid, _ in pairs(ruleids) do
+    for ruleid, stack_count in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
+
+        if stack_count > 1 then
+            display = table.concat({stack_count, " x ", display})
+        end
+
         list_width = math.max(list_width, LETTER_WIDTH * #display + LETTER_SPACING * (#display - 1))
 
         for _, stable_this_id in ipairs(stablestate.rules[ruleid].stable_this_ids) do
@@ -1212,9 +1273,13 @@ local function write_stable_rules(su_key_list, x, y, empty_tileid)
 
     -- Write the rules 
     local y_offset = 0
-    for ruleid,_ in pairs(ruleids) do
+    for ruleid, stack_count in pairs(ruleids) do
         local display = stablestate.rules[ruleid].display
         local color = {3,3}
+
+        if stack_count > 1 then
+            display = table.concat({stack_count, " x ", display})
+        end
 
         -- Create the text "outline". (Hacky but does the job. Though if there's a more supported way to do this I'm all ears)
         for outline_x = -2, 2, 2 do
