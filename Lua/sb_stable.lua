@@ -698,7 +698,6 @@ end
 
 table.insert(mod_hook_functions["level_start"],
     function()
-        clear_stable_mod()
         record_stable_undo() -- Record stable undo on start because we need to use it for comparision. Each undo entry is added whenever the stablestate shows some difference.
         update_stable_state() -- Only reason we update stable state here is because of a bug where the stable cursor doesn't show at level startup
 

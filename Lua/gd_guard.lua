@@ -71,7 +71,7 @@ local GUARD_LOGGING = false
 local GUARD_ALG_LOGGING = false
 local GUARD_CHECK_LOGGING = false
 
-local function clear_guard_mod()
+function clear_guard_mod()
     guard_relation_map = {}
     processed_destroyed_units = {}
     units_to_guard_destroy = {}

@@ -16,6 +16,9 @@ function clearunits(...)
     local ret = old_clearunits(...)
     reset_this_mod()
 	clear_stable_mod()
+    clear_turning_text_mod()
+    reset_arrow_properties()
+    clear_guard_mod()
 
     return ret
 end
