@@ -1141,7 +1141,11 @@ function print_stable_state()
     print("--------Stable State---------")
     print("===stableunits===")
     for k,v in pairs(stablestate.units) do
-        print("su_key: "..k.. " | Name: "..v.name.." | Stable Id: "..v.stableid.." | Unit: "..utils.unitstring(MF_getfixed(k)))
+        local unitstring = ""
+        if not on_stable_undo then
+            unitstring = utils.unitstring(MF_getfixed(k))
+        end
+        print("su_key: "..k.. " | Name: "..v.name.." | Stable Id: "..v.stableid.." | Unit: "..unitstring)
         for ruleid, ruleid_data in pairs(v.ruleids) do
             print("\t"..ruleid, ", Stack Count: "..ruleid_data.stack_count)
         end
