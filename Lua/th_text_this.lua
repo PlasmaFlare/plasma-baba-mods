@@ -317,12 +317,10 @@ end
 function reset_this_mod()
     for this_unitid, v in pairs(raycast_data) do
         for _, cursor in pairs(v.cursors) do
-            delunit(cursor)
             MF_cleanremove(cursor)
         end
     end
     for tileid, relay_indicator_unitid in pairs(relay_indicators) do
-        delunit(relay_indicator_unitid)
         MF_cleanremove(relay_indicator_unitid)
     end
     reset_this_mod_globals()
@@ -1335,7 +1333,6 @@ local function commit_raycast_data(pnoun_unitid, raycast_simulation_data, pnoun_
     for tileid, cursor_unitid in pairs(curr_raycast_data.cursors) do
         if not curr_raycast_data.raycast_positions[tileid] then
             table.insert(tileids_to_delete, tileid)
-            delunit(cursor_unitid)
             MF_cleanremove(cursor_unitid)
             -- @Note: apparently we have to delete then remake all cursors to avoid a visual glitch with multiple cursors.
             -- Reassigning cursor positions without deleting causes the visual glitch for which I have no idea why it happens
@@ -1561,7 +1558,6 @@ function do_subrule_pnouns()
     -- Updating the set of relay indicators
     for indicator_key, indicator in pairs(relay_indicators) do
         if not all_found_relay_indicators[indicator_key] then
-            delunit(indicator)
             MF_cleanremove(indicator)
             relay_indicators[indicator_key] = nil
         end
