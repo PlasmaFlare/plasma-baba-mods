@@ -46,6 +46,50 @@ utils = {
         end
     end,
 
+    parse_object_full = function(object)
+        utils.debug_assert(object)
+        if object <= -200 then
+            local tileid = (-object) - 200
+            local x = tileid % roomsizex
+            local y = math.floor(tileid / roomsizex)
+            return {
+                unitid = 2,
+                name = "empty",
+                x = x,
+                y = y,
+                tileid = tileid,
+                unittype = "object",
+                texttype = 0
+            }
+        elseif object == -1 then
+            return {
+                unitid = 1,
+                name = "level",
+                x = 0,
+                y = 0,
+                tileid = 0,
+                unittype = "object",
+                texttype = 0
+            }
+        else
+            -- local unit = mmf.newObject(object)
+            local unitid = MF_getfixed(object)
+            utils.debug_assert(unitid, "Cannot find unitid of object: "..tostring(object))
+            local unit = mmf.newObject(unitid)
+            utils.debug_assert(unit, "Cannot find unit of object: "..tostring(object))
+
+            return {
+                unitid = unitid,
+                name = unit.strings[NAME],
+                x = unit.values[XPOS],
+                y = unit.values[YPOS],
+                tileid = unit.values[XPOS] + unit.values[YPOS] * roomsizex,
+                unittype = unit.strings[UNITTYPE],
+                texttype = unit.values[TYPE]
+            }
+        end
+    end,
+
     objectstring = function(object)
         local unitid, x, y = utils.parse_object(object)
         if unitid == 1 then

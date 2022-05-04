@@ -1805,6 +1805,22 @@ condlist.feeling = function(params,checkedconds,checkedconds_,cdata)
 			local bcode = b .. "_" .. tostring(a)
 			local prev_GLOBAL_checking_stable = GLOBAL_checking_stable
 			
+			-- @mods(this) - special case to handle THIS pointing to a property
+			local raycast_objects, found_letterwords = parse_this_param_and_get_raycast_infix_units(pname, "feeling")
+			local raycast_props = {}
+			for _, raycast_object in ipairs(raycast_objects) do
+				local ray_unitid = plasma_utils.parse_object(raycast_object)
+				local text_name = get_turning_text_interpretation(ray_unitid)
+				raycast_props[text_name] = true
+			end
+			for _, letterword in ipairs(found_letterwords) do
+				local word = letterword[1]
+				if (string.len(word) > 5) and (string.sub(word, 1, 5) == "text_") then
+                    word = string.sub(letterword[1], 6)
+                end
+				raycast_props[word] = true
+			end
+			
 			if (featureindex[name] ~= nil) then
 				for c,d in ipairs(featureindex[name]) do
 					local drule = d[1]
@@ -1812,7 +1828,7 @@ condlist.feeling = function(params,checkedconds,checkedconds_,cdata)
 					
 					if (checkedconds[tostring(dconds)] == nil) then
 						if (pnot == false) then
-							if (drule[1] == name) and (drule[2] == "is") and (drule[3] == b) then
+							if (drule[1] == name) and (drule[2] == "is") and (drule[3] == b or raycast_props[drule[3]]) then
 								checkedconds[tostring(dconds)] = 1
 								
 								--@mods(stable) special case with "feeling stable". Need this global set to true to refer to

@@ -1308,8 +1308,15 @@ function docode(firstwords)
 									end
 									
 									if (allowed == false) then
+										local wname_pnoun = is_name_text_this(wname)
 										for a,b in ipairs(allowedwords_extra) do
 											if (wname == b) then
+												allowed = true
+												break
+											end
+
+											-- @mods(THIS) - need to use is_name_text_this() to account for "this" being a prefix for all pnouns
+											if wname_pnoun and wname_pnoun == is_name_text_this(b) then
 												allowed = true
 												break
 											end
@@ -1384,6 +1391,7 @@ function docode(firstwords)
 										else
 											if (wtype == 1) then
 												allowedwords = argtype
+												allowedwords_extra = argextra --@mods(this) - needed for special cases of pnoun parsing
 												
 												stage = 1
 												local target = {prefix .. wname, wtype, wid}
@@ -1394,6 +1402,7 @@ function docode(firstwords)
 												newcondgroup = 1
 											elseif (wtype == 3) then
 												allowedwords = {0}
+												allowedwords_extra = argextra
 												local cond = {prefix .. wname, wtype, wid}
 												table.insert(group_conds, {cond, {}})
 											elseif (wtype == 7) then
@@ -1663,7 +1672,7 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 
 								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
 								if not is_param_this_formatted and not is_this_unit_in_stablerule(this_param_id) then
-									register_pnoun_in_cond(this_unitid)
+									register_pnoun_in_cond(this_unitid, condname)
 									local param_id = convert_this_unit_to_param_id(this_unitid)
 									table.insert(newconds, make_this_param(b, param_id))
 								else

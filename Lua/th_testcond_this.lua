@@ -107,6 +107,17 @@ function parse_this_param_and_get_raycast_units(this_param)
     return this_param_name, out, tileids, count, this_unitid
 end
 
+function parse_this_param_and_get_raycast_infix_units(this_param, infix)
+    local this_param_name, param_id = parse_this_param(this_param)
+    local this_unitid = parse_this_unit_from_param_id(param_id)
+    if not this_unitid then
+        return {}, {}
+    end
+    
+    local raycast_objects, found_letterwords = get_raycast_infix_units(this_unitid, infix)
+    return raycast_objects, found_letterwords
+end
+
 local function get_singlular_unitid_from_rule(idgroup, include_letters)
     if include_letters then
         if #idgroup > 1 then -- If this is true, then the word from by ids[1] is actually formed by letters
