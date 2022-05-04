@@ -6,29 +6,17 @@ for name,display in pairs(arrow_property_display) do
 end
 
 arrow_prop_mod_globals = {}
-local function reset_arrow()
+function reset_arrow_properties()
 	arrow_prop_mod_globals = {
 		-- The reason behind this global is mainly to toggle between handling interactions that do not depend on direction ("i.e on conditions") and interactions that do depend on direction
 		-- Prime example: directional you depends on direction when the player input is pressed, but doesn't depend on direction when handling a you object on a defeat object
 		group_arrow_properties = true
 	}
 end
-reset_arrow()
 
 table.insert(mod_hook_functions["level_start"], 
     function()
-        reset_arrow()
 		enable_directional_shift = not PlasmaSettings.get_toggle_setting("disable_dir_shift")
-    end
-)
-table.insert(mod_hook_functions["level_end"], 
-    function()
-        reset_arrow()
-    end
-)
-table.insert(mod_hook_functions["level_win"], 
-    function()
-        reset_arrow()
     end
 )
 

@@ -1051,7 +1051,7 @@ condlist.above = function(params,checkedconds,checkedconds_,cdata)
 			local dist = roomsizey - y - 2
 
 			local is_param_this, raycast_units, raycast_tileids, this_count = parse_this_param_and_get_raycast_units(pname)
-			local ray_unit_is_empty = is_param_this and raycast_units[2] -- <-- this last condition checks if empty is a raycast unit -- @TODO - does this work in the new THIS system?
+			local ray_unit_is_empty = is_param_this and raycast_units[2]
 			
 			if (unitid ~= 1) then
 				if (b ~= "level") or ((b == "level") and (alreadyfound[1] ~= nil)) then

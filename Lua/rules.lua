@@ -587,8 +587,8 @@ function docode(firstwords)
 		this time its on the tail end of the sentence. We can't actively prevent the "baba is you and lonely" from being run through the syntax checker. 
 		But we CAN eliminate it AFTER the syntax checker.
 
-		The basic idea is to detect which sentences are left with a "dangling and". A dangling and is simply an "and" at the end of a sentence. It occurs in the 
-		main game code due to how the parser handles "and"s as potential to have more words appended to it, but without any words actually being appended. This code
+		The basic idea is to remove extra texts from the end of an "incomplete" sentence until we detect a "dangling and". A dangling and is simply an "and" at the end of a sentence. 
+		We detect dangling and's specifically because if you want to extend a "complete" sentence, you have to start by adding "and" first. This code
 		keeps track of any dangling and sentences with the key of calculatesentences id + lhs sentid before last omni "and". But the protocol is this:
 			- If a "full sentence" (sentence without dangling and) has calculatesentences id + lhs sentid combo, the slot with that id combo will be labeled as "disabled"
 				- if the slot already has a dangling and sentence, delete the dangling and sentence and override the slot to be disabled

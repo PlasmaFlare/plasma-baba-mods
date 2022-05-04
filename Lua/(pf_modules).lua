@@ -9,6 +9,8 @@ local module_load_order = {
     "cutpack/word_verify",
     "this/pnoun_group_defs",
     "this/pnoun_raycast_trace",
+    "stable/stablestate",
+    "stable/stabledisplay",
 }
 local pf_module_dir = pf_lua_dir.."modules/"
 

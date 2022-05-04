@@ -5,7 +5,7 @@ local DirTextDisplay = PlasmaModules.load_module("general/directional_text_displ
 
 turning_text_mod_globals = {}
 
-local function clear_turning_text_mod()
+function clear_turning_text_mod()
     turning_units = {}
     is_sound_played = false
 
@@ -17,24 +17,11 @@ local function clear_turning_text_mod()
         tt_executing_code = false,        
     }
 end
-clear_turning_text_mod()
 
 for name,_ in pairs(turning_word_names) do
     DirTextDisplay:register_directional_text("turning_"..name)
 end
 
-
-table.insert( mod_hook_functions["level_start"],
-    function()
-        clear_turning_text_mod()
-    end
-)
-
-table.insert( mod_hook_functions["level_end"],
-    function()
-        clear_turning_text_mod()
-    end
-)
 table.insert( mod_hook_functions["turn_end"], 
     function()
         local play_rule_sound = false
