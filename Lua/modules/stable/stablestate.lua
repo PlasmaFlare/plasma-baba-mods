@@ -133,7 +133,7 @@ function StableState:add_object(object, features)
         self.objects[object] = stableunit
 
         if self.logging then
-            print("[StableState] Added new stableunit: ", utils.objectstring(object))
+            print("[StableState] Added new stableunit: ", object)
         end
         return true
     end
@@ -150,7 +150,7 @@ function StableState:remove_object(object)
         self.objects[object] = nil
 
         if self.logging then
-            print("[StableState] Removed stableunit: ", utils.objectstring(object))
+            print("[StableState] Removed stableunit: ", object)
         end
         return true
     end
@@ -203,6 +203,8 @@ function StableState:print_stable_state(on_stable_undo)
         local unitstring = ""
         if not on_stable_undo then
             unitstring = utils.objectstring(object)
+        else
+            unitstring = object
         end
         print("Object: "..unitstring)
         for ruleid, ruleid_data in pairs(v.ruleids) do
@@ -277,7 +279,7 @@ function StableState:add_rule_with_object(ruleid, feature, object, rule_data)
     }
 
     if self.logging then
-        print("[StableState] Added new stablerule: "..ruleid.."\n\t\t...and linked it with object: "..utils.objectstring(object))
+        print("[StableState] Added new stablerule: "..ruleid.."\n\t\t...and linked it with object: "..object)
     end
 end
 
@@ -290,7 +292,7 @@ function StableState:link_rule_with_object(ruleid, object, rule_data)
     self.rules[ruleid].max_stack_count = math.max(self.rules[ruleid].max_stack_count, rule_data.stack_count)
 
     if self.logging then
-        print("[StableState] Linked stablerule: "..ruleid.."\n\t...with object: "..utils.objectstring(object))
+        print("[StableState] Linked stablerule: "..ruleid.."\n\t...with object: "..object)
     end
 end
 
@@ -305,7 +307,7 @@ function StableState:detach_rule_from_object(ruleid, object)
         self.rules[ruleid] = nil
 
         if self.logging then
-            print("[StableState] Removed stablerule: "..ruleid.."\n\t...in the process of detaching it from object: "..utils.objectstring(object))
+            print("[StableState] Removed stablerule: "..ruleid.."\n\t...in the process of detaching it from object: "..object)
         end
     else
         stablerule.objects[object] = nil
@@ -319,7 +321,7 @@ function StableState:detach_rule_from_object(ruleid, object)
         stablerule.max_stack_count = new_max_stack
 
         if self.logging then
-            print("[StableState] Detached stablerule: "..ruleid.."\n\t...from object: "..utils.objectstring(object))
+            print("[StableState] Detached stablerule: "..ruleid.."\n\t...from object: "..object)
         end
     end
 end

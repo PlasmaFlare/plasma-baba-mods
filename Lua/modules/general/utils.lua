@@ -39,7 +39,6 @@ utils = {
         elseif object == -1 then
             return 1
         else
-            -- local unit = mmf.newObject(object)
             local unitid = MF_getfixed(object)
             utils.debug_assert(unitid, "Cannot find unitid of object: "..tostring(object))
             local unit = mmf.newObject(unitid)

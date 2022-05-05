@@ -203,15 +203,17 @@ function update_stable_state(alreadyrun)
 
     -- Deleting items from stablestate.units and rules
     local deleted_su_key_count = 0
+    deleted_su_key_count = #queued_deleted_su_keys
     for _, object in ipairs(queued_deleted_su_keys) do
 
-        if STABLE_LOGGING then
-            print("Removing queued stableunit object ", utils.objectstring(object))
-        end
+        local stableunit = stablestate:get_stableunit(object)
         local removed = stablestate:remove_object(object)
         if removed then
-            deleted_su_key_count = deleted_su_key_count + 1
             stabledisplay:remove_stableunit(object)
+
+            utils.debug_assert(stableunit)
+            addundo({"stable","remove", object, stableunit})
+            deleted_su_key_count = deleted_su_key_count + 1
         end
     end
     queued_deleted_su_keys = {}
@@ -378,6 +380,10 @@ table.insert(mod_hook_functions["rule_update_after"],
     function()
         if on_stable_undo then
             on_stable_undo = false
+
+            if STABLE_LOGGING then
+                stablestate:print_stable_state(on_stable_undo)
+            end
         end
     end
 )
@@ -390,7 +396,7 @@ function handle_stable_undo(line)
     local stableunit = line[4]
     if action == "add" then
         if STABLE_LOGGING then
-            print("Removing stableunit on undo "..utils.objectstring(object))
+            print("Removing stableunit on undo "..object)
         end
 
         local removed = stablestate:remove_object(object)
@@ -400,7 +406,7 @@ function handle_stable_undo(line)
         end
     elseif action == "remove" then
         if STABLE_LOGGING then
-            print("Restored stableunit on undo "..utils.objectstring(object))
+            print("Restored stableunit on undo "..object)
         end
 
         local restored = stablestate:restore_stableunit(stableunit)
@@ -416,10 +422,6 @@ end
 table.insert(mod_hook_functions["undoed"],
     function()
         on_stable_undo = true
-
-        if STABLE_LOGGING then
-            stablestate:print_stable_state(on_stable_undo)
-        end
     end
 )
 
@@ -428,6 +430,7 @@ table.insert(mod_hook_functions["command_given"],
         if STABLE_LOGGING then
             print("--------turn start--------")
         end
+        on_stable_undo = false
     end
 )
 
