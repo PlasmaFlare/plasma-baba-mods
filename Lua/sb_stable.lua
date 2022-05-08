@@ -24,16 +24,6 @@ local on_stable_undo = false
 
 local STABLE_LOGGING = false
 
---[[ 
-    We need this for a specific glitch that prevents the "Level Saved!" text from displaying. It's because we are calling MF_letterclear("stablerules") in the "always" modhook.
-    Apparently, even though MF_letterclear is supposed to clear all displayed texts for a certain group (the "stablerules"), it also clears the "Level Saved!" text even
-    though "stablerules" is a custom group. So the (hacky) fix is to detect if we are currently playing a level, done by a combination of the mod hook "level_start" and in clear_stable_units
-    (whenever clearunits is called)
-
-    Emphasis on "hacky". Be wary if this fix causes something else to break.-- (10/31/21)
- ]]
-local allow_stablerule_display = false
-
 local utils = PlasmaModules.load_module("general/utils")
 local PlasmaSettings = PlasmaModules.load_module("general/gui")
 local StableState = PlasmaModules.load_module("stable/stablestate")
@@ -47,7 +37,6 @@ GLOBAL_checking_stable = false -- set to true whenever we are finding "X is stab
 
 function clear_stable_mod()
     MF_letterclear("stablerules")
-    allow_stablerule_display = false
 
     stablestate:reset()
     stabledisplay:reset()
@@ -178,7 +167,6 @@ table.insert(mod_hook_functions["level_start"],
     function()
         update_stable_state() -- Only reason we update stable state here is because of a bug where the stable cursor doesn't show at level startup
 
-        allow_stablerule_display = true
         enable_stablerule_display_setting = not PlasmaSettings.get_toggle_setting("disable_stable_display")
     end
 )
@@ -446,10 +434,11 @@ table.insert(mod_hook_functions["turn_end"],
 -- Note: changed from "effect_always" to "always" since effect_always only activates when disable particle effects is off 
 table.insert(mod_hook_functions["always"],
     function()
-        if allow_stablerule_display then
-            stabledisplay:update_stable_indicators()
-            if enable_stablerule_display_setting then
-                stabledisplay:show_stablerule_display()
+        if generaldata.values[MODE] == 0 then
+            if utils.try_call(stabledisplay.update_stable_indicators, stabledisplay) then
+                if enable_stablerule_display_setting then
+                    utils.try_call(stabledisplay.show_stablerule_display, stabledisplay)
+                end
             end
         end
     end

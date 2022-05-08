@@ -161,10 +161,12 @@ table.insert(mod_hook_functions["rule_baserules"],
 -- Note: changed from "effect_always" to "always" since effect_always only activates when disable particle effects is off 
 table.insert(mod_hook_functions["always"],
     function()
-        update_all_cursors(indicator_layer_timer)
-        indicator_layer_timer = indicator_layer_timer + 1
-        if indicator_layer_timer >= TIMER_PERIOD then
-            indicator_layer_timer = 0
+        if (generaldata.values[MODE] == 0) then
+            utils.try_call(update_all_cursors, indicator_layer_timer)
+            indicator_layer_timer = indicator_layer_timer + 1
+            if indicator_layer_timer >= TIMER_PERIOD then
+                indicator_layer_timer = 0
+            end
         end
     end
 )
