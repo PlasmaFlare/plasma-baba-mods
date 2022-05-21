@@ -1,5 +1,5 @@
 local utils = {}
-local DEBUG_TEST = true
+local DEBUG_TEST = false
 
 utils = {
     debug_assert = function(expr, err_msg)
@@ -15,7 +15,7 @@ utils = {
 
     debug_error = function(error_msg)
         if DEBUG_TEST then
-            error(error_msg..debug.traceback())
+            error(error_msg.." "..debug.traceback())
         else
             error(error_msg)
         end
@@ -113,6 +113,23 @@ utils = {
                 unittype = unit.strings[UNITTYPE],
                 texttype = unit.values[TYPE]
             }
+        end
+    end,
+
+    object_exists = function(object)
+        if not object then return false end
+        if object <= -200 then
+            return true
+        elseif object == -1 then
+            return true
+        else
+            local unitid = MF_getfixed(object)
+            if not unitid then return false end
+
+            local unit = mmf.newObject(unitid)
+            if not unit then return false end
+            
+            return true
         end
     end,
 

@@ -9,6 +9,7 @@ local module_load_order = {
     "cutpack/word_verify",
     "this/pnoun_group_defs",
     "this/pnoun_raycast_trace",
+    "this/raycast_bank",
     "stable/stablestate",
     "stable/stabledisplay",
 }

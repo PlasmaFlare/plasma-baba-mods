@@ -1,3 +1,5 @@
+local RaycastBank = PlasmaModules.load_module("this/raycast_bank")
+
 function codecheck(unitid,ox,oy,cdir_,ignore_end_,wordunitresult_)
 	--[[ 
 		@mods(turning text) - Override reason: provide a hook to reinterpret turning text names based on their direction
@@ -1667,11 +1669,11 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 							local alreadyused = {}
 							
 							local this_param_name, this_param_id = parse_this_param(b)
-							if this_param_name and not is_this_unit_in_stablerule(this_param_id) then
+							if this_param_name and not RaycastBank:is_valid_ray_id(this_param_id) then
 								local this_unitid = this_params_in_conds[cond][a]
 
 								local is_param_this_formatted,_,_,_,this_param_id = parse_this_param_and_get_raycast_units(b)
-								if not is_param_this_formatted and not is_this_unit_in_stablerule(this_param_id) then
+								if not is_param_this_formatted and not RaycastBank:is_valid_ray_id(this_param_id) then
 									register_pnoun_in_cond(this_unitid, condname)
 									local param_id = convert_this_unit_to_param_id(this_unitid)
 									table.insert(newconds, make_this_param(b, param_id))

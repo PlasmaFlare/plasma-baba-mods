@@ -19,7 +19,6 @@ formatobjlist()
 -- @TODO: would it be better if the su_key was deleted instantly?
 local queued_deleted_su_keys = {}
     
-local STABLE_THIS_ID_BASE = -50
 local on_stable_undo = false
 
 local STABLE_LOGGING = false
@@ -58,22 +57,6 @@ function on_delete_stableunit(unitid)
         table.insert(queued_deleted_su_keys, object)
     end
 end
-
-function get_stable_this_raycast_units(stable_this_id)
-    if stablestate.stable_this_raycast_units[stable_this_id] then
-        return stablestate.stable_this_raycast_units[stable_this_id].objects
-    else
-        return {}
-    end
-end
-
-function get_stable_this_raycast_pos(stable_this_id)
-    return stablestate.stable_this_raycast_units[stable_this_id].tileids
-end
-
-function is_this_unit_in_stablerule(this_unitid)
-    return tonumber(this_unitid) and tonumber(this_unitid) <= STABLE_THIS_ID_BASE
-end 
 
 function has_stable_tag(tags)
     for i, tag in ipairs(tags) do
@@ -387,7 +370,7 @@ function handle_stable_undo(line)
             print("Removing stableunit on undo "..object)
         end
 
-        local removed = stablestate:remove_object(object)
+        local removed = stablestate:remove_object(object, true)
         if removed then
             stabledisplay:remove_stableunit(object)
             updatecode = 1

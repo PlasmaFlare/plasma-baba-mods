@@ -9,9 +9,9 @@ end
 reset_this_mod_globals()
 
 local utils = PlasmaModules.load_module("general/utils")
-local DirTextDisplay = PlasmaModules.load_module("general/directional_text_display")
 local UndoAnalyzer = PlasmaModules.load_module("general/undo_analyzer") 
 local RaycastTrace = PlasmaModules.load_module("this/pnoun_raycast_trace")
+local RaycastBank = PlasmaModules.load_module("this/raycast_bank")
 local Pnoun = PlasmaModules.load_module("this/pnoun_group_defs")
 
 local raycast_trace_tracker = RaycastTrace:new()
@@ -950,8 +950,8 @@ function check_updatecode_status_from_raycasting()
 end
 
 function get_raycast_objects(this_text_unitid)
-    if is_this_unit_in_stablerule(this_text_unitid) then
-        return get_stable_this_raycast_units(tonumber(this_text_unitid))
+    if RaycastBank:is_valid_ray_id(this_text_unitid) then
+        return RaycastBank:get_raycast_objects(this_text_unitid)
     end
 
     if raycast_data[this_text_unitid] == nil then
@@ -962,8 +962,8 @@ function get_raycast_objects(this_text_unitid)
 end
 
 function get_raycast_tileid(this_text_unitid)
-    if is_this_unit_in_stablerule(this_text_unitid) then
-        return get_stable_this_raycast_pos(tonumber(this_text_unitid))
+    if RaycastBank:is_valid_ray_id(this_text_unitid) then
+        return RaycastBank:get_raycast_tileids(this_text_unitid)
     end
 
     return raycast_data[this_text_unitid].raycast_positions
