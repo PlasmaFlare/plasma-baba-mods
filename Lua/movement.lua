@@ -541,31 +541,17 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 						table.insert(moving_units, {unitid = data.unitid, reason = data.reason, state = data.state, moves = data.moves, dir = unit.values[DIR], xpos = unit.values[XPOS], ypos = unit.values[YPOS]})
 					end
 				else
-					table.insert(moving_units, {unitid = data.unitid, reason = data.reason, state = data.state, moves = data.moves, dir = data.dir, xpos = -1, ypos = -1})
+					-- MF_alert("Still moving: " .. tostring(data.xpos) .. ", " .. tostring(data.ypos) .. ", " .. tostring(data.moves))
+					table.insert(moving_units, {unitid = data.unitid, reason = data.reason, state = data.state, moves = data.moves, dir = data.dir, xpos = data.xpos, ypos = data.ypos})
 				end
 			end
 			
 			still_moving = {}
 		end
-		
-		local unitcount = #moving_units
-			
-		for i,data in ipairs(moving_units) do
-			if (i <= unitcount) then
-				if (data.unitid == 2) and (data.xpos == -1) and (data.ypos == -1) then
-					local positions = getemptytiles()
-					
-					for a,b in ipairs(positions) do
-						local x,y = b[1],b[2]
-						table.insert(moving_units, {unitid = 2, reason = data.reason, state = data.state, moves = data.moves, dir = data.dir, xpos = x, ypos = y})
-					end
-				end
-			else
-				break
-			end
-		end
+
 		add_moving_units_to_exclude_from_cut_blocking(moving_units)
 		
+		local unitcount = #moving_units
 		local done = false
 		local state = 0
 		
@@ -809,6 +795,11 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 									end
 									
 									table.insert(movelist, {data.unitid,ox,oy,olddir,specials,x,y})
+									if (data.unitid == 2) and (data.moves > 1) then
+										data.xpos = x + ox
+										data.ypos = y + oy
+										data.dir = dir
+									end
 									--move(data.unitid,ox,oy,dir,specials)
 									
 									local swapped = {}
@@ -991,38 +982,33 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 						data.state = 10
 					end
 					
-					--[[
-					local tunit = mmf.newObject(data.unitid)
-					
-					MF_alert(tunit.strings[UNITNAME] .. " (" .. tostring(data.unitid) .. ") is solved, " .. data.reason .. ", take " .. tostring(take) .. ", state " .. tostring(data.state) .. ", moves " .. tostring(data.moves))
-					]]--
+					-- MF_alert("(" .. tostring(data.unitid) .. ") solved, " .. data.reason .. ", t " .. tostring(take) .. ", s " .. tostring(data.state) .. ", m " .. tostring(data.moves) .. ", " .. tostring(data.xpos) .. ", " .. tostring(data.ypos))
 					
 					if (data.moves == 0) then
 						--MF_alert(tunit.strings[UNITNAME] .. " - removed from queue")
 						table.insert(delete_moving_units, i)
 					else
-						if (data.unitid ~= 2) or ((data.unitid == 2) and (data.xpos == -1) and (data.ypos == -1)) then
-							if enable_directional_shift then
-								--@Turning Text(shift)
-								table.insert(still_moving, {
-									unitid = data.unitid, 
-									reason = data.reason, 
-									state = data.state, 
-									moves = data.moves, 
-									dir = data.dir, 
-									xpos = data.xpos, 
-									ypos = data.ypos,
+						if enable_directional_shift then
+							--@Turning Text(shift)
+							table.insert(still_moving, {
+								unitid = data.unitid, 
+								reason = data.reason, 
+								state = data.state, 
+								moves = data.moves, 
+								dir = data.dir, 
+								xpos = data.xpos, 
+								ypos = data.ypos,
 
-									horsdir = data.horsdir,
-									vertdir = data.vertdir,
-									horsmove = data.horsmove,
-									vertmove = data.vertmove,
-									dirshiftstate = data.dirshiftstate
-								})
-							else
-								table.insert(still_moving, {unitid = data.unitid, reason = data.reason, state = data.state, moves = data.moves, dir = data.dir, xpos = data.xpos, ypos = data.ypos})
-							end
+								horsdir = data.horsdir,
+								vertdir = data.vertdir,
+								horsmove = data.horsmove,
+								vertmove = data.vertmove,
+								dirshiftstate = data.dirshiftstate
+							})
+						else
+							table.insert(still_moving, {unitid = data.unitid, reason = data.reason, state = data.state, moves = data.moves, dir = data.dir, xpos = data.xpos, ypos = data.ypos})
 						end
+						
 						--MF_alert(tunit.strings[UNITNAME] .. " - removed from queue")
 						table.insert(delete_moving_units, i)
 					end

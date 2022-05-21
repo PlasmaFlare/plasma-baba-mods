@@ -758,7 +758,7 @@ condlist.seeing = function(params,checkedconds,checkedconds_,cdata)
 	local solid = 0
 	
 	if (checkedconds_ ~= nil) and (checkedconds_[tostring(conds) .. "_s_"] ~= nil) then
-		return false,checkedconds
+		return false,checkedconds,true
 	end
 	
 	if (#params > 0) and (dir ~= 4) then
@@ -898,12 +898,12 @@ condlist.seeing = function(params,checkedconds,checkedconds_,cdata)
 		end
 	elseif (#params == 0) then
 		print("no parameters given!")
-		return false,checkedconds
+		return false,checkedconds,true
 	else
-		return false,checkedconds
+		return false,checkedconds,true
 	end
 	
-	return (allfound == #params),checkedconds
+	return (allfound == #params),checkedconds,true
 end
 
 condlist.without = function(params,checkedconds,checkedconds_,cdata)
@@ -1873,8 +1873,8 @@ condlist.feeling = function(params,checkedconds,checkedconds_,cdata)
 			GLOBAL_checking_stable = prev_GLOBAL_checking_stable
 		end
 	else
-		return false,checkedconds
+		return false,checkedconds,true
 	end
 	
-	return (allfound == #params),checkedconds
+	return (allfound == #params),checkedconds,true
 end

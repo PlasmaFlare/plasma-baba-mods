@@ -88,6 +88,12 @@ function undo()
 						
 						--MF_alert("Trying to create " .. name .. ", " .. tostring(unitreference[name]))
 						unitname = unitreference[name]
+						if (name == "level") and (unitreference[name] ~= "level") then
+							unitname = "level"
+							unitreference["level"] = "level"
+							MF_alert("ALERT! Unitreference for level was wrong!")
+						end
+						
 						unitid = MF_emptycreate(unitname,x,y)
 						
 						local unit = mmf.newObject(unitid)
@@ -216,6 +222,7 @@ function undo()
 					--print(unit.className .. ", " .. tostring(unitid) .. ", " .. tostring(line[3]) .. ", " .. unit.strings[UNITNAME])
 					
 					addunit(unitid,true)
+					unit.originalname = line[9]
 					
 					if (unit.values[TILING] == 1) then
 						dynamic(unitid)

@@ -514,7 +514,7 @@ function block(small_)
 				end
 				
 				if (ufloat ~= 2) and (ded == false) then
-					addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,ufloat})
+					addundo({"done",unit.strings[UNITNAME],unit.values[XPOS],unit.values[YPOS],unit.values[DIR],unit.values[ID],unit.fixed,ufloat,unit.originalname})
 				end
 				
 				delunit(unit.fixed)
@@ -1298,6 +1298,9 @@ function levelblock()
 		local emptybonus = false
 		local emptydone = false
 		
+		local ewintiles = {}
+		local eendtiles = {}
+		
 		local levelteledone = 0
 		
 		if (#emptythings > 0) then
@@ -1464,6 +1467,14 @@ function levelblock()
 								if canend and ((hasfeature("level","is","you",1,i,j) ~= nil) or (hasfeature("level","is","you2",1,i,j) ~= nil) or (hasfeature("level","is","3d",1,i,j) ~= nil)) and floating_level(2,i,j) then
 									ending = true
 								end
+								
+								if victory then
+									table.insert(ewintiles, {i,j})
+								end
+								
+								if ending then
+									table.insert(eendtiles, {i,j})
+								end
 							elseif (rule[2] == "eat") and (rule[3] == "level") and (lsafe == false) then
 								if testcond(conds,2,i,j) and floating_level(2,i,j) then
 									local pmult,sound = checkeffecthistory("eat")
@@ -1568,11 +1579,16 @@ function levelblock()
 							table.insert(edelthese, {i,j})
 						end
 						
-						if bonus and (esafe == false) and alive then
-							setsoundname("turn",2)
+						if bonus and (esafe == false) then
+							if alive then
+								setsoundname("turn",2)
+								
+								if (math.random(1,4) == 1) then
+									MF_particles("win",i,j,1,4,2,1,1)
+								end
 							
-							if (math.random(1,4) == 1) then
-								MF_particles("win",i,j,1,4,2,1,1)
+								alive = false
+								table.insert(edelthese, {i,j})
 							end
 							
 							if (emptybonus == false) then
@@ -1581,9 +1597,6 @@ function levelblock()
 								addundo({"bonus",1})
 								emptybonus = true
 							end
-							
-							alive = false
-							table.insert(edelthese, {i,j})
 						end
 						
 						if victory and alive then
@@ -1620,6 +1633,36 @@ function levelblock()
 		
 		for a,b in ipairs(edelthese) do
 			delete(2,b[1],b[2])
+		end
+		
+		if (#ewintiles > 0) then
+			for a,b in ipairs(ewintiles) do
+				local i,j = b[1],b[2]
+				local tileid = i + j * roomsizex
+				if (unitmap[tileid] == nil) or (#unitmap[tileid] == 0) then
+					MF_win()
+					return
+				end
+			end
+		end
+		
+		if (#eendtiles > 0) and (generaldata.strings[WORLD] ~= generaldata.strings[BASEWORLD]) then
+			for a,b in ipairs(eendtiles) do
+				local i,j = b[1],b[2]
+				local tileid = i + j * roomsizex
+				if (unitmap[tileid] == nil) or (#unitmap[tileid] == 0) then
+					if (editor.values[INEDITOR] ~= 0) then
+						MF_end_single()
+						MF_win()
+						return
+					else
+						MF_end_single()
+						MF_win()
+						MF_credits(1)
+						return
+					end
+				end
+			end
 		end
 		
 		if (#things > 0) then
@@ -1718,6 +1761,7 @@ function levelblock()
 						local defeats = findfeature(nil,"is","defeat")
 						local wins = findfeature(nil,"is","win")
 						local ends = findfeature(nil,"is","end")
+						local bonus = findfeature(nil,"is","bonus")
 						
 						if (defeats ~= nil) then
 							for a,b in ipairs(defeats) do
@@ -1745,7 +1789,7 @@ function levelblock()
 							end
 						end
 						
-						if ((#findallfeature("empty","is","defeat") > 0) or (#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
+						if ((#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
 							local is_guarded = ack_endangered_unit(1)
 							if not is_guarded then
 								destroylevel()
@@ -1755,6 +1799,7 @@ function levelblock()
 						
 						local canwin = false
 						local canend = false
+						local canbonus = false
 						
 						if (wins ~= nil) then
 							for a,b in ipairs(wins) do
@@ -1792,12 +1837,39 @@ function levelblock()
 							end
 						end
 						
-						if ((#findallfeature("empty","is","win") > 0) or (#findallfeature("empty","is","win") > 0)) and floating_level(2) then
+						if (bonus ~= nil) then
+							for a,b in ipairs(bonus) do
+								local allbonus = findall(b)
+								
+								if (#allbonus > 0) then
+									for c,d in ipairs(allbonus) do
+										if (issafe(d) == false) and floating_level(d) then
+											local unit = mmf.newObject(d)
+											
+											local pmult,sound = checkeffecthistory("bonus")
+											MF_particles("bonus",unit.values[XPOS],unit.values[YPOS],10 * pmult,4,1,1,1)
+											MF_playsound("bonus")
+											canbonus = true
+											generaldata.values[SHAKE] = 2
+											setsoundname("removal",2,sound)
+											delete(d)
+										end
+									end
+								end
+							end
+						end
+						
+						if (#findallfeature("empty","is","win") > 0) and floating_level(2) then
 							canwin = true
 						end
 						
-						if ((#findallfeature("empty","is","end") > 0) or (#findallfeature("empty","is","end") > 0)) and floating_level(2) then
+						if (#findallfeature("empty","is","end") > 0) and floating_level(2) then
 							canend = true
+						end
+						
+						if canbonus then
+							MF_bonus(1)
+							addundo({"bonus",1})
 						end
 						
 						if canwin then
@@ -2166,6 +2238,8 @@ function levelblock()
 						local yous2 = findfeature(nil,"is","you2")
 						local yous3 = findfeature(nil,"is","3d")
 						
+						local bonusget = false
+						
 						if (yous == nil) then
 							yous = {}
 						end
@@ -2189,13 +2263,19 @@ function levelblock()
 									
 									if (#allyous > 0) then
 										for c,d in ipairs(allyous) do
-											if (issafe(d) == false) and floating_level(d) then
-												destroylevel("bonus")
-												return
+											if floating_level(d) then
+												bonusget = true
+												
+												if (lsafe == false) then
+													destroylevel("bonus")
+													return
+												end
 											end
 										end
 									end
 								elseif testcond(b[2],1) then
+									bonusget = true
+									
 									if (lsafe == false) then
 										destroylevel("bonus")
 										return
@@ -2204,9 +2284,19 @@ function levelblock()
 							end
 						end
 						
-						if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) and (lsafe == false) then
-							destroylevel("bonus")
-							return
+						if ((#findallfeature("empty","is","you") > 0) or (#findallfeature("empty","is","you2") > 0) or (#findallfeature("empty","is","3d") > 0)) and floating_level(2) then
+							bonusget = true
+							
+							if (lsafe == false) then
+								destroylevel("bonus")
+								return
+							end
+						end
+						
+						if bonusget then
+							MF_playsound("bonus")
+							MF_bonus(1)
+							addundo({"bonus",1})
 						end
 					elseif (action == "win") then
 						local yous = findfeature(nil,"is","you")

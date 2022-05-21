@@ -214,14 +214,12 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						table.insert(sents[step], v)
 						maxw = math.max(maxw, v[2])
 
-						if (currw == 0) then
-							currw = v[2]
+						if (v[2] > 1) then
+							currw = math.max(currw, v[2] + 1)
 						end
 					end
 				end
 				
-				currw = math.max(currw - 1, 0)
-
 				if (sharedtype >= 0) and (prevsharedtype >= 0) and (#words > 0) and (maxw == 1) and (prevmaxw == 1) and (currw == 0) and not br_calling_calculatesentences_branch then
 					if ((sharedtype == 0) and (prevsharedtype == 0)) or ((sharedtype == 1) and (prevsharedtype == 1)) or ((sharedtype == 2) and (prevsharedtype == 2)) or ((sharedtype == 0) and (prevsharedtype == 2)) then
 						done = true
@@ -231,6 +229,8 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 					end
 				end
 
+				currw = math.max(currw - 1, 0)
+				
 				prevsharedtype = sharedtype
 				prevmaxw = maxw
 				
@@ -865,6 +865,10 @@ function docode(firstwords)
 							local tiletype = s[2]
 							local tileid = s[3][1]
 							local tilewidth = s[4]
+							
+							if (string.sub(tilename, 1, 10) == "text_text_") then
+								tilename = string.sub(tilename, 6)
+							end
 							
 							local wordtile = false
 							
