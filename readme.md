@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: 464/465 on PC**
+**Current compatable Baba Is You version: 468c on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,13 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.7** (5/23/22)
+  - Updated for Version 468C
+  - [THIS] Special handling of parsing edge cases with THIS [Issue#8](https://github.com/PlasmaFlare/plasma-baba-mods/issues/8)
+  - [STABLE] Heavy refactoring of STABLE code to modularize it and make it work better with the mega modpack. (Beware of bugs if any)
+  - [THIS + STABLE] Fixed edge cases with `baba near THIS(orb) is X` + `baba is stable`. 
+    - Edge case 1: lua error when orb gets destroyed
+    - Edge case 2: rule not working when an undo action forms the above rule
 - **1.5.6** (4/10/22)
   - [STABLE]: Fixed stacked stablerules not working properly
 - **1.5.5** (3/28/22)
