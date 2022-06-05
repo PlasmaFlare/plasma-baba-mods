@@ -1274,6 +1274,7 @@ function levelblock()
 	local delthese = {}
 	local edelthese = {}
 	local emptythings = {}
+	local level_obj = plasma_utils.make_object(1)
 	
 	if (destroylevel_check == false) then
 		if (featureindex["level"] ~= nil) then
@@ -1479,7 +1480,7 @@ function levelblock()
 								if testcond(conds,2,i,j) and floating_level(2,i,j) then
 									local pmult,sound = checkeffecthistory("eat")
 									setsoundname("removal",1,sound)
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
@@ -1692,7 +1693,7 @@ function levelblock()
 									if (d == "level") and (#unitlists["level"] > 0) and (lsafe == false) then
 										local pmult,sound = checkeffecthistory("eat")
 										setsoundname("removal",1,sound)
-										local is_guarded = ack_endangered_unit(1)
+										local is_guarded = ack_endangered_unit(level_obj)
 										if not is_guarded then
 											destroylevel()
 											return
@@ -1733,7 +1734,7 @@ function levelblock()
 						if (#dothese > 0) and (lsafe == false) then
 							local pmult,sound = checkeffecthistory("eat")
 							setsoundname("removal",1,sound)
-							local is_guarded = ack_endangered_unit(1)
+							local is_guarded = ack_endangered_unit(level_obj)
 							if not is_guarded then
 								destroylevel()
 								return
@@ -1771,7 +1772,7 @@ function levelblock()
 									if (#allyous > 0) then
 										for c,d in ipairs(allyous) do
 											if (issafe(1) == false) and floating_level(d) then
-												local is_guarded = ack_endangered_unit(1)
+												local is_guarded = ack_endangered_unit(level_obj)
 												if not is_guarded then
 													destroylevel()
 													return
@@ -1780,7 +1781,7 @@ function levelblock()
 										end
 									end
 								elseif testcond(b[2],1) and (lsafe == false) then
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
@@ -1790,7 +1791,7 @@ function levelblock()
 						end
 						
 						if ((#findallfeature("empty","is","defeat") > 0)) and floating_level(2) and (lsafe == false) then
-							local is_guarded = ack_endangered_unit(1)
+							local is_guarded = ack_endangered_unit(level_obj)
 							if not is_guarded then
 								destroylevel()
 								return
@@ -1929,7 +1930,7 @@ function levelblock()
 										end
 									end
 								elseif testcond(b[2],1) and (lsafe == false) then
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
@@ -1945,7 +1946,7 @@ function levelblock()
 							end
 							
 							if floating_level(unit.fixed) and (lsafe == false) then
-								local is_guarded = ack_endangered_unit(1)
+								local is_guarded = ack_endangered_unit(level_obj)
 								if not is_guarded then
 									destroylevel()
 									return
@@ -1994,7 +1995,7 @@ function levelblock()
 								end
 								
 								if doit then
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
@@ -2004,7 +2005,7 @@ function levelblock()
 						end
 						
 						if (#findallfeature("empty","is","hot") > 0) and floating_level(2) and (lsafe == false) then
-							local is_guarded = ack_endangered_unit(1)
+							local is_guarded = ack_endangered_unit(level_obj)
 							if not is_guarded then
 								destroylevel()
 								return
@@ -2037,7 +2038,7 @@ function levelblock()
 								
 								if doit then
 									if (lsafe == false) then
-										local is_guarded = ack_endangered_unit(1)
+										local is_guarded = ack_endangered_unit(level_obj)
 										if not is_guarded then
 											destroylevel()
 											return
@@ -2064,7 +2065,7 @@ function levelblock()
 						end
 						
 						if (#findallfeature("empty","is","shut") > 0) and floating_level(2) and (lsafe == false) then
-							local is_guarded = ack_endangered_unit(1)
+							local is_guarded = ack_endangered_unit(level_obj)
 							if not is_guarded then
 								destroylevel()
 								return
@@ -2097,7 +2098,7 @@ function levelblock()
 								
 								if doit then
 									if (lsafe == false) then
-										local is_guarded = ack_endangered_unit(1)
+										local is_guarded = ack_endangered_unit(level_obj)
 										if not is_guarded then
 											destroylevel()
 											return
@@ -2124,7 +2125,7 @@ function levelblock()
 						end
 						
 						if (#findallfeature("empty","is","open") > 0) and floating_level(2) and (lsafe == false) then
-							local is_guarded = ack_endangered_unit(1)
+							local is_guarded = ack_endangered_unit(level_obj)
 							if not is_guarded then
 								destroylevel()
 								return
@@ -2142,7 +2143,7 @@ function levelblock()
 							
 							if floating_level(unit.fixed) then
 								if (lsafe == false) then
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
@@ -2183,7 +2184,7 @@ function levelblock()
 							
 							if floating_level(unit.fixed) then
 								if (lsafe == false) then
-									local is_guarded = ack_endangered_unit(1)
+									local is_guarded = ack_endangered_unit(level_obj)
 									if not is_guarded then
 										destroylevel()
 										return
