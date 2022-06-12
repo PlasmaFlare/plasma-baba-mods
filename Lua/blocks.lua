@@ -312,8 +312,6 @@ function moveblock(onlystartblock_)
 											end
 										end
 										
-										local uname = getname(newunit)
-										
 										if (#undowordrelatedunits > 0) then
 											for a,b in ipairs(undowordrelatedunits) do
 												if (b == bline[6]) then
@@ -348,6 +346,7 @@ function moveblock(onlystartblock_)
 		for i,unitid in ipairs(istele) do
 			if (isgone(unitid) == false) then
 				local unit = mmf.newObject(unitid)
+				-- METATEXT
 				local name = getname(unit)
 				local x,y = unit.values[XPOS],unit.values[YPOS]
 			
@@ -359,7 +358,7 @@ function moveblock(onlystartblock_)
 					for i,v in ipairs(targets) do
 						local vunit = mmf.newObject(v)
 						local thistype = vunit.strings[UNITTYPE]
-						local vname = getname(vunit)
+						local vname = vunit.strings[UNITNAME]
 						
 						local targetvalid = isgone(v)
 						local targetstill = hasfeature(vname,"is","still",v,x,y)
@@ -528,7 +527,7 @@ function block(small_)
 
 		for id,unit in ipairs(ismore) do
 			local x,y = unit.values[XPOS],unit.values[YPOS]
-			local name = getname(unit)
+			local name = unit.strings[UNITNAME]
 			local doblocks = {}
 			
 			for i=1,4 do
@@ -546,7 +545,7 @@ function block(small_)
 							valid = false
 						elseif (b ~= 0) and (b ~= -1) then
 							local bunit = mmf.newObject(b)
-							local obsname = getname(bunit)
+							local obsname = bunit.strings[UNITNAME]
 							
 							local obsstop = hasfeature(obsname,"is","stop",b,x+ox,y+oy)
 							local obspush = hasfeature(obsname,"is","push",b,x+ox,y+oy)
@@ -735,7 +734,7 @@ function block(small_)
 		
 		-- @mods(turning text)
 		arrow_prop_mod_globals.group_arrow_properties = false
-		local name = getname(unit)
+		local name = unit.strings[UNITNAME]
 		local count = hasfeature_count(name,"is","boom",unit.fixed,ux,uy)
 		local dim = math.min(count - 1, math.max(roomsizex, roomsizey))
 		arrow_prop_mod_globals.group_arrow_properties = true
@@ -936,7 +935,7 @@ function block(small_)
 							if (d ~= unit.fixed) then
 								if floating(d,unit.fixed,x,y) then
 									local kunit = mmf.newObject(d)
-									local kname = getname(kunit)
+									local kname = kunit.strings[UNITNAME]
 									
 									local weakskull = hasfeature(kname,"is","weak",d)
 									
