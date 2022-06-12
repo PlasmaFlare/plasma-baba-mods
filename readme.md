@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: 468c on PC**
+**Current compatable Baba Is You version: 469 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,10 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.8** (6/12/22)
+  - Updated for Version 469
+  - [GUARD] Fixed level + guard not working
+  - Added a "Restore Default Settings" button to the modpack settings menu.
 - **1.5.7** (5/23/22)
   - Updated for Version 468C
   - [THIS] Special handling of parsing edge cases with THIS [Issue#8](https://github.com/PlasmaFlare/plasma-baba-mods/issues/8)
