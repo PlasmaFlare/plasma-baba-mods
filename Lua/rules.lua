@@ -1539,8 +1539,9 @@ end
 
 function addoption(option,conds_,ids,visible,notrule,tags_)
 	--[[ 
-		@mods(this) - Override reason: handle "not this is X. Also treat "this<string>" as part of 
-			featureindex["this"]
+		@mods(this) - Override reason: hook for registering any pnoun rules in th_text_this.lua.
+			Also, prevent a few things that addoption usually does when adding a pnoun rule. These include processing
+			"not THIS is X" and displaying the rule in the pause menu.
 	 ]]
 	 --MF_alert(option[1] .. ", " .. option[2] .. ", " .. option[3])
 
@@ -1562,16 +1563,9 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 	
 	if (#option == 3) then
 		local rule = {option,conds,ids,tags}
-		--[[ 
-			Defer processing any sentences with "this" as target or effect.
-			The reason that we do this is if we insert "not this is blue" into featureindex before we call do_subrule_pnouns(), it will evaluate as "anything that isn't the non-text object called "this" is blue".
-			This would make everything blue, since everything on the level isn't this hypothetical-non-text-THIS-object. 
-		]]
-		if is_name_text_this(option[1]) or is_name_text_this(option[3]) or is_name_text_this(option[3], true) then
-			defer_addoption_with_this(rule)
-			return
-		elseif is_name_text_this(option[1], true) then
-			defer_addoption_with_this(rule)
+
+		local allow_add_to_featureindex, is_pnoun_target, is_pnoun_effect, is_pnoun_rule = scan_added_feature_for_pnoun_rule(rule, visual)
+		if not allow_add_to_featureindex then
 			return
 		end
 
@@ -1600,9 +1594,17 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 			table.insert(featureindex[target], rule)
 		end
 		
-		if visual then
+		if visual and not is_pnoun_rule then
 			local visualrule = copyrule(rule)
 			table.insert(visualfeatures, visualrule)
+		end
+
+		-- @mods(this) - prevent populating the featureindex with pnoun rules. Each pnoun isn't an object, but a reference to an object.
+		if is_pnoun_effect then
+			featureindex[effect] = {}
+		end
+		if is_pnoun_target then
+			featureindex[target] = {}
 		end
 		
 		local groupcond = false
@@ -1714,6 +1716,12 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 
 		local targetnot = string.sub(target, 1, 4)
 		local targetnot_ = string.sub(target, 5)
+		
+		-- @mods(this) - odd but mininal way to prevent "not this is X" from applying X to everything but a theoretical "this" object
+		if is_pnoun_rule then
+			targetnot = ""
+			targetnot_ = ""
+		end
 		
 		if (targetnot == "not ") and (objectlist[targetnot_] ~= nil) and (string.sub(targetnot_, 1, 5) ~= "group") and (string.sub(effect, 1, 5) ~= "group") and (string.sub(effect, 1, 9) ~= "not group") or (((string.sub(effect, 1, 5) == "group") or (string.sub(effect, 1, 9) == "not group")) and (targetnot_ == "all")) then
 			if (targetnot_ ~= "all") then
@@ -1925,13 +1933,9 @@ function code(alreadyrun_)
 				if BRANCHING_TEXT_LOGGING then
 					print("<<<<<<<<<<<<<end>")
 				end
-				subrules()
-				
-				-- @mods(THIS) - this global is to indicate to findnoun() to return false on any pointer noun. (See defer_addoption_with_this for why we do this)
-				this_mod_globals.doing_group_rules = true
-				grouprules()
-				this_mod_globals.doing_group_rules = false
 				do_subrule_pnouns()
+				subrules()
+				grouprules()
 				playrulesound = postrules(alreadyrun)
 				updatecode = 0
 				
