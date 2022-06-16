@@ -2282,6 +2282,7 @@ function postrules(alreadyrun_)
 				-- @mods(stable) - to handle cases of "X is X" and "X is not Y" directly modifying the featureindex with conditions,
 				-- the general rule is this: Normal features can only modify other normal features. Stable features can only modify other stable features.
 				-- There cannot be a crisscross between normal and stable features. - 3/6/22
+				-- Update: we allow one exception. If "X is not stable" is a stablerule, it should cancel out the normal rule "X is stable"
 				local not_rule_has_stable_tag = has_stable_tag(tags)
 				
 				for e,g in ipairs(targetlists) do
@@ -2289,7 +2290,7 @@ function postrules(alreadyrun_)
 						local same = comparerules(newbaserule,b[1])
 						local target_rule_has_stable_tag = has_stable_tag(b[4])
 						
-						if (same or ((g == "write") and (target == b[1][1]) and (b[1][2] == "write"))) and (not_rule_has_stable_tag == target_rule_has_stable_tag) then
+						if (same or ((g == "write") and (target == b[1][1]) and (b[1][2] == "write"))) and (not_rule_has_stable_tag == target_rule_has_stable_tag or newbaserule == "stable") then
 							--MF_alert(rule[1] .. ", " .. rule[2] .. ", " .. neweffect .. ": " .. b[1][1] .. ", " .. b[1][2] .. ", " .. b[1][3])
 							local theseconds = b[2]
 							

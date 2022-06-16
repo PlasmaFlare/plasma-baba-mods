@@ -1298,10 +1298,8 @@ local function process_pnoun_features(pnoun_features, feature_extradata, filter_
                     end
 
                     if filter_property_func(rulename) and unit_details.texttype ~= 5 then
-                        if rulename ~= "empty" then
-                            if unit_details.unittype == "text" then
-                                this_mod_globals.active_this_property_text[unit_details.unitid] = true
-                            end
+                        if unit_details.unittype == "text" then
+                            this_mod_globals.active_this_property_text[unit_details.unitid] = true
                         end
 
                         if prop_isnot then
