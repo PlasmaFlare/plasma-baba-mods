@@ -155,7 +155,7 @@ table.insert(mod_hook_functions["level_start"],
 )
 
 function is_stableunit(unitid, x, y)
-    local object = utils.make_object(unitid, x, y)
+    local object = utils.make_object(unitid, x, y, true)
     return stablestate.objects[object] ~= nil
 end
 
