@@ -41,6 +41,11 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.9** (7/12/22)
+  - [CUT/PACK]: Fixed "baba is cut and weak" giving an error when cutting a text
+  - [THIS]: Fixed many this + subrule cases (See: https://github.com/PlasmaFlare/plasma-baba-mods/issues/6)
+  - [THIS]: Fixed "X is THIS(text_empty)" not lighting up text_empty
+  - [STABLE]: If "X is group" is a stablerule and you form "group is not stable", X is still stable. This is now fixed.
 - **1.5.8** (6/12/22)
   - Updated for Version 469
   - [GUARD] Fixed level + guard not working
