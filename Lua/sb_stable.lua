@@ -294,7 +294,7 @@ local function add_stable_rules()
                 end
             end
 
-            addoption(feature[1], feature[2], feature[3], false, nil, feature[4], true)
+            addoption(feature[1], feature[2], feature[3], false, nil, feature[4])
             
             if STABLE_LOGGING then
                 print("Inserted stablerule into featureindex: "..utils.serialize_feature(feature), "Stack count: "..s)
