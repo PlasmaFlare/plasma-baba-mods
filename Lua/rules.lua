@@ -2559,6 +2559,15 @@ function subrules()
 			local rule = rules[1]
 			local conds = rules[2]
 			local tags = rules[4]
+
+			--[[ 
+				@mods(THIS): basegame MIMIC doesn't copy the text ids of "X mimic Y" to its subrules.
+				It's needed in THIS for the following:
+				- If "THIS mimic X is blue", then the subrule generated is "THIS is blue".
+				- In order to process "THIS is blue", we need the unitid of the THIS text to figure out where to start raycasting.
+				- But since the unitid of THIS wasn't copied over to the subrule, we cannot process "THIS is blue"
+			]]
+			local mimic_ids = rules[3]
 			
 			if (rule[2] == "mimic" ) then
 				local object = rule[1]
@@ -2612,6 +2621,7 @@ function subrules()
 						
 						if (trule[1] == target) and (trule[2] ~= "mimic") and valid then
 							local newconds = {}
+							local newids = {}
 							local newtags = {}
 							local has_stable_cond = false
 							
@@ -2628,6 +2638,14 @@ function subrules()
 							
 							for c,d in ipairs(extraconds) do
 								table.insert(newconds, d)
+							end
+
+							for c,d in ipairs(mimic_ids) do
+								table.insert(newids, d)
+							end
+
+							for c,d in ipairs(ids) do
+								table.insert(newids, d)
 							end
 							
 							for c,d in ipairs(ttags) do
@@ -2652,9 +2670,9 @@ function subrules()
 							limiter = limiter + 1
 
 							if has_stable_cond then
-								addoption(newrule,newconds,ids,false,nil,newtags)
+								addoption(newrule,newconds,newids,false,nil,newtags)
 							else
-								addoption(newrule,newconds,ids,true,nil,newtags)
+								addoption(newrule,newconds,newids,true,nil,newtags)
 							end
 
 							if STABLE_LOGGING then
