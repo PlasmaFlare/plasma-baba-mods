@@ -76,38 +76,40 @@ end
 ]]
 local function get_stablerules_from_name(name)
     local stable_features = {}
-    for _, feature in ipairs(featureindex[name]) do
-        local rule = feature[1]
-        
-        if rule[1] == name and rule[3] ~= "stable" and not is_name_text_this(rule[3]) then
-            local copy_this_rule = true
+    if featureindex[name] ~= nil then
+        for _, feature in ipairs(featureindex[name]) do
+            local rule = feature[1]
             
-            local tags = feature[4]
-            for _, tag in ipairs(tags) do
-                if tag == "stable" or tag == "mimic" then
-                    copy_this_rule = false
-                    break
-                end
-            end
-            
-            --[[ 
-                Note: one "special" rule that we haven't covered is "X is crash". But excluding this property from stablerules seems to prevent the infinite loop screen from happening when "X is stable" + "X feeling stable is not stable"
-            ]]
-            if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
-                for i, cond in ipairs(feature[2]) do
-                    local condtype = cond[1]
-                    local real_condtype = utils.real_condtype(condtype)
-                    if real_condtype == "stable" or real_condtype == "not stable" then
-                        -- Don't copy this rule if the rule has stable condition. 
-                        -- @Note: This is a fix to an issue with group where in some cases in grouprules(), tags aren't preserved. (Look for "local newtags = concatenate(tags)") - 3/6/22
+            if rule[1] == name and rule[3] ~= "stable" and not is_name_text_this(rule[3]) then
+                local copy_this_rule = true
+                
+                local tags = feature[4]
+                for _, tag in ipairs(tags) do
+                    if tag == "stable" or tag == "mimic" then
                         copy_this_rule = false
+                        break
                     end
                 end
+                
+                --[[ 
+                    Note: one "special" rule that we haven't covered is "X is crash". But excluding this property from stablerules seems to prevent the infinite loop screen from happening when "X is stable" + "X feeling stable is not stable"
+                ]]
+                if copy_this_rule and rule[1] == name and rule[3] ~= "stable" then
+                    for i, cond in ipairs(feature[2]) do
+                        local condtype = cond[1]
+                        local real_condtype = utils.real_condtype(condtype)
+                        if real_condtype == "stable" or real_condtype == "not stable" then
+                            -- Don't copy this rule if the rule has stable condition. 
+                            -- @Note: This is a fix to an issue with group where in some cases in grouprules(), tags aren't preserved. (Look for "local newtags = concatenate(tags)") - 3/6/22
+                            copy_this_rule = false
+                        end
+                    end
 
-            end
+                end
 
-            if copy_this_rule then
-                table.insert(stable_features, feature)
+                if copy_this_rule then
+                    table.insert(stable_features, feature)
+                end
             end
         end
     end
