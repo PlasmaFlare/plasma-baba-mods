@@ -41,6 +41,8 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.10** (7/18/22)
+  - [THIS]: Fixed "THIS mimic X" erroring
 - **1.5.9** (7/12/22)
   - [CUT/PACK]: Fixed "baba is cut and weak" giving an error when cutting a text
   - [THIS]: Fixed many this + subrule cases (See: https://github.com/PlasmaFlare/plasma-baba-mods/issues/6)
