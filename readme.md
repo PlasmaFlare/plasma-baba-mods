@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: 469 on PC**
+**Current compatable Baba Is You version: 472 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,11 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.11** (8/30/22)
+  - [THIS] Fixed THIS + GROUP giving an error
+  - [THIS] Fixed an inconsistency with how THIS handles GROUP vs GROUP2
+  - Fixed settings button not showing in some cases
+  - Added a dumb sound effect
 - **1.5.10** (7/18/22)
   - [THIS]: Fixed "THIS mimic X" erroring
 - **1.5.9** (7/12/22)
