@@ -1709,8 +1709,11 @@ function addoption(option,conds_,ids,visible,notrule,tags_)
 				end
 			end
 		end
-		
-		if groupcond then
+
+		-- @mods(this) - prevent any pnouns from being a "member" of a group. Pnouns aren't objects, but references to objects/
+		-- This was needed because "THIS is group is group" generates the subrule "THIS is THIS", which cannot be processed since
+		-- the second THIS doesn't have a unitid.
+		if groupcond and not is_pnoun_target then
 			table.insert(groupfeatures, rule)
 		end
 
