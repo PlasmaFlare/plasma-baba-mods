@@ -117,6 +117,7 @@ menufuncs.pfsettings = {
         item_y = screenh - f_tilesize
 
         make_plasma_button("revert_plasma_settings", name, buttonid, "Restore default settings", 20, item_y)
+        table.insert(dynamic_structure, {{"revert_plasma_settings"}})
 
         gd = MF_specialcreate("customsprite")
         MF_loadsprite(gd,"text_gd",27,true)
