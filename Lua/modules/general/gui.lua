@@ -128,7 +128,7 @@ menufuncs.pfsettings = {
         testunit.values[YPOS] = 294
         testunit.values[ONLINE] = 1
 
-        -- buildmenustructure(dynamic_structure)
+        buildmenustructure(dynamic_structure)
     end,
     leave = function(parent,name)
         MF_cleanremove(gd)
