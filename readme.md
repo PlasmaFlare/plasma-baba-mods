@@ -15,6 +15,8 @@ Total list of mods (Click on one to get a *stylized* description of each mod)
 
 
 # Installation
+### [Download the modpack in the Releases Section!](https://github.com/PlasmaFlare/plasma-baba-mods/releases)
+
 ### A few notes before installing
 - **This modpack is not guaranteed to be compatable with mods created by other people.**
 - Please note the supported Baba version number when downloading the modpack. Feel free to use this modpack in earlier or later versions of Baba Is You. However, it isn't guaranteed that it will be completely compatable without bugs. So if the game updates and you encounter a bug with my modpack, sometimes it could be because of the update.
