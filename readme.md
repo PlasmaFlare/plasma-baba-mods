@@ -1,6 +1,6 @@
 # Plasma's mods - Baba Is You
 
-**Current compatable Baba Is You version: 473 on PC**
+**Current compatable Baba Is You version: 476 on PC**
 
 This is a merged collection of all of my Baba mods I made so far.
 
@@ -41,6 +41,9 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.12** (3/4/23)
+  - CUT/PACK: cutting besideright/besideleft yields "beside" instead of "besideright/besideleft"
+  - Fixed mod settings buttons not working after 476 update
 - **1.5.11** (11/2/22)
   - Updated for Baba Version 473
   - [ARROW PROP] Fixed "LEVEL IS SHIFTDOWN" happening regardless of any conditions applied to it
