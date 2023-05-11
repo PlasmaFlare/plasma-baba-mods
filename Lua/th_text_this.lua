@@ -183,6 +183,7 @@ table.insert(mod_hook_functions["always"],
 table.insert(mod_hook_functions["level_start"], 
     function()
         on_level_start = true
+        objectlist["text"] = 1 -- this fixes the "this(text) mimic x" + "X is this(Y)".
     end
 )
 
@@ -442,11 +443,15 @@ function scan_added_feature_for_pnoun_rule(rule, visible)
 
         if target_is_pnoun then
             local target_this_unitid = get_target_unitid_from_rule(rule)
-            table.insert(pnouns_to_add, target_this_unitid)
+            if target_this_unitid ~= nil then
+                table.insert(pnouns_to_add, target_this_unitid)
+            end
         end
         if property_is_pnoun then
             local property_this_unitid = get_property_unitid_from_rule(rule)
-            table.insert(pnouns_to_add, property_this_unitid)
+            if property_this_unitid ~= nil then
+                table.insert(pnouns_to_add, property_this_unitid)
+            end
         end
 
         -- A pnoun unit can only belong to one pnoun group. If a pnoun can be categorized into two
@@ -1630,6 +1635,10 @@ function do_subrule_pnouns()
                         end
 
                         local curr_raycast_data = raycast_data[pnoun_unitid]
+
+                        -- Added an assert here since there are many cases where this happens
+                        plasma_utils.debug_assert(curr_raycast_data, "Getting raycast data failed for unitid: "..pnoun_unitid.." | unitstring: "..utils.unitstring(pnoun_unitid))
+
                         local raycast_objects_by_tileid, extradata, raycast_trace = simulate_raycast_with_pnoun(pnoun_unitid, raycast_settings)
                         recorded_raycast_simulations[pnoun_unitid] = {
                             raycast_objects_by_tileid = raycast_objects_by_tileid,

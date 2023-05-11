@@ -2645,10 +2645,12 @@ function subrules()
 
 							for c,d in ipairs(mimic_ids) do
 								table.insert(newids, d)
-							end
 
-							for c,d in ipairs(ids) do
-								table.insert(newids, d)
+								if c == 3 then
+									for e,f in ipairs(ids) do
+										table.insert(newids, f)
+									end		
+								end
 							end
 							
 							for c,d in ipairs(ttags) do
@@ -2709,4 +2711,3 @@ function subrules()
 		end
 	end
 end
-
