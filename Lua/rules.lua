@@ -2643,13 +2643,24 @@ function subrules()
 								table.insert(newconds, d)
 							end
 
-							for c,d in ipairs(mimic_ids) do
-								table.insert(newids, d)
+							-- TODO: this system is definetly jank and might need to be reworked
+							if #mimic_ids >= 3 then -- If we are using a normal mimic rule, the text unitids will be at least 3
+								-- To allow compatability with th_testcond_this.lua functions, insert text unit ids in this order (X = mimic rule, Y = other rule):
+								-- 		(noun of X) (verb of X) (property of X) (noun of Y) (verb of Y) (property of Y) (condition params for Y...) (condition params for X...)
+								for c,d in ipairs(mimic_ids) do
+									table.insert(newids, d)
 
-								if c == 3 then
-									for e,f in ipairs(ids) do
-										table.insert(newids, f)
-									end		
+									if c == 3 then
+										for e,f in ipairs(ids) do
+											table.insert(newids, f)
+										end		
+									end
+								end
+							else
+								-- If the mimic rule has no text unitids, then it should be either a baserule or stablerule
+								assert(#mimic_ids == 0) -- Assuming it's impossible for a rule to be formed with 1 or 2 texts
+								for e,f in ipairs(ids) do
+									table.insert(newids, f)
 								end
 							end
 							
