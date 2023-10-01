@@ -43,6 +43,10 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.14** (10/1/23)
+- [STABLE + THIS]: Fixed THIS is X and STABLE not applying on level startup
+- [STABLE + THIS]: Fixed stabledisplay not showing "&" when THIS is in an infix condition
+- [STABLE + THIS] : Fixed lua error from a specific combination of rules involving STABLE, MIMIC, TEXT and THIS
 - **1.5.13** (7/15/23)
   - [THIS] Fixed regression bug where THIS IS BLOCK AND PINK makes the target pink regardless of BLOCK [Issue#11](https://github.com/PlasmaFlare/plasma-baba-mods/issues/11)
   - [THIS] Fixed most cases where a rule formed by THIS + MIMIC + GROUP gives an `attempt to index a nil value. local curr_raycast_data` error
