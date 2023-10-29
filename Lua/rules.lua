@@ -196,19 +196,19 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						local br_unitid = v[1][1]
 						local br_unit = mmf.newObject(br_unitid)
 						br_and_text_with_split_parsing[br_unitid] = nil
+					end
 
-						if name_is_branching_text(text_name, true, false) then
-							table.insert(sents[step], v)
-							maxw = math.max(maxw, v[2])
+					local add_to_sents = true
+					if name_is_branching_text(text_name, false, true) then
+						--[[ 
+							@mod(Omni text) - prevent pivot text specifically from being added to sents since we want parsing to stop in the current direction
+							and start parsing in the perp direction (which is handled by submitting a branch for br_process_branches()). We do it this way instead
+							of changing direction of parsing overall since we want to account for stacked texts. If pivot_is and some other normal text
+						 ]]
+						add_to_sents = false
+					end
 
-							if (v[2] > 1) then
-								currw = math.max(currw, v[2] + 1)
-							end
-						end	
-					else
-						--@mod(Omni text) - these lines in this block were originally outside the current ifelse block. I originally programmed this
-						-- so that these lines don't apply to pivot text. @TODO: Reinvestigate why this is the case and if we need to keep it that way.
-						-- (3/6/22)
+					if add_to_sents then
 						table.insert(sents[step], v)
 						maxw = math.max(maxw, v[2])
 
@@ -246,7 +246,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 						if #words ~= br_text_count then
 							totalvariants = totalvariants * (#words - br_text_count)
 						end
-						variantshere[step] = #words
+						variantshere[step] = #words - br_text_count
 						combo[step] = 1
 					
 						if (totalvariants >= limiter) then
@@ -255,7 +255,7 @@ function calculatesentences(unitid,x,y,dir,a,b,c,br_calling_calculatesentences_b
 							return nil
 						end
 						
-						if (#words > 1) then
+						if (#words - br_text_count > 1) then
 							combospots[#combospots + 1] = step
 						end
 						
