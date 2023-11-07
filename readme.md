@@ -43,6 +43,8 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.15** (11/6/23)
+  - [Omni Text]: Fixed error from FLAG (PIVOT_IS & PUSH) (BLUE & PUSH)
 - **1.5.14** (10/1/23)
   - [STABLE + THIS]: Fixed THIS is X and STABLE not applying on level startup
   - [STABLE + THIS]: Fixed stabledisplay not showing "&" when THIS is in an infix condition
