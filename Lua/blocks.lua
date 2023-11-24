@@ -565,7 +565,7 @@ function block(small_)
 					local obspush = hasfeature("empty","is","push",2,x+ox,y+oy)
 					local obspull = hasfeature("empty","is","pull",2,x+ox,y+oy)
 
-					obsstop, obspush, obspull = do_directional_collision(i-1, obsname, 2, obsstop, obspush, obspull, x,y,ox,oy, false)
+					obsstop, obspush, obspull = do_directional_collision(i-1, "empty", 2, obsstop, obspush, obspull, x,y,ox,oy, false)
 					
 					if (obsstop ~= nil) or (obspush ~= nil) or (obspull ~= nil) then
 						valid = false
