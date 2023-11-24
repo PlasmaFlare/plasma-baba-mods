@@ -523,14 +523,15 @@ function block(small_)
 		
 		local ismore = getunitswitheffect("more",false,delthese)
 		--@Turning Text(more)
-		do_directional_more(ismore, delthese)
+		ismore = do_directional_more(ismore, delthese)
 
-		for id,unit in ipairs(ismore) do
+		--@plasma(more): changed format of "ismore" to be unit -> list of directions to duplicate unit from MORE
+		for unit,dirs in pairs(ismore) do
 			local x,y = unit.values[XPOS],unit.values[YPOS]
 			local name = unit.strings[UNITNAME]
 			local doblocks = {}
 			
-			for i=1,4 do
+			for _, i in ipairs(dirs) do
 				local drs = ndirs[i]
 				ox = drs[1]
 				oy = drs[2]

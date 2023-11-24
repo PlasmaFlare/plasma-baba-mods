@@ -26,76 +26,30 @@ function do_directional_more(full_more_units, delthese_)
         return
     end
 
-    local full_more_units_dict = {}
-	for id,unit in ipairs(full_more_units) do
-		full_more_units_dict[unit.fixed] = true
+	local full_more_units_dict = {}
+	
+	local more_unit_dirs = {}
+	if full_more_units ~= nil then
+    	for _, unit in ipairs(full_more_units) do
+			full_more_units_dict[unit.fixed] = true
+			more_unit_dirs[unit] = {1,2,3,4}
+		end
 	end
 
-	local partial_more_units = {}
 	for i=1,4 do
 		local dirfeature = dirfeaturemap[i]
 		local more_units = getunitswitheffect("more"..dirfeature,false,delthese)
 		for j,unit in ipairs(more_units) do
 			if not full_more_units_dict[unit.fixed] then
-				if not partial_more_units[unit] then
-					partial_more_units[unit] = {}
+				if not more_unit_dirs[unit] then
+					more_unit_dirs[unit] = {}
 				end
-				table.insert(partial_more_units[unit], i)
+				table.insert(more_unit_dirs[unit], i)
 			end
 		end
 	end
 
-	for unit,dirs in pairs(partial_more_units) do
-		local x,y = unit.values[XPOS],unit.values[YPOS]
-		local name = getname(unit)
-		local doblocks = {}
-		
-        for ind, i in ipairs(dirs) do
-			local drs = ndirs[i]
-			ox = drs[1]
-			oy = drs[2]
-			
-			local valid = true
-			local obs = findobstacle(x+ox,y+oy)
-			local tileid = (x+ox) + (y+oy) * roomsizex
-			
-			if (#obs > 0) then
-				for a,b in ipairs(obs) do
-					if (b == -1) then
-						valid = false
-					elseif (b ~= 0) and (b ~= -1) then
-						local bunit = mmf.newObject(b)
-						local obsname = getname(bunit)
-						
-						local obsstop = hasfeature(obsname,"is","stop",b,x+ox,y+oy)
-						local obspush = hasfeature(obsname,"is","push",b,x+ox,y+oy)
-                        local obspull = hasfeature(obsname,"is","pull",b,x+ox,y+oy)
-                        
-                        obsstop, obspush, obspull = do_directional_collision(i-1, obsname, b, obsstop, obspush, obspull, x,y,ox,oy, false, nil)
-						
-						if (obsstop ~= nil) or (obspush ~= nil) or (obspull ~= nil) or (obsname == name) then
-							valid = false
-							break
-						end
-					end
-				end
-			else
-				local obsstop = hasfeature("empty","is","stop",2,x+ox,y+oy)
-				local obspush = hasfeature("empty","is","push",2,x+ox,y+oy)
-                local obspull = hasfeature("empty","is","pull",2,x+ox,y+oy)
-                
-                obsstop, obspush, obspull = do_directional_collision(i-1, obsname, 2, obsstop, obspush, obspull, x,y,ox,oy, false, nil)
-				
-				if (obsstop ~= nil) or (obspush ~= nil) or (obspull ~= nil) then
-					valid = false
-				end
-			end
-			
-			if valid then
-				local newunit = copy(unit.fixed,x+ox,y+oy)
-			end
-		end
-	end
+	return more_unit_dirs
 end
 
 function do_directional_collision(dir, name, unitid, isstop, ispush, ispull, x, y, ox, oy, pulling, reason)
