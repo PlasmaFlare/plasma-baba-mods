@@ -1160,7 +1160,7 @@ function docode(firstwords)
 									if prev_word then
 										local word_name = parse_branching_text(prev_word[1])
 										print("test: "..word_name)
-										if word_name ~= "is" and word_name ~= "and" then
+										if word_name ~= "is" and word_name ~= "and" and word_name ~= "not" then
 											remove = true
 										end
 									end
