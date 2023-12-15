@@ -1490,6 +1490,8 @@ function docode(firstwords)
 										ids = copytable(ids, group_target[1][3])
 										ids = copytable(ids, target[3])
 										
+										pf_rule_metadata_index:register_rule(rule, group_object[3], group_target[1][3], target[3])
+										
 										for g,h in ipairs(extraids) do
 											ids = copytable(ids, h[3])
 										end
@@ -1817,6 +1819,8 @@ function code(alreadyrun_)
 			visualfeatures = {}
 			notfeatures = {}
 			groupfeatures = {}
+
+			pf_rule_metadata_index:reset()
 			
 			local firstwords = {}
 			local alreadyused = {}
