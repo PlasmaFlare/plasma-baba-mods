@@ -445,13 +445,48 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 					end
 				end
 			elseif (take == 8) then
-				if enable_directional_shift then
-					--@Turning Text(shift)
-					do_directional_shift_parsing(moving_units, been_seen, roomsizex)
-				else
-					local shifts = findallfeature(nil,"is","shift",true)
-					
-					for i,v in ipairs(shifts) do
+				arrow_prop_mod_globals.group_arrow_properties = false
+				local shifts = findallfeature(nil,"is","shift",true)
+				
+				for i,v in ipairs(shifts) do
+					if (v ~= 2) then
+						local affected = {}
+						local unit = mmf.newObject(v)
+						
+						local x,y = unit.values[XPOS],unit.values[YPOS]
+						local tileid = x + y * roomsizex
+						
+						if (unitmap[tileid] ~= nil) then
+							if (#unitmap[tileid] > 1) then
+								for a,b in ipairs(unitmap[tileid]) do
+									if (b ~= v) and floating(b,v,x,y) then
+									
+										--updatedir(b, unit.values[DIR])
+										
+										if (isstill_or_locked(b,x,y,unit.values[DIR]) == false) then
+											if (been_seen[b] == nil) then
+												table.insert(moving_units, {unitid = b, reason = "shift", state = 0, moves = 1, dir = unit.values[DIR], xpos = x, ypos = y})
+												been_seen[b] = #moving_units
+											else
+												local id = been_seen[b]
+												local this = moving_units[id]
+												this.moves = this.moves + 1
+											end
+											
+											update_net_shift_data(unit.values[DIR], moving_units[been_seen[b]], 1)
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+
+				--@Turning Text(shift)
+				for dir=0,3 do
+					local dirfeature = dirfeaturemap[dir+1]
+					local dirshifts = findallfeature(nil, "is", "shift"..dirfeature, true)
+					for i,v in ipairs(dirshifts) do
 						if (v ~= 2) then
 							local affected = {}
 							local unit = mmf.newObject(v)
@@ -464,17 +499,17 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 									for a,b in ipairs(unitmap[tileid]) do
 										if (b ~= v) and floating(b,v,x,y) then
 										
-											--updatedir(b, unit.values[DIR])
-											
 											if (isstill_or_locked(b,x,y,unit.values[DIR]) == false) then
 												if (been_seen[b] == nil) then
-													table.insert(moving_units, {unitid = b, reason = "shift", state = 0, moves = 1, dir = unit.values[DIR], xpos = x, ypos = y})
+													table.insert(moving_units, {unitid = b, reason = "shift", state = 0, moves = 1, dir = dir, xpos = x, ypos = y})
 													been_seen[b] = #moving_units
 												else
 													local id = been_seen[b]
 													local this = moving_units[id]
 													this.moves = this.moves + 1
 												end
+
+												update_net_shift_data(dir, moving_units[been_seen[b]], 1)
 											end
 										end
 									end
@@ -483,37 +518,85 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 						end
 					end
 				end
+
+				local levelshift = findfeature("level","is","shift")
 				
-				if enable_directional_shift then
-					do_directional_shift_level_parsing(moving_units, been_seen, mapdir)
-				else
-					local levelshift = findfeature("level","is","shift")
+				if (levelshift ~= nil) then
+					local leveldir = mapdir
+					-- @Note from plasma, below is vanilla code. The code after the commented code fixes "LEVEL IS SHIFT AND SHIFT" not stack shifting
+					-- local valid = false
 					
-					if (levelshift ~= nil) then
-						local leveldir = mapdir
-						local valid = false
-						
-						for a,b in ipairs(levelshift) do
-							if (valid == false) and testcond(b[2],1) then
-								valid = true
-							end
+					-- for a,b in ipairs(levelshift) do
+					-- 	if (valid == false) and testcond(b[2],1) then
+					-- 		valid = true
+					-- 	end
+					-- end
+					local valid = false
+					local level_shift_count = 0
+					for a,b in ipairs(levelshift) do
+						if testcond(b[2],1) then
+							valid = true
+							level_shift_count = level_shift_count + 1
 						end
-						
-						if valid then
-							for a,unit in ipairs(units) do
-								local x,y = unit.values[XPOS],unit.values[YPOS]
+					end
+					
+					if valid then
+						for a,unit in ipairs(units) do
+							local x,y = unit.values[XPOS],unit.values[YPOS]
+							
+							if floating_level(unit.fixed) then
+								updatedir(unit.fixed, leveldir)
 								
-								if floating_level(unit.fixed) then
-									updatedir(unit.fixed, leveldir)
-									
-									if (isstill_or_locked(unit.fixed,x,y,leveldir) == false) and (issleep(unit.fixed,x,y) == false) then
-										table.insert(moving_units, {unitid = unit.fixed, reason = "shift", state = 0, moves = 1, dir = unit.values[DIR], xpos = x, ypos = y})
+								if (isstill_or_locked(unit.fixed,x,y,leveldir) == false) and (issleep(unit.fixed,x,y) == false) then
+									if (been_seen[unit.fixed] == nil) then
+										table.insert(moving_units, {unitid = unit.fixed, reason = "shift", state = 0, moves = level_shift_count, dir = unit.values[DIR], xpos = x, ypos = y})
+										been_seen[unit.fixed] = #moving_units
+									else
+										local id = been_seen[unit.fixed]
+										local this = moving_units[id]
+										this.moves = this.moves + level_shift_count
 									end
+
+									update_net_shift_data(leveldir, moving_units[been_seen[unit.fixed]], level_shift_count)
 								end
 							end
 						end
 					end
 				end
+
+				--@Turning Text(shift)
+				for dir=0,3 do
+					local dirfeature = dirfeaturemap[dir+1]
+					local dirshifts = findfeature("level", "is", "shift"..dirfeature)
+					if dirshifts ~= nil then
+						for i,feature in ipairs(dirshifts) do
+							if testcond(feature[2],1) then
+								for a,unit in ipairs(units) do
+									local x,y = unit.values[XPOS],unit.values[YPOS]
+									
+									if floating_level(unit.fixed) then
+										updatedir(unit.fixed, dir)
+										
+										if (isstill_or_locked(unit.fixed,x,y,dir) == false) and (issleep(unit.fixed,x,y) == false) then
+											if (been_seen[unit.fixed] == nil) then
+												table.insert(moving_units, {unitid = unit.fixed, reason = "shift", state = 0, moves = 1, dir = dir, xpos = x, ypos = y})
+												been_seen[unit.fixed] = #moving_units
+											else
+												local id = been_seen[unit.fixed]
+												local this = moving_units[id]
+												this.moves = this.moves + 1
+											end
+
+											update_net_shift_data(dir, moving_units[been_seen[unit.fixed]], 1)
+										end
+									end	
+								end
+							end
+						end
+					end
+				end
+
+				arrow_prop_mod_globals.group_arrow_properties = true
 			end
 		else
 			for i,data in ipairs(still_moving) do

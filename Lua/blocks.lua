@@ -422,47 +422,56 @@ function moveblock(onlystartblock_)
 				end
 			end
 		end
-	end
-	
-	if enable_directional_shift then
-		--@Turning Text(shift)
-		do_directional_shift_moveblock()
-	else
-		for a,unitid in ipairs(isshift) do
-			if (unitid ~= 2) and (unitid ~= 1) then
-				local unit = mmf.newObject(unitid)
-				local x,y,dir = unit.values[XPOS],unit.values[YPOS],unit.values[DIR]
-				
-				local things = findallhere(x,y,unitid)
-				
-				if (#things > 0) and (isgone(unitid) == false) then
-					for e,f in ipairs(things) do
-						if floating(unitid,f,x,y) and (issleep(unitid,x,y) == false) then
-							local newunit = mmf.newObject(f)
-							local name = newunit.strings[UNITNAME]
-							
-							if (featureindex["reverse"] ~= nil) then
-								local turndir = unit.values[DIR]
-								turndir = reversecheck(newunit.fixed,unit.values[DIR],x,y)
-							end
-							
-							if (newunit.flags[DEAD] == false) then
-								addundo({"update",name,x,y,newunit.values[DIR],x,y,unit.values[DIR],newunit.values[ID]})
-								newunit.values[DIR] = unit.values[DIR]
+
+		if enable_directional_shift then
+			--@Turning Text(shift)
+			do_directional_shift_moveblock()
+		else
+			--[[
+				@Note from plasma: as weird as this may sound, I think that the entirety of this shift code below is redundant in vanilla.
+				The code to handle updating directions of shifted objects is already handled in movecommand() with this code snippet:
+					if (state == 0) and (data.reason == "shift") and (data.unitid ~= 2) then
+						updatedir(data.unitid, data.dir)
+						dir = data.dir
+					end 
+				As such, I decided to not bother with removing calling do_directional_shift_moveblock() if enable_directional_shift == true
+			]]
+			for a,unitid in ipairs(isshift) do
+				if (unitid ~= 2) and (unitid ~= 1) then
+					local unit = mmf.newObject(unitid)
+					local x,y,dir = unit.values[XPOS],unit.values[YPOS],unit.values[DIR]
+					
+					local things = findallhere(x,y,unitid)
+					
+					if (#things > 0) and (isgone(unitid) == false) then
+						for e,f in ipairs(things) do
+							if floating(unitid,f,x,y) and (issleep(unitid,x,y) == false) then
+								local newunit = mmf.newObject(f)
+								local name = newunit.strings[UNITNAME]
 								
-								--@ Turning text --
-								if is_turning_text(newunit.strings[NAME]) then
-									updatecode = 1
+								if (featureindex["reverse"] ~= nil) then
+									local turndir = unit.values[DIR]
+									turndir = reversecheck(newunit.fixed,unit.values[DIR],x,y)
 								end
-								--@ Turning text --
+								
+								if (newunit.flags[DEAD] == false) then
+									addundo({"update",name,x,y,newunit.values[DIR],x,y,unit.values[DIR],newunit.values[ID]})
+									newunit.values[DIR] = unit.values[DIR]
+									
+									--@ Turning text --
+									if is_turning_text(newunit.strings[NAME]) then
+										updatecode = 1
+									end
+									--@ Turning text --
+								end
 							end
 						end
 					end
 				end
 			end
+			
+			doupdate()
 		end
-		
-		doupdate()
 	end
 end
 
