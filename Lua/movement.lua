@@ -493,6 +493,12 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 							
 							local x,y = unit.values[XPOS],unit.values[YPOS]
 							local tileid = x + y * roomsizex
+
+							local shiftdir = dir
+							if not enable_direction_shift then
+								-- @Turning Text - if net shifting is disabled, we dont want the direction of the arrow to influence the shift direction
+								shiftdir = unit.values[DIR]
+							end
 							
 							if (unitmap[tileid] ~= nil) then
 								if (#unitmap[tileid] > 1) then
@@ -501,7 +507,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 										
 											if (isstill_or_locked(b,x,y,unit.values[DIR]) == false) then
 												if (been_seen[b] == nil) then
-													table.insert(moving_units, {unitid = b, reason = "shift", state = 0, moves = 1, dir = dir, xpos = x, ypos = y})
+													table.insert(moving_units, {unitid = b, reason = "shift", state = 0, moves = 1, dir = shiftdir, xpos = x, ypos = y})
 													been_seen[b] = #moving_units
 												else
 													local id = been_seen[b]
@@ -509,7 +515,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 													this.moves = this.moves + 1
 												end
 
-												update_net_shift_data(dir, moving_units[been_seen[b]], 1)
+												update_net_shift_data(shiftdir, moving_units[been_seen[b]], 1)
 											end
 										end
 									end
@@ -573,13 +579,19 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 							if testcond(feature[2],1) then
 								for a,unit in ipairs(units) do
 									local x,y = unit.values[XPOS],unit.values[YPOS]
+
+									local shiftdir = dir
+									if not enable_direction_shift then
+										-- @Turning Text - if net shifting is disabled, we dont want the direction of the arrow to influence the shift direction
+										shiftdir = unit.values[DIR]
+									end
 									
 									if floating_level(unit.fixed) then
-										updatedir(unit.fixed, dir)
+										updatedir(unit.fixed, shiftdir)
 										
-										if (isstill_or_locked(unit.fixed,x,y,dir) == false) and (issleep(unit.fixed,x,y) == false) then
+										if (isstill_or_locked(unit.fixed,x,y,shiftdir) == false) and (issleep(unit.fixed,x,y) == false) then
 											if (been_seen[unit.fixed] == nil) then
-												table.insert(moving_units, {unitid = unit.fixed, reason = "shift", state = 0, moves = 1, dir = dir, xpos = x, ypos = y})
+												table.insert(moving_units, {unitid = unit.fixed, reason = "shift", state = 0, moves = 1, dir = shiftdir, xpos = x, ypos = y})
 												been_seen[unit.fixed] = #moving_units
 											else
 												local id = been_seen[unit.fixed]
@@ -587,7 +599,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 												this.moves = this.moves + 1
 											end
 
-											update_net_shift_data(dir, moving_units[been_seen[unit.fixed]], 1)
+											update_net_shift_data(shiftdir, moving_units[been_seen[unit.fixed]], 1)
 										end
 									end	
 								end

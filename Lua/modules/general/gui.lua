@@ -15,7 +15,7 @@ local plasma_modpack_settings = {
         display = "Disable net shifting",
         value = false,
         buttonfunc = "pfdirshift",
-        tooltip = "When this setting is off, SHIFT logic is reworked to support adding all SHIFT sources to one overall SHIFT movement."
+        tooltip = "Disables SHIFT logic change where it combines SHIFT sources to one overall SHIFT movement. THIS DISABLES DIRECTIONAL SHIFT."
     },
     disable_stable_display = {
         display = "Disable stable text display",
