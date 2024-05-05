@@ -43,6 +43,12 @@ Feel free to submit an issue to this Github repository to report bugs.
 If you are on the [Baba Is You Discord](https://discord.gg/GGbUUse), you can report bugs in #plasmaflare-mod-collection-bugs, which is a thread of #asset-is-make. You can also report bugs in #asset-is-make, but I recommend the first channel just to avoid spamming the other channels.
 
 # Changelog
+- **1.5.16** (5/4/24)
+  - [THIS] Fixed special edge case with group + this + pass (and hopefully other cases with erroring with "curr_raycast_data")
+  - [Omni text] Fixed "Baba is you omni_and not blue" not parsing when parsing splits on the omni_and
+  - [CUT/PACK + Arrow Prop] Fixed MORE not being affected by "EMPTY IS directional PUSH/PULL/STOP"
+  - [CUT/PACK + Arrow Prop] Fixed CUT not being affected by directional PUSH/PULL/STOP
+  - [CUT/PACK] Fixed CUT/PACK not working when playing the levelpack directly instead of in the editor
 - **1.5.15** (11/6/23)
   - [Omni Text]: Fixed error from FLAG (PIVOT_IS & PUSH) (BLUE & PUSH)
 - **1.5.14** (10/1/23)
