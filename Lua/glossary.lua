@@ -189,6 +189,7 @@ Refers to all objects connected adjacently from the object directly in front of 
     author = "PlasmaFlare",
     description =
 [[Limits which objects can be referred by pointer nouns (THIS, THAT, THESE, THOSE).
+
 While a pointer noun selects a "BLOCK" object, all targeted objects won't be affected by rules formed with the pointer noun.]],
 },
 {
@@ -196,6 +197,7 @@ While a pointer noun selects a "BLOCK" object, all targeted objects won't be aff
     author = "PlasmaFlare",
     description = 
 [[Limits which objects can be referred by pointer nouns (THIS, THAT, THESE, THOSE).
+
 "PASS" objects will be ignored by pointer nouns as if the "PASS" objects are empty space.
 
 - As a consequence, "EMPTY" is inheritly "PASS". It is similar to how all texts are PUSH]],
@@ -205,6 +207,7 @@ While a pointer noun selects a "BLOCK" object, all targeted objects won't be aff
     author = "PlasmaFlare",
     description =
 [[Limits which objects can be referred by pointer nouns (THIS, THAT, THESE, THOSE).
+
 A "RELAY" object can redirect the targeting of pointer nouns in the direction the "RELAY" object is facing.
 
 - "RELAY" objects do not get selected by pointer nouns]],
@@ -213,7 +216,7 @@ A "RELAY" object can redirect the targeting of pointer nouns in the direction th
     name = "cut",
     author = "PlasmaFlare",
     description = 
-[[Gives an object the ability to split a text block     into individual letters.
+[[Gives an object the ability to split a text block into individual letters.
 
 - The effect happens when the "CUT" object walks into a text block.
 
