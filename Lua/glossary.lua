@@ -107,7 +107,7 @@ Unlike normal "SHIFT", the direction that the object is facing does not affect t
 [[Makes an object instantly explode and destroy other objects 1 tile in the direction of the arrow.
 
 - Stacking multiple arrow booms in the same direction will increase the range of explosion.
-    - Ex: an object that is 3x boom right will destroy objects within 3 tiles to the right of the boomed object. ]],
+    - Ex: an object that is 3x boomright will destroy objects within 3 tiles to the right of the boomed object. ]],
     display_sprites = {"text_boomup", "text_boomright", "text_boomleft", "text_boomdown",}
 },
 
