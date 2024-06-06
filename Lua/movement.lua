@@ -495,7 +495,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 							local tileid = x + y * roomsizex
 
 							local shiftdir = dir
-							if not enable_direction_shift then
+							if not enable_directional_shift then
 								-- @Turning Text - if net shifting is disabled, we dont want the direction of the arrow to influence the shift direction
 								shiftdir = unit.values[DIR]
 							end
@@ -581,7 +581,7 @@ function movecommand(ox,oy,dir_,playerid_,dir_2,no3d_)
 									local x,y = unit.values[XPOS],unit.values[YPOS]
 
 									local shiftdir = dir
-									if not enable_direction_shift then
+									if not enable_directional_shift then
 										-- @Turning Text - if net shifting is disabled, we dont want the direction of the arrow to influence the shift direction
 										shiftdir = unit.values[DIR]
 									end
